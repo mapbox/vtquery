@@ -29,9 +29,9 @@ endif()
 mason_use(geometry VERSION 0.9.2 HEADER_ONLY)
 mason_use(variant VERSION 1.1.4 HEADER_ONLY)
 # mason_use(vtzero VERSION fa6682b HEADER_ONLY)
-include_directories(SYSTEM /Users/mapsam/mapbox/spatial-algorithms/include)
-include_directories(SYSTEM /Users/mapsam/mapbox/protozero/include)
-include_directories(SYSTEM /Users/mapsam/mapbox/vtzero/include)
+include_directories(SYSTEM ../spatial-algorithms/include) # todo: package in mason
+include_directories(SYSTEM ../protozero/include) # todo: package in mason
+include_directories(SYSTEM ../vtzero/include) # todo: package in mason
 include_directories(SYSTEM ${MASON_PACKAGE_geometry_INCLUDE_DIRS})
 include_directories(SYSTEM ${MASON_PACKAGE_variant_INCLUDE_DIRS})
 include_directories(SYSTEM ${MASON_PACKAGE_vtzero_INCLUDE_DIRS})
