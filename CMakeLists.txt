@@ -29,9 +29,9 @@ endif()
 mason_use(geometry VERSION 0.9.2 HEADER_ONLY)
 mason_use(variant VERSION 1.1.4 HEADER_ONLY)
 # mason_use(vtzero VERSION fa6682b HEADER_ONLY)
-include_directories(SYSTEM ../spatial-algorithms/include) # todo: package in mason
-include_directories(SYSTEM ../protozero/include) # todo: package in mason
-include_directories(SYSTEM ../vtzero/include) # todo: package in mason
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/../spatial-algorithms/include) # todo: package in mason
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/../protozero/include) # todo: package in mason
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/../vtzero/include) # todo: package in mason
 include_directories(SYSTEM ${MASON_PACKAGE_geometry_INCLUDE_DIRS})
 include_directories(SYSTEM ${MASON_PACKAGE_variant_INCLUDE_DIRS})
 include_directories(SYSTEM ${MASON_PACKAGE_vtzero_INCLUDE_DIRS})
@@ -41,4 +41,4 @@ file (GLOB VTQUERY_SOURCE vtquery/*.cpp)
 add_executable(vtquery ${VTQUERY_SOURCE})
 
 # link benchmark static library to the bench-tests binary so the bench tests know where to find the benchmark impl code
-target_link_libraries(vtquery -lz /Users/mapsam/mapbox/spatial-algorithms/build/libspatialalgorithms.a)
+target_link_libraries(vtquery -lz ${CMAKE_CURRENT_SOURCE_DIR}/../spatial-algorithms/build/libspatialalgorithms.a)
