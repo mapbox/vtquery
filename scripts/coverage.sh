@@ -20,8 +20,8 @@ make debug
 rm -f *profraw
 rm -f *gcov
 rm -f *profdata
-LLVM_PROFILE_FILE="code-%p.profraw" make test
-CXX_MODULE="./build/unit-tests"
+LLVM_PROFILE_FILE="code-%p.profraw" npm test
+CXX_MODULE=$(./node_modules/.bin/node-pre-gyp reveal module --silent)
 llvm-profdata merge -output=code.profdata code-*.profraw
 llvm-cov report ${CXX_MODULE} -instr-profile=code.profdata -use-color
 llvm-cov show ${CXX_MODULE} -instr-profile=code.profdata src/*.cpp -filename-equivalence -use-color

@@ -6,3 +6,4 @@ build
 .toolchain
 .mason
 local.env
+lib/binding
