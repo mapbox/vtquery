@@ -32,7 +32,7 @@ int main() {
   std::vector<mapbox::geometry::point<std::int64_t>> results;
 
   // read buffer from filesystem
-  std::string filename("../mvt-fixtures/fixtures/017/tile.mvt");
+  std::string filename("/Users/mapsam/Downloads/3044.vector.pbf");
   std::ifstream stream(filename,std::ios_base::in|std::ios_base::binary);
   if (!stream.is_open())
   {
@@ -41,6 +41,7 @@ int main() {
   std::string buffer((std::istreambuf_iterator<char>(stream.rdbuf())),
                       std::istreambuf_iterator<char>());
   stream.close();
+
   std::uint32_t tile_z = 0;
   std::uint32_t tile_x = 0;
   std::uint32_t tile_y = 0;
@@ -123,6 +124,10 @@ int main() {
     std::clog << "\n" << (&feature - &features[0]) << ")\n";
     std::clog << "x: " << feature.second.x << ", y: " << feature.second.y << ", distance: " << feature.second.distance << "\n";
 
+    // lng lat
+    const auto ll = tile_to_long_lat(tile_z, tile_x, tile_y, feature.second.x, feature.second.y);
+    std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
+
     for (auto const prop : feature.first) {
       // get key as string
 
@@ -130,7 +135,7 @@ int main() {
       // get value as mapbox variant
       auto v = vtzero::convert_property_value<variant_type>(prop.value());
       // print them out
-      std::clog << key << ": ";
+      std::clog << " - " << key << ": ";
       mapbox::util::apply_visitor(print_variant(),v);
       std::clog << "\n";
 
