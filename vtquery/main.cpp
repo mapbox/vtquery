@@ -42,9 +42,9 @@ int main() {
                       std::istreambuf_iterator<char>());
   stream.close();
 
-  int tile_z = 0;
-  int tile_x = 0;
-  int tile_y = 0;
+  std::uint32_t tile_z = 0;
+  std::uint32_t tile_x = 0;
+  std::uint32_t tile_y = 0;
 
   // use vtzero to get geometry info
   vtzero::vector_tile tile{buffer};
@@ -138,6 +138,14 @@ int main() {
       std::clog << " - " << key << ": ";
       mapbox::util::apply_visitor(print_variant(),v);
       std::clog << "\n";
+<<<<<<< HEAD
+=======
+
+      // lng lat
+      std::uint32_t extent = 4096; // TODO: pull from layer.extent()
+      const auto ll = tile_to_long_lat(extent,tile_z, tile_x, tile_y, feature.second.x, feature.second.y);
+      std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
+>>>>>>> master
     }
   }
 
