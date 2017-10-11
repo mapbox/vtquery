@@ -26,11 +26,11 @@ struct TileObject {
            buffer_ref.Reset(buffer.As<v8::Object>());
         }
 
-    // explicitly set the default constructor for TileObjects
-    // we are okay with the default because QueryData is Reset()-ing
-    // buffers explicitly
-    ~TileObject() = default;
-
+    // explicitly use the destructor to clean up
+    // the persistent buffer ref by Reset()-ing
+    ~TileObject() {
+        buffer_ref.Reset();
+    }
 
     // guarantee that objects are not being copied by deleting the
     // copy and move definitions
@@ -38,6 +38,7 @@ struct TileObject {
     // non-copyable
     TileObject( TileObject const& ) = delete;
     TileObject& operator=(TileObject const& ) = delete;
+
     // non-movable
     TileObject( TileObject && ) = delete;
     TileObject& operator=(TileObject && ) = delete;
@@ -50,12 +51,24 @@ struct TileObject {
 };
 
 struct QueryData {
-    ~QueryData() {
-        for (auto & tile : tiles) tile.buffer_ref.Reset();
+    QueryData(std::uint32_t num_tiles) {
+        tiles.reserve(num_tiles);
     }
+    ~QueryData() = default;
+
+    // guarantee that objects are not being copied by deleting the
+    // copy and move definitions
+
+    // non-copyable
+    QueryData( QueryData const& ) = delete;
+    QueryData& operator=(QueryData const& ) = delete;
+
+    // non-movable
+    QueryData( QueryData && ) = delete;
+    QueryData& operator=(QueryData && ) = delete;
 
     // buffers object thing
-    std::vector<TileObject> tiles;
+    std::vector<std::unique_ptr<TileObject>> tiles;
 
     // lng/lat
     double latitude = 0.0;
@@ -71,16 +84,18 @@ struct QueryData {
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
-    Worker(QueryData query_data,
+    Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* callback)
         : Base(callback),
-          query_data_(query_data) {}
+          query_data_(std::move(query_data)) {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
     // - You do not have access to Javascript v8 objects here.
     void Execute() override {
         try {
+            // Get the object from the unique_ptr
+            //QueryData const& data = *query_data_;
             // do the stuff here
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
@@ -97,16 +112,17 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
+        std::string result("todo results here");
         const auto argc = 2u;
         v8::Local<v8::Value> argv[argc] = {
-            Nan::Null(), Nan::New<v8::String>(result_).ToLocalChecked()
+            Nan::Null(), Nan::New<v8::String>(result).ToLocalChecked()
         };
 
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
         callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
 
-    QueryData query_data_;
+    std::unique_ptr<QueryData> query_data_;
 };
 
 NAN_METHOD(vtquery) {
@@ -117,8 +133,6 @@ NAN_METHOD(vtquery) {
         return;
     }
     v8::Local<v8::Function> callback = callback_val.As<v8::Function>();
-
-    QueryData query_data;
 
     // validate buffers
       // must have `buffer` buffer
@@ -135,6 +149,8 @@ NAN_METHOD(vtquery) {
     if (num_tiles <= 0) {
         return utils::CallbackError("'tiles' array must be of length greater than 0", callback);
     }
+
+    std::unique_ptr<QueryData> query_data{new QueryData(num_tiles)};
 
     for (unsigned t=0; t < num_tiles; ++t) {
         v8::Local<v8::Value> tile_val = tiles_arr_val->Get(t);
@@ -194,7 +210,11 @@ NAN_METHOD(vtquery) {
         }
 
         // in-place construction
-        query_data.tiles.emplace_back(z, x, y, buffer);
+        std::unique_ptr<TileObject> tile{new TileObject{static_cast<std::uint32_t>(z),
+                                                        static_cast<std::uint32_t>(x),
+                                                        static_cast<std::uint32_t>(y),
+                                                        buffer}};
+        query_data->tiles.push_back(std::move(tile));
     }
 
     // validate lng/lat array
@@ -311,7 +331,7 @@ NAN_METHOD(vtquery) {
         }
     }
 
-    auto* worker = new Worker{query_data, new Nan::Callback{callback}};
+    auto* worker = new Worker{std::move(query_data), new Nan::Callback{callback}};
     Nan::AsyncQueueWorker(worker);
 }
 
