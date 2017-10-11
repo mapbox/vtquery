@@ -13,7 +13,7 @@ test('failure: fails without callback function', assert => {
 test('failure: buffers is not an array', assert => {
   vtquery('i am not an array', [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, 'first arg \'buffers\' must be an array of objects');
+    assert.equal(err.message, 'first arg \'tiles\' must be an array of tile objects');
     assert.end();
   });
 });
@@ -22,7 +22,7 @@ test('failure: buffers array is empty', assert => {
   const buffs = [];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'buffers\' array must be of length greater than 0');
+    assert.equal(err.message, '\'tiles\' array must be of length greater than 0');
     assert.end();
   });
 });
@@ -33,7 +33,7 @@ test('failure: item in buffers array is not an object', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, 'items in \'buffers\' array must be objects');
+    assert.equal(err.message, 'items in \'tiles\' array must be objects');
     assert.end();
   });
 });
@@ -49,7 +49,7 @@ test('failure: buffer value is null', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, 'buffer value in \'buffers\' array is null or undefined');
+    assert.equal(err.message, 'buffer value in \'tiles\' array item is null or undefined');
     assert.end();
   });
 });
@@ -65,7 +65,7 @@ test('failure: buffer value is not a buffer', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, 'buffer value in \'buffers\' array is not a true buffer');
+    assert.equal(err.message, 'buffer value in \'tiles\' array item is not a true buffer');
     assert.end();
   });
 });
@@ -81,7 +81,7 @@ test('failure: buffer object missing z value', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, 'item in \'buffers\' array object does not include a \'z\' value');
+    assert.equal(err.message, 'item in \'tiles\' array does not include a \'z\' value');
     assert.end();
   });
 });
@@ -97,7 +97,7 @@ test('failure: buffer object missing x value', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, 'item in \'buffers\' array object does not include a \'x\' value');
+    assert.equal(err.message, 'item in \'tiles\' array does not include a \'x\' value');
     assert.end();
   });
 });
@@ -113,7 +113,7 @@ test('failure: buffer object missing y value', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, 'item in \'buffers\' array object does not include a \'y\' value');
+    assert.equal(err.message, 'item in \'tiles\' array does not include a \'y\' value');
     assert.end();
   });
 });
@@ -129,7 +129,7 @@ test('failure: buffer object z value is not a number', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'z\' value in \'buffers\' array is not a number');
+    assert.equal(err.message, '\'z\' value in \'tiles\' array item is not a number');
     assert.end();
   });
 });
@@ -145,7 +145,7 @@ test('failure: buffer object x value is not a number', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'x\' value in \'buffers\' array is not a number');
+    assert.equal(err.message, '\'x\' value in \'tiles\' array item is not a number');
     assert.end();
   });
 });
@@ -161,7 +161,7 @@ test('failure: buffer object y value is not a number', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'y\' value in \'buffers\' array is not a number');
+    assert.equal(err.message, '\'y\' value in \'tiles\' array item is not a number');
     assert.end();
   });
 });

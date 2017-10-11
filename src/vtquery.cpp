@@ -9,24 +9,95 @@
 // #include <mapbox/geometry/geometry.hpp>
 // #include <mapbox/geometry/algorithms/closest_point.hpp>
 #include <vtzero/vector_tile.hpp>
+#include <vtzero/types.hpp>
 // #include <mapbox/variant.hpp>
 
 namespace VectorTileQuery {
 
+struct TileObject {
+    TileObject(std::uint32_t z0,
+        std::uint32_t x0,
+        std::uint32_t y0,
+        v8::Local<v8::Object> buffer)
+      : z(z0),
+        x(x0),
+        y(y0),
+        data(node::Buffer::Data(buffer),node::Buffer::Length(buffer)) {
+           buffer_ref.Reset(buffer.As<v8::Object>());
+        }
+
+    // explicitly use the destructor to clean up
+    // the persistent buffer ref by Reset()-ing
+    ~TileObject() {
+        buffer_ref.Reset();
+    }
+
+    // guarantee that objects are not being copied by deleting the
+    // copy and move definitions
+
+    // non-copyable
+    TileObject( TileObject const& ) = delete;
+    TileObject& operator=(TileObject const& ) = delete;
+
+    // non-movable
+    TileObject( TileObject && ) = delete;
+    TileObject& operator=(TileObject && ) = delete;
+
+    std::uint32_t z;
+    std::uint32_t x;
+    std::uint32_t y;
+    vtzero::data_view data;
+    Nan::Persistent<v8::Object> buffer_ref;
+};
+
+struct QueryData {
+    QueryData(std::uint32_t num_tiles) {
+        tiles.reserve(num_tiles);
+    }
+    ~QueryData() = default;
+
+    // guarantee that objects are not being copied by deleting the
+    // copy and move definitions
+
+    // non-copyable
+    QueryData( QueryData const& ) = delete;
+    QueryData& operator=(QueryData const& ) = delete;
+
+    // non-movable
+    QueryData( QueryData && ) = delete;
+    QueryData& operator=(QueryData && ) = delete;
+
+    // buffers object thing
+    std::vector<std::unique_ptr<TileObject>> tiles;
+
+    // lng/lat
+    double latitude = 0.0;
+    double longitude = 0.0;
+
+    // options
+    double radius = 0.0;
+    std::uint32_t results_length = 5;
+    std::vector<std::string> layers{};
+    std::string geometry{};
+};
+
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
-    Worker(Nan::Callback* callback)
-        : Base(callback), result_{"hello"} {}
+    Worker(std::unique_ptr<QueryData> query_data,
+           Nan::Callback* callback)
+        : Base(callback),
+          query_data_(std::move(query_data)) {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
     // - You do not have access to Javascript v8 objects here.
     void Execute() override {
         try {
+            // Get the object from the unique_ptr
+            //QueryData const& data = *query_data_;
             // do the stuff here
-        }
-        catch (const std::exception& e) {
+        } catch (const std::exception& e) {
             SetErrorMessage(e.what());
         }
     }
@@ -41,16 +112,17 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
+        std::string result("todo results here");
         const auto argc = 2u;
         v8::Local<v8::Value> argv[argc] = {
-            Nan::Null(), Nan::New<v8::String>(result_).ToLocalChecked()
+            Nan::Null(), Nan::New<v8::String>(result).ToLocalChecked()
         };
 
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
         callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
 
-    std::string result_;
+    std::unique_ptr<QueryData> query_data_;
 };
 
 NAN_METHOD(vtquery) {
@@ -68,75 +140,81 @@ NAN_METHOD(vtquery) {
       // must have `x` int >= 0
       // must have `y` int >= 0
     if (!info[0]->IsArray()) {
-        return utils::CallbackError("first arg 'buffers' must be an array of objects", callback);
+        return utils::CallbackError("first arg 'tiles' must be an array of tile objects", callback);
     }
 
-    v8::Local<v8::Array> buffers_arr_val = info[0].As<v8::Array>();
-    unsigned num_buffers = buffers_arr_val->Length();
+    v8::Local<v8::Array> tiles_arr_val = info[0].As<v8::Array>();
+    unsigned num_tiles = tiles_arr_val->Length();
 
-    if (num_buffers <= 0) {
-      return utils::CallbackError("'buffers' array must be of length greater than 0", callback);
-  }
+    if (num_tiles <= 0) {
+        return utils::CallbackError("'tiles' array must be of length greater than 0", callback);
+    }
 
-    // std::vector<> - some sort of storage mechanism for buffers and their zxy values here
-    for (unsigned b=0; b < num_buffers; ++b) {
-        v8::Local<v8::Value> buffers_val = buffers_arr_val->Get(b);
-        if (!buffers_val->IsObject()) {
-            return utils::CallbackError("items in 'buffers' array must be objects", callback);
+    std::unique_ptr<QueryData> query_data{new QueryData(num_tiles)};
+
+    for (unsigned t=0; t < num_tiles; ++t) {
+        v8::Local<v8::Value> tile_val = tiles_arr_val->Get(t);
+        if (!tile_val->IsObject()) {
+            return utils::CallbackError("items in 'tiles' array must be objects", callback);
         }
-        v8::Local<v8::Object> buffers_obj = buffers_val->ToObject();
+        v8::Local<v8::Object> tile_obj = tile_val->ToObject();
 
         // check buffer value
-        if (!buffers_obj->Has(Nan::New("buffer").ToLocalChecked())) {
-            return utils::CallbackError("item in 'buffers' array object does not include a buffer value", callback);
+        if (!tile_obj->Has(Nan::New("buffer").ToLocalChecked())) {
+            return utils::CallbackError("item in 'tiles' array does not include a buffer value", callback);
         }
-        v8::Local<v8::Value> buf_val = buffers_obj->Get(Nan::New("buffer").ToLocalChecked());
+        v8::Local<v8::Value> buf_val = tile_obj->Get(Nan::New("buffer").ToLocalChecked());
         if (buf_val->IsNull() || buf_val->IsUndefined()) {
-            return utils::CallbackError("buffer value in 'buffers' array is null or undefined", callback);
+            return utils::CallbackError("buffer value in 'tiles' array item is null or undefined", callback);
         }
-        v8::Local<v8::Value> buffer = buf_val->ToObject();
+        v8::Local<v8::Object> buffer = buf_val->ToObject();
         if (!node::Buffer::HasInstance(buffer)) {
-            return utils::CallbackError("buffer value in 'buffers' array is not a true buffer", callback);
+            return utils::CallbackError("buffer value in 'tiles' array item is not a true buffer", callback);
         }
 
         // check z,x,y values
-        if (!buffers_obj->Has(Nan::New("z").ToLocalChecked())) {
-            return utils::CallbackError("item in 'buffers' array object does not include a 'z' value", callback);
+        if (!tile_obj->Has(Nan::New("z").ToLocalChecked())) {
+            return utils::CallbackError("item in 'tiles' array does not include a 'z' value", callback);
         }
-        v8::Local<v8::Value> z_val = buffers_obj->Get(Nan::New("z").ToLocalChecked());
+        v8::Local<v8::Value> z_val = tile_obj->Get(Nan::New("z").ToLocalChecked());
         if (!z_val->IsNumber()) {
-            return utils::CallbackError("'z' value in 'buffers' array is not a number", callback);
+            return utils::CallbackError("'z' value in 'tiles' array item is not a number", callback);
         }
         int z = z_val->IntegerValue();
         if (z < 0) {
             return utils::CallbackError("'z' value must not be less than zero", callback);
         }
 
-        if (!buffers_obj->Has(Nan::New("x").ToLocalChecked())) {
-            return utils::CallbackError("item in 'buffers' array object does not include a 'x' value", callback);
+        if (!tile_obj->Has(Nan::New("x").ToLocalChecked())) {
+            return utils::CallbackError("item in 'tiles' array does not include a 'x' value", callback);
         }
-        v8::Local<v8::Value> x_val = buffers_obj->Get(Nan::New("x").ToLocalChecked());
+        v8::Local<v8::Value> x_val = tile_obj->Get(Nan::New("x").ToLocalChecked());
         if (!x_val->IsNumber()) {
-            return utils::CallbackError("'x' value in 'buffers' array is not a number", callback);
+            return utils::CallbackError("'x' value in 'tiles' array item is not a number", callback);
         }
         int x = x_val->IntegerValue();
         if (x < 0) {
             return utils::CallbackError("'x' value must not be less than zero", callback);
         }
 
-        if (!buffers_obj->Has(Nan::New("y").ToLocalChecked())) {
-            return utils::CallbackError("item in 'buffers' array object does not include a 'y' value", callback);
+        if (!tile_obj->Has(Nan::New("y").ToLocalChecked())) {
+            return utils::CallbackError("item in 'tiles' array does not include a 'y' value", callback);
         }
-        v8::Local<v8::Value> y_val = buffers_obj->Get(Nan::New("y").ToLocalChecked());
+        v8::Local<v8::Value> y_val = tile_obj->Get(Nan::New("y").ToLocalChecked());
         if (!y_val->IsNumber()) {
-            return utils::CallbackError("'y' value in 'buffers' array is not a number", callback);
+            return utils::CallbackError("'y' value in 'tiles' array item is not a number", callback);
         }
         int y = y_val->IntegerValue();
         if (y < 0) {
             return utils::CallbackError("'y' value must not be less than zero", callback);
         }
 
-        // append to std::vector value defined above
+        // in-place construction
+        std::unique_ptr<TileObject> tile{new TileObject{static_cast<std::uint32_t>(z),
+                                                        static_cast<std::uint32_t>(x),
+                                                        static_cast<std::uint32_t>(y),
+                                                        buffer}};
+        query_data->tiles.push_back(std::move(tile));
     }
 
     // validate lng/lat array
@@ -155,9 +233,6 @@ NAN_METHOD(vtquery) {
     if (!lng_val->IsNumber() || !lat_val->IsNumber()) {
         return utils::CallbackError("lnglat values must be numbers", callback);
     }
-
-    // double lng = lng_val->NumberValue();
-    // double lat = lat_val->NumberValue();
 
     // validate options object if it exists
     if (info.Length() > 3) {
@@ -253,7 +328,7 @@ NAN_METHOD(vtquery) {
         }
     }
 
-    auto* worker = new Worker{new Nan::Callback{callback}};
+    auto* worker = new Worker{std::move(query_data), new Nan::Callback{callback}};
     Nan::AsyncQueueWorker(worker);
 }
 
