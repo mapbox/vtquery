@@ -40,14 +40,14 @@ features that either exist at the query point or features within a radius of the
 
 **Parameters**
 
--   `buffers` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).&lt;[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)>** an array of buffer objects with `buffer`, `z`, `x`, and `y` values specified.
+-   `tiles` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).&lt;[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)>** an array of tile objects with `buffer`, `z`, `x`, and `y` values
 -   `LngLat` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).&lt;[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)>** a query point of longitude and latitude to query, `[lng, lat]`
 -   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)=** 
     -   `options.radius` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)=** radius - the radius to query for features. If your radius is larger than
         the extent of an individual tile, include multiple nearby buffers to collect a realstic list of features (optional, default `0`)
     -   `options.results` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)=** results - the number of results/features returned from the query. (optional, default `5`)
     -   `options.layers` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).&lt;[String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)>=** layers - an array of layer string names to query from. Default is all layers.
-    -   `options.geometryType` **[String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)=** only return features of a particular geometry type. Can be `point`, `linestring`, or `polygon`.
+    -   `options.geometry` **[String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)=** only return features of a particular geometry type. Can be `point`, `linestring`, or `polygon`.
         Defaults to all geometry types.
 
 # Develop

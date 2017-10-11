@@ -161,24 +161,24 @@ NAN_METHOD(vtquery) {
 
         // check buffer value
         if (!tile_obj->Has(Nan::New("buffer").ToLocalChecked())) {
-            return utils::CallbackError("item in 'tiles' array object does not include a buffer value", callback);
+            return utils::CallbackError("item in 'tiles' array does not include a buffer value", callback);
         }
         v8::Local<v8::Value> buf_val = tile_obj->Get(Nan::New("buffer").ToLocalChecked());
         if (buf_val->IsNull() || buf_val->IsUndefined()) {
-            return utils::CallbackError("buffer value in 'tiles' array is null or undefined", callback);
+            return utils::CallbackError("buffer value in 'tiles' array item is null or undefined", callback);
         }
         v8::Local<v8::Object> buffer = buf_val->ToObject();
         if (!node::Buffer::HasInstance(buffer)) {
-            return utils::CallbackError("buffer value in 'tiles' array is not a true buffer", callback);
+            return utils::CallbackError("buffer value in 'tiles' array item is not a true buffer", callback);
         }
 
         // check z,x,y values
         if (!tile_obj->Has(Nan::New("z").ToLocalChecked())) {
-            return utils::CallbackError("item in 'buffers' array object does not include a 'z' value", callback);
+            return utils::CallbackError("item in 'tiles' array does not include a 'z' value", callback);
         }
         v8::Local<v8::Value> z_val = tile_obj->Get(Nan::New("z").ToLocalChecked());
         if (!z_val->IsNumber()) {
-            return utils::CallbackError("'z' value in 'buffers' array is not a number", callback);
+            return utils::CallbackError("'z' value in 'tiles' array item is not a number", callback);
         }
         int z = z_val->IntegerValue();
         if (z < 0) {
@@ -186,11 +186,11 @@ NAN_METHOD(vtquery) {
         }
 
         if (!tile_obj->Has(Nan::New("x").ToLocalChecked())) {
-            return utils::CallbackError("item in 'buffers' array object does not include a 'x' value", callback);
+            return utils::CallbackError("item in 'tiles' array does not include a 'x' value", callback);
         }
         v8::Local<v8::Value> x_val = tile_obj->Get(Nan::New("x").ToLocalChecked());
         if (!x_val->IsNumber()) {
-            return utils::CallbackError("'x' value in 'buffers' array is not a number", callback);
+            return utils::CallbackError("'x' value in 'tiles' array item is not a number", callback);
         }
         int x = x_val->IntegerValue();
         if (x < 0) {
@@ -198,11 +198,11 @@ NAN_METHOD(vtquery) {
         }
 
         if (!tile_obj->Has(Nan::New("y").ToLocalChecked())) {
-            return utils::CallbackError("item in 'buffers' array object does not include a 'y' value", callback);
+            return utils::CallbackError("item in 'tiles' array does not include a 'y' value", callback);
         }
         v8::Local<v8::Value> y_val = tile_obj->Get(Nan::New("y").ToLocalChecked());
         if (!y_val->IsNumber()) {
-            return utils::CallbackError("'y' value in 'buffers' array is not a number", callback);
+            return utils::CallbackError("'y' value in 'tiles' array item is not a number", callback);
         }
         int y = y_val->IntegerValue();
         if (y < 0) {
