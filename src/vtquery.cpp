@@ -70,11 +70,78 @@ NAN_METHOD(vtquery)
 
     // validate buffers
       // must have `buffer` buffer
-      // must have `z` int
-      // must have `x` int
-      // must have `y` int
+      // must have `z` int >= 0
+      // must have `x` int >= 0
+      // must have `y` int >= 0
     if (!info[0]->IsArray())
         return utils::CallbackError("first arg 'buffers' must be an array of objects", callback);
+
+    v8::Local<v8::Array> buffers_arr_val = info[0].As<v8::Array>();
+    unsigned num_buffers = buffers_arr_val->Length();
+
+    if (num_buffers <= 0)
+      return utils::CallbackError("'buffers' array must be of length greater than 0", callback);
+
+    // std::vector<> - some sort of storage mechanism for buffers and their zxy values here
+    for (unsigned b=0; b < num_buffers; ++b) {
+        v8::Local<v8::Value> buffers_val = buffers_arr_val->Get(b);
+        if (!buffers_val->IsObject()) {
+            return utils::CallbackError("items in 'buffers' array must be objects", callback);
+        }
+        v8::Local<v8::Object> buffers_obj = buffers_val->ToObject();
+
+        // check buffer value
+        if (!buffers_obj->Has(Nan::New("buffer").ToLocalChecked())) {
+            return utils::CallbackError("item in 'buffers' array object does not include a buffer value", callback);
+        }
+        v8::Local<v8::Value> buf_val = buffers_obj->Get(Nan::New("buffer").ToLocalChecked());
+        if (buf_val->IsNull() || buf_val->IsUndefined()) {
+            return utils::CallbackError("buffer value in 'buffers' array is null or undefined", callback);
+        }
+        v8::Local<v8::Value> buffer = buf_val->ToObject();
+        if (!node::Buffer::HasInstance(buffer)) {
+            return utils::CallbackError("buffer value in 'buffers' array is not a true buffer", callback);
+        }
+
+        // check z,x,y values
+        if (!buffers_obj->Has(Nan::New("z").ToLocalChecked())) {
+            return utils::CallbackError("item in 'buffers' array object does not include a 'z' value", callback);
+        }
+        v8::Local<v8::Value> z_val = buffers_obj->Get(Nan::New("z").ToLocalChecked());
+        if (!z_val->IsNumber()) {
+            return utils::CallbackError("'z' value in 'buffers' array is not a number", callback);
+        }
+        int z = z_val->IntegerValue();
+        if (z < 0) {
+            return utils::CallbackError("'z' value must not be less than zero", callback);
+        }
+
+        if (!buffers_obj->Has(Nan::New("x").ToLocalChecked())) {
+            return utils::CallbackError("item in 'buffers' array object does not include a 'x' value", callback);
+        }
+        v8::Local<v8::Value> x_val = buffers_obj->Get(Nan::New("x").ToLocalChecked());
+        if (!x_val->IsNumber()) {
+            return utils::CallbackError("'x' value in 'buffers' array is not a number", callback);
+        }
+        int x = x_val->IntegerValue();
+        if (x < 0) {
+            return utils::CallbackError("'x' value must not be less than zero", callback);
+        }
+
+        if (!buffers_obj->Has(Nan::New("y").ToLocalChecked())) {
+            return utils::CallbackError("item in 'buffers' array object does not include a 'y' value", callback);
+        }
+        v8::Local<v8::Value> y_val = buffers_obj->Get(Nan::New("y").ToLocalChecked());
+        if (!y_val->IsNumber()) {
+            return utils::CallbackError("'y' value in 'buffers' array is not a number", callback);
+        }
+        int y = y_val->IntegerValue();
+        if (y < 0) {
+            return utils::CallbackError("'y' value must not be less than zero", callback);
+        }
+
+        // append to std::vector value defined above
+    }
 
     // validate lng/lat array
     if (!info[1]->IsArray())

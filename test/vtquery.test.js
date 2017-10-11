@@ -10,15 +10,209 @@ test('failure: fails without callback function', assert => {
   }
 });
 
-test('failure: buffers is not an object', assert => {
-  vtquery('i am a buffer object', [47.6117, -122.3444], {}, function(err, result) {
+test('failure: buffers is not an array', assert => {
+  vtquery('i am not an array', [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, 'first arg \'buffers\' must be an array of objects');
     assert.end();
   });
 });
 
-// more buffer failure tests
+test('failure: buffers array is empty', assert => {
+  const buffs = [];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'buffers\' array must be of length greater than 0');
+    assert.end();
+  });
+});
+
+test('failure: item in buffers array is not an object', assert => {
+  const buffs = [
+    'not an object'
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'items in \'buffers\' array must be objects');
+    assert.end();
+  });
+});
+
+test('failure: buffer value is null', assert => {
+  const buffs = [
+    {
+      buffer: null,
+      z: 0,
+      x: 0,
+      y: 0
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'buffer value in \'buffers\' array is null or undefined');
+    assert.end();
+  });
+});
+
+test('failure: buffer value is not a buffer', assert => {
+  const buffs = [
+    {
+      buffer: 'not a buffer',
+      z: 0,
+      x: 0,
+      y: 0
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'buffer value in \'buffers\' array is not a true buffer');
+    assert.end();
+  });
+});
+
+test('failure: buffer object missing z value', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      // z: 0,
+      x: 0,
+      y: 0
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'item in \'buffers\' array object does not include a \'z\' value');
+    assert.end();
+  });
+});
+
+test('failure: buffer object missing x value', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      z: 0,
+      // x: 0,
+      y: 0
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'item in \'buffers\' array object does not include a \'x\' value');
+    assert.end();
+  });
+});
+
+test('failure: buffer object missing y value', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      z: 0,
+      x: 0,
+      // y: 0
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'item in \'buffers\' array object does not include a \'y\' value');
+    assert.end();
+  });
+});
+
+test('failure: buffer object z value is not a number', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      z: 'zero',
+      x: 0,
+      y: 0
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'z\' value in \'buffers\' array is not a number');
+    assert.end();
+  });
+});
+
+test('failure: buffer object x value is not a number', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      z: 0,
+      x: 'zero',
+      y: 0
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'x\' value in \'buffers\' array is not a number');
+    assert.end();
+  });
+});
+
+test('failure: buffer object y value is not a number', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      z: 0,
+      x: 0,
+      y: 'zero'
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'y\' value in \'buffers\' array is not a number');
+    assert.end();
+  });
+});
+
+test('failure: buffer object z value is negative', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      z: -10,
+      x: 0,
+      y: 0
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'z\' value must not be less than zero');
+    assert.end();
+  });
+});
+
+test('failure: buffer object x value is negative', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      z: 0,
+      x: -5,
+      y: 0
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'x\' value must not be less than zero');
+    assert.end();
+  });
+});
+
+test('failure: buffer object y value is negative', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      z: 0,
+      x: 0,
+      y: -4
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'y\' value must not be less than zero');
+    assert.end();
+  });
+});
 
 test('failure: lnglat is not an array', assert => {
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], '[47.6117, -122.3444]', {}, function(err, result) {
