@@ -234,9 +234,6 @@ NAN_METHOD(vtquery) {
         return utils::CallbackError("lnglat values must be numbers", callback);
     }
 
-    // double lng = lng_val->NumberValue();
-    // double lat = lat_val->NumberValue();
-
     // validate options object if it exists
     if (info.Length() > 3) {
         // set defaults
