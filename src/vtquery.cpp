@@ -76,7 +76,7 @@ struct QueryData {
 
     // options
     double radius = 0.0;
-    std::uint32_t results_length = 5;
+    std::uint32_t num_results = 5;
     std::vector<std::string> layers{};
     std::string geometry{};
 };
@@ -95,7 +95,7 @@ struct Worker : Nan::AsyncWorker {
     void Execute() override {
         try {
             // Get the object from the unique_ptr
-            //QueryData const& data = *query_data_;
+            // QueryData const& data = *query_data_;
             // do the stuff here
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
@@ -112,7 +112,11 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
-        std::string result("todo results here");
+        // QueryData const& data = *query_data_;
+        // double lng = data.longitude;
+        std::string result = "hello";
+
+        // std::string result("longitude: " + lng);
         const auto argc = 2u;
         v8::Local<v8::Value> argv[argc] = {
             Nan::Null(), Nan::New<v8::String>(result).ToLocalChecked()
@@ -233,14 +237,12 @@ NAN_METHOD(vtquery) {
     if (!lng_val->IsNumber() || !lat_val->IsNumber()) {
         return utils::CallbackError("lnglat values must be numbers", callback);
     }
+    query_data->longitude = lng_val->NumberValue();
+    query_data->latitude = lat_val->NumberValue();
 
     // validate options object if it exists
+    // defaults are set in the QueryData struct.
     if (info.Length() > 3) {
-        // set defaults
-        double radius = 0.0;
-        int results = 5;
-        bool custom_layers = false;
-        bool custom_geometry = false;
 
         if (!info[2]->IsObject()) {
             return utils::CallbackError("'options' arg must be an object", callback);
@@ -254,24 +256,28 @@ NAN_METHOD(vtquery) {
                 return utils::CallbackError("'radius' must be a number", callback);
             }
 
-            radius = radius_val->NumberValue();
-
+            double radius = radius_val->NumberValue();
             if (radius < 0.0) {
                 return utils::CallbackError("'radius' must be a positive number", callback);
             }
+
+            query_data->radius = radius;
         }
 
-        if (options->Has(Nan::New("results").ToLocalChecked())) {
-            v8::Local<v8::Value> results_val = options->Get(Nan::New("results").ToLocalChecked());
-            if (!results_val->IsNumber()) {
-                return utils::CallbackError("'results' must be a number", callback);
+        if (options->Has(Nan::New("numResults").ToLocalChecked())) {
+            v8::Local<v8::Value> num_results_val = options->Get(Nan::New("numResults").ToLocalChecked());
+            if (!num_results_val->IsNumber()) {
+                return utils::CallbackError("'numResults' must be a number", callback);
             }
 
-            results = results_val->IntegerValue();
-
-            if (results < 0) {
-                return utils::CallbackError("'results' must be a positive number", callback);
+            // TODO(sam) using std::uint32_t results in a "comparison of unsigned expression" error
+            // what's the best way to check that a number isn't negative but also assigning it a proper value?
+            std::int32_t num_results = num_results_val->IntegerValue();
+            if (num_results < 0) {
+                return utils::CallbackError("'numResults' must be a positive number", callback);
             }
+
+            query_data->num_results = num_results;
         }
 
         if (options->Has(Nan::New("layers").ToLocalChecked())) {
@@ -285,9 +291,6 @@ NAN_METHOD(vtquery) {
 
             // only gather layers if there are some in the array
             if (num_layers > 0) {
-                custom_layers = true;
-                std::vector<std::string> layers;
-                layers.reserve(num_layers);
                 for (unsigned j=0; j < num_layers; ++j) {
                     v8::Local<v8::Value> layer_val = layers_arr->Get(j);
                     if (!layer_val->IsString()) {
@@ -301,14 +304,12 @@ NAN_METHOD(vtquery) {
                     }
 
                     std::string layer(*layer_utf8_value, layer_str_len);
-                    layers.push_back(layer);
+                    query_data->layers.push_back(layer);
                 }
             }
         }
 
         if (options->Has(Nan::New("geometry").ToLocalChecked())) {
-            custom_geometry = true;
-
             v8::Local<v8::Value> geometry_val = options->Get(Nan::New("geometry").ToLocalChecked());
             if (!geometry_val->IsString()) {
                 return utils::CallbackError("'geometry' option must be a string", callback);
@@ -325,6 +326,8 @@ NAN_METHOD(vtquery) {
             if (geometry != "point" && geometry != "linestring" && geometry != "polygon") {
                 return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
             }
+
+            query_data->geometry = geometry;
         }
     }
 

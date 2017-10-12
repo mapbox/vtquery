@@ -1,5 +1,7 @@
 const test = require('tape');
 const vtquery = require('../lib/index.js');
+// const mvtFixtures = require('@mapbox/mvt-fixtures');
+const fs = require('fs');
 
 test('failure: fails without callback function', assert => {
   try {
@@ -349,6 +351,15 @@ test('failure: options.geometry does not equal an accepted value', assert => {
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'geometry\' must be \'point\', \'linestring\', or \'polygon\'');
+    assert.end();
+  });
+});
+
+test('success: no options - all defaults', assert => {
+  const buffer = fs.readFileSync(__dirname + '/../node_modules/@mapbox/mvt-fixtures/fixtures/043/tile.mvt');
+  vtquery([{buffer: buffer, z: 0, x: 0, y: 0}], [47.6, -122.3], function(err, result) {
+    assert.ifError(err);
+    console.log(result);
     assert.end();
   });
 });
