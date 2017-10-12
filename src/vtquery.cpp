@@ -184,7 +184,7 @@ NAN_METHOD(vtquery) {
         if (!z_val->IsNumber()) {
             return utils::CallbackError("'z' value in 'tiles' array item is not a number", callback);
         }
-        int z = z_val->IntegerValue();
+        std::int64_t z = z_val->IntegerValue();
         if (z < 0) {
             return utils::CallbackError("'z' value must not be less than zero", callback);
         }
@@ -196,7 +196,7 @@ NAN_METHOD(vtquery) {
         if (!x_val->IsNumber()) {
             return utils::CallbackError("'x' value in 'tiles' array item is not a number", callback);
         }
-        int x = x_val->IntegerValue();
+        std::int64_t x = x_val->IntegerValue();
         if (x < 0) {
             return utils::CallbackError("'x' value must not be less than zero", callback);
         }
@@ -208,7 +208,7 @@ NAN_METHOD(vtquery) {
         if (!y_val->IsNumber()) {
             return utils::CallbackError("'y' value in 'tiles' array item is not a number", callback);
         }
-        int y = y_val->IntegerValue();
+        std::int64_t y = y_val->IntegerValue();
         if (y < 0) {
             return utils::CallbackError("'y' value must not be less than zero", callback);
         }
@@ -272,12 +272,14 @@ NAN_METHOD(vtquery) {
 
             // TODO(sam) using std::uint32_t results in a "comparison of unsigned expression" error
             // what's the best way to check that a number isn't negative but also assigning it a proper value?
-            std::int32_t num_results = num_results_val->IntegerValue();
+            std::int32_t num_results = num_results_val->Int32Value();
             if (num_results < 0) {
                 return utils::CallbackError("'numResults' must be a positive number", callback);
             }
 
-            query_data->num_results = num_results;
+            // TODO(sam) do we need to cast here? Or can we safely use an Int32Value knowing that it isn't negative
+            // thanks to the check above
+            query_data->num_results = static_cast<std::uint32_t>(num_results);
         }
 
         if (options->Has(Nan::New("layers").ToLocalChecked())) {
@@ -303,7 +305,7 @@ NAN_METHOD(vtquery) {
                         return utils::CallbackError("'layers' values must be non-empty strings", callback);
                     }
 
-                    std::string layer(*layer_utf8_value, layer_str_len);
+                    std::string layer(*layer_utf8_value, static_cast<std::size_t>(layer_str_len));
                     query_data->layers.push_back(layer);
                 }
             }
@@ -316,12 +318,12 @@ NAN_METHOD(vtquery) {
             }
 
             Nan::Utf8String geometry_utf8_value(geometry_val);
-            int geometry_str_len = geometry_utf8_value.length();
+            std::int32_t geometry_str_len = geometry_utf8_value.length();
             if (geometry_str_len <= 0) {
               return utils::CallbackError("'geometry' value must be a non-empty string", callback);
             }
 
-            std::string geometry(*geometry_utf8_value, geometry_str_len);
+            std::string geometry(*geometry_utf8_value, static_cast<std::size_t>(geometry_str_len));
 
             if (geometry != "point" && geometry != "linestring" && geometry != "polygon") {
                 return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);

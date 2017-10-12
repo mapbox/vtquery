@@ -295,22 +295,23 @@ test('failure: options.radius is negative', assert => {
 
 test('failure: options.results is not a number', assert => {
   const opts = {
-    results: 'hi'
+    numResults: 'hi'
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+    console.log('ERROR', err);
     assert.ok(err);
-    assert.equal(err.message, '\'results\' must be a number');
+    assert.equal(err.message, '\'numResults\' must be a number');
     assert.end();
   });
 });
 
 test('failure: options.results is negative', assert => {
   const opts = {
-    results: -10
+    numResults: -10
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'results\' must be a positive number');
+    assert.equal(err.message, '\'numResults\' must be a positive number');
     assert.end();
   });
 });
