@@ -38,6 +38,21 @@ test('failure: item in buffers array is not an object', assert => {
   });
 });
 
+test('failure: buffer value does not exist', assert => {
+  const buffs = [
+    {
+      z: 0,
+      x: 0,
+      y: 0
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'item in \'tiles\' array does not include a buffer value');
+    assert.end();
+  });
+});
+
 test('failure: buffer value is null', assert => {
   const buffs = [
     {
@@ -349,6 +364,17 @@ test('failure: options.geometry does not equal an accepted value', assert => {
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'geometry\' must be \'point\', \'linestring\', or \'polygon\'');
+    assert.end();
+  });
+});
+
+test('failure: options.geometry must not be empty', assert => {
+  const opts = {
+    geometry: ''
+  };
+  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'geometry\' value must be a non-empty string');
     assert.end();
   });
 });
