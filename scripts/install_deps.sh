@@ -14,6 +14,7 @@ source local.env
 
 install geometry 0.9.2
 install variant 1.1.4
-# install vtzero ...
-# install protozero ...
-# install spatial-algorithms ...
+install vtzero 556fac5
+install protozero ccf6c39
+install spatial-algorithms 2904283
+install boost 1.65.1
