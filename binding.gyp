@@ -10,7 +10,8 @@
         "-isystem <(module_root_dir)/<!(node -e \"require('nan')\")",
         "-isystem <(module_root_dir)/mason_packages/.link/include/",
         "-isystem <(module_root_dir)/../vtzero/include",
-        "-isystem <(module_root_dir)/../protozero/include"
+        "-isystem <(module_root_dir)/../protozero/include",
+        "-isystem <(module_root_dir)/../spatial-algorithms/include"
       ],
       'compiler_checks': [
         '-Wall',

@@ -1,6 +1,7 @@
 const test = require('tape');
 const vtquery = require('../lib/index.js');
-// const mvtFixtures = require('@mapbox/mvt-fixtures');
+const mvtFixtures = require('@mapbox/mvt-fixtures');
+const queue = require('d3-queue').queue;
 const fs = require('fs');
 
 test('failure: fails without callback function', assert => {
@@ -231,6 +232,28 @@ test('failure: buffer object y value is negative', assert => {
   });
 });
 
+test('failure: buffer object z values don\'t match', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      z: 0,
+      x: 0,
+      y: 0
+    },
+    {
+      buffer: new Buffer('hi'),
+      z: 1,
+      x: 1,
+      y: 1
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'z\' values do not match across all tiles in the \'tiles\' array');
+    assert.end();
+  });
+});
+
 test('failure: lnglat is not an array', assert => {
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], '[47.6117, -122.3444]', {}, function(err, result) {
     assert.ok(err);
@@ -378,6 +401,34 @@ test('failure: options.geometry must not be empty', assert => {
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'geometry\' value must be a non-empty string');
+    assert.end();
+  });
+});
+
+test('success: defaults', assert => {
+  vtquery([{buffer: mvtFixtures.get('043').buffer, z: 0, x: 0, y: 0}], [47.6, -122.3], function(err, result) {
+    assert.ifError(err);
+    console.log(result);
+    assert.end();
+  });
+});
+
+test('mvt-fixtures', assert => {
+  const q = queue(5);
+
+  function testFixture(fixture, callback) {
+    vtquery([{buffer: fixture.buffer, z: 0, x: 0, y: 0}], [47.6, -122.3], function(err, result) {
+      // something if invalid fixture, make sure there's an error
+      // if valid, do something
+      return callback();
+    });
+  }
+
+  mvtFixtures.each(f => {
+    q.defer(testFixture, f);
+  });
+
+  q.awaitAll((err, data) => {
     assert.end();
   });
 });

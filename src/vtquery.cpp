@@ -6,13 +6,38 @@
 #include <iostream>
 #include <map>
 #include <stdexcept>
-// #include <mapbox/geometry/geometry.hpp>
-// #include <mapbox/geometry/algorithms/closest_point.hpp>
+#include <mapbox/geometry/geometry.hpp>
+#include <mapbox/geometry/algorithms/closest_point.hpp>
 #include <vtzero/vector_tile.hpp>
 #include <vtzero/types.hpp>
-// #include <mapbox/variant.hpp>
+#include <mapbox/variant.hpp>
+
+#include "geometry_processors.hpp"
+#include "reproject.hpp"
 
 namespace VectorTileQuery {
+
+struct ResultObject {
+    ResultObject(
+        std::uint32_t z0,
+        std::uint32_t x0,
+        std::uint32_t y0,
+        mapbox::geometry::algorithms::closest_point_info cp_info0,
+        vtzero::feature feature0)
+      : z(z0),
+        x(x0),
+        y(y0),
+        cp_info(cp_info0),
+        feature(feature0) {}
+
+    ~ResultObject() = default;
+
+    std::uint32_t z;
+    std::uint32_t x;
+    std::uint32_t y;
+    mapbox::geometry::algorithms::closest_point_info cp_info;
+    vtzero::feature feature;
+};
 
 struct TileObject {
     TileObject(std::uint32_t z0,
@@ -74,6 +99,9 @@ struct QueryData {
     double latitude = 0.0;
     double longitude = 0.0;
 
+    // zoom - determined by tiles array in validation
+    std::int32_t zoom = 0;
+
     // options
     double radius = 0.0;
     std::uint32_t num_results = 5;
@@ -95,8 +123,147 @@ struct Worker : Nan::AsyncWorker {
     void Execute() override {
         try {
             // Get the object from the unique_ptr
-            // QueryData const& data = *query_data_;
-            // do the stuff here
+            QueryData const& data = *query_data_;
+
+            /* QUERY POINT
+
+               The query point will be in tile coordinates eventually. This means we need to convert
+               lng/lat values into tile coordinates based on the z value of the current tile.
+
+               If the xy of the current tile do not intersect the lng/lat, let's determine how far away
+               the current buffer is in tile coordinates from the query point (now in tile coords). This
+               means we'll need to store the origin x/y tile values to refer back to when looping through
+               each tile.
+            */
+
+            // convert lng/lat to tile coordinates with z value (also get tile XY location)
+            // std::int64_t origin_X = ...
+            // std::int64_t origin_Y = ...
+            // std::int32_t origin_tileX = ...
+            // std::int32_t origin_tileY = ...
+            // std::uint32_t extent = ...
+
+            // storage mechanisms for features and layers
+            std::deque<vtzero::layer> layers;
+            std::vector<ResultObject> features;
+
+            /* EACH TILE OBJECT
+
+               At this point we've verified all tiles are of the same zoom level, so we work with that
+               since it has been stored in the QueryData struct
+            */
+            for (auto const& tile_ptr : data.tiles) {
+
+                // tile object
+                TileObject const& tile_obj = *tile_ptr;
+
+                // calculate a relative for the current tile based on origin x/y and origin tile x/y values
+                // if the current tile x/y match the origin x/y, just create a query_point then
+                // if (tile_obj.x == origin_tileX && tile_obj.y == origin_tileY) {
+                //     mapbox::geometry::point<std::int64_t> query_point{origin_X,origin_Y};
+                // } else {
+                //     std::utin32_t diff_tileX = tile_obj.x - origin_tileX;
+                //     std::utin32_t diff_tileY = tile_obj.y - origin_tileY;
+                //     std::int64_t nX = -(diff_tileX * extent) + origin_X;
+                //     std::int64_t nY = -(diff_tileY * extent) + origin_Y;
+                //     mapbox::geometry::point<std::int64_t> query_point{nX,nY};
+                // }
+                mapbox::geometry::point<std::int64_t> query_point{10,15};
+
+                // use vtzero to get geometry info
+                vtzero::vector_tile tile{tile_obj.data};
+
+                while (auto layer = tile.next_layer()) {
+                    // storing layers to get properties afterwards
+                    // this is probably not the most efficient, but we're getting it working
+                    layers.emplace_back(layer);
+                    // auto & layer_ref = layers.back();
+                    while (auto feature = layer.next_feature()) {
+
+                        // if we encounter an UNKNOWN geometry, skip the feature
+                        bool skip_feature = false;
+
+                        // create a dummy default geometry structure that will be updated in the switch statement below
+                        mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
+                        // get the geometry type and decode the geometry into mapbox::geometry data structures
+                        switch (feature.geometry_type()) {
+                            case vtzero::GeomType::POINT: {
+                                mapbox::geometry::multi_point<std::int64_t> mpoint;
+                                point_processor proc_point(mpoint);
+                                vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
+                                query_geometry = std::move(mpoint);
+                                break;
+                            }
+                            case vtzero::GeomType::LINESTRING: {
+                                mapbox::geometry::multi_line_string<std::int64_t> mline;
+                                linestring_processor proc_line(mline);
+                                vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
+                                query_geometry = std::move(mline);
+                                break;
+                            }
+                            case vtzero::GeomType::POLYGON: {
+                                mapbox::geometry::multi_polygon<std::int64_t> mpoly;
+                                polygon_processor proc_poly(mpoly);
+                                vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);
+                                query_geometry = std::move(mpoly);
+                                break;
+                            }
+                            default: {
+                                skip_feature = true;
+                                break;
+                            }
+                        }
+
+                        if (!skip_feature) {
+                            // implement closest point algorithm on query geometry and the query point
+                            const auto cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
+
+                            // if the distance is within the threshold, save it
+                            if (cp_info.distance <= data.radius) {
+                                ResultObject r(tile_obj.z, tile_obj.x, tile_obj.y, cp_info, feature);
+                                features.push_back(r);
+                            }
+                        }
+                    } // end tile.layer.feature loop
+
+                    // if we have hits
+                    // decode properties for each hit, with a reference to the layer keys/values
+                    // (included as a pointer in vtzero::feature)
+
+                } // end tile.layer loop
+
+            } // end tile loop
+
+            /* GET 'n' results based on num_results */
+
+
+            // std::clog << "\n---\ntotal features: " << features.size() << "\n";
+            // for (auto const& feature : features) {
+            //     std::clog << "\n" << (&feature - &features[0]) << ")\n";
+            //     std::clog << "x: " << feature.second.x << ", y: " << feature.second.y << ", distance: " << feature.second.distance << "\n";
+            //
+            //     // lng lat
+            //     const auto ll = tile_to_long_lat(tile_z, tile_x, tile_y, feature.second.x, feature.second.y);
+            //     std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
+            //
+            //     for (auto const prop : feature.first) {
+            //         // get key as string
+            //
+            //         std::string key = std::string{prop.key()};
+            //         // get value as mapbox variant
+            //         auto v = vtzero::convert_property_value<variant_type>(prop.value());
+            //         // print them out
+            //         std::clog << " - " << key << ": ";
+            //         mapbox::util::apply_visitor(print_variant(),v);
+            //         std::clog << "\n";
+            //
+            //         // lng lat
+            //         std::uint32_t extent = 4096; // TODO: pull from layer.extent()
+            //         const auto ll = tile_to_long_lat(extent,tile_z, tile_x, tile_y, feature.second.x, feature.second.y);
+            //         std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
+            //     }
+            // }
+
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
         }
@@ -112,9 +279,9 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
-        // QueryData const& data = *query_data_;
-        // double lng = data.longitude;
-        std::string result = "hello";
+        // TODO(sam) turn results vector into JSON object
+        QueryData const& data = *query_data_;
+        std::string result = data.geometry;
 
         // std::string result("longitude: " + lng);
         const auto argc = 2u;
@@ -138,11 +305,7 @@ NAN_METHOD(vtquery) {
     }
     v8::Local<v8::Function> callback = callback_val.As<v8::Function>();
 
-    // validate buffers
-      // must have `buffer` buffer
-      // must have `z` int >= 0
-      // must have `x` int >= 0
-      // must have `y` int >= 0
+    // validate tiles
     if (!info[0]->IsArray()) {
         return utils::CallbackError("first arg 'tiles' must be an array of tile objects", callback);
     }
@@ -184,9 +347,17 @@ NAN_METHOD(vtquery) {
         if (!z_val->IsNumber()) {
             return utils::CallbackError("'z' value in 'tiles' array item is not a number", callback);
         }
-        std::int64_t z = z_val->IntegerValue();
+        std::int32_t z = z_val->Int32Value();
         if (z < 0) {
             return utils::CallbackError("'z' value must not be less than zero", callback);
+        }
+        // set zoom level in QueryData struct if it's the first iteration, otherwise verify zooms match
+        if (t == 0) {
+          query_data->zoom = z;
+        } else {
+          if (z != query_data->zoom) {
+            return utils::CallbackError("'z' values do not match across all tiles in the 'tiles' array", callback);
+          }
         }
 
         if (!tile_obj->Has(Nan::New("x").ToLocalChecked())) {
@@ -305,8 +476,7 @@ NAN_METHOD(vtquery) {
                         return utils::CallbackError("'layers' values must be non-empty strings", callback);
                     }
 
-                    std::string layer(*layer_utf8_value, static_cast<std::size_t>(layer_str_len));
-                    query_data->layers.push_back(layer);
+                    query_data->layers.emplace_back(*layer_utf8_value, static_cast<std::size_t>(layer_str_len));
                 }
             }
         }
