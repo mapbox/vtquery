@@ -6,6 +6,7 @@
 #include <iostream>
 #include <map>
 #include <stdexcept>
+#include <memory>
 // #include <mapbox/geometry/geometry.hpp>
 // #include <mapbox/geometry/algorithms/closest_point.hpp>
 #include <vtzero/vector_tile.hpp>
