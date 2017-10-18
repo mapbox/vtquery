@@ -321,7 +321,6 @@ test('failure: options.results is not a number', assert => {
     numResults: 'hi'
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
-    console.log('ERROR', err);
     assert.ok(err);
     assert.equal(err.message, '\'numResults\' must be a number');
     assert.end();
@@ -413,7 +412,7 @@ test('success: defaults', assert => {
   });
 });
 
-test('mvt-fixtures', assert => {
+test('mvt-fixtures: each', assert => {
   const q = queue(5);
 
   function testFixture(fixture, callback) {
@@ -429,6 +428,15 @@ test('mvt-fixtures', assert => {
   });
 
   q.awaitAll((err, data) => {
+    assert.end();
+  });
+});
+
+test('real-world tests: chicago', assert => {
+  const buffer = fs.readFileSync('../mvt-fixtures/real-world/chicago/13-2098-3042.mvt');
+  vtquery([{buffer: buffer, z: 13, x: 2099, y: 3046}], [47.6, -122.3], {radius: 100}, function(err, result) {
+    assert.ifError(err);
+    assert.ok(true);
     assert.end();
   });
 });

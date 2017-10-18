@@ -1,19 +1,20 @@
 #include "vtquery.hpp"
 #include "util.hpp"
+#include "geometry_processors.hpp"
+#include "reproject.hpp"
 
 #include <deque>
 #include <exception>
 #include <iostream>
 #include <map>
 #include <stdexcept>
+#include <memory>
 #include <mapbox/geometry/geometry.hpp>
 #include <mapbox/geometry/algorithms/closest_point.hpp>
+#include <mapbox/geometry/algorithms/closest_point_impl.hpp>
 #include <vtzero/vector_tile.hpp>
 #include <vtzero/types.hpp>
 #include <mapbox/variant.hpp>
-
-#include "geometry_processors.hpp"
-#include "reproject.hpp"
 
 namespace VectorTileQuery {
 
@@ -22,7 +23,7 @@ struct ResultObject {
         std::uint32_t z0,
         std::uint32_t x0,
         std::uint32_t y0,
-        mapbox::geometry::algorithms::closest_point_info cp_info0,
+        mapbox::geometry::algorithms::closest_point_info<std::int64_t> cp_info0,
         vtzero::feature feature0)
       : z(z0),
         x(x0),
@@ -35,7 +36,7 @@ struct ResultObject {
     std::uint32_t z;
     std::uint32_t x;
     std::uint32_t y;
-    mapbox::geometry::algorithms::closest_point_info cp_info;
+    mapbox::geometry::algorithms::closest_point_info<std::int64_t> cp_info;
     vtzero::feature feature;
 };
 
@@ -219,9 +220,11 @@ struct Worker : Nan::AsyncWorker {
                             const auto cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
 
                             // if the distance is within the threshold, save it
+                            std::clog << "distance: " << cp_info.distance << std::endl;
                             if (cp_info.distance <= data.radius) {
                                 ResultObject r(tile_obj.z, tile_obj.x, tile_obj.y, cp_info, feature);
                                 features.push_back(r);
+                                std::clog << "hit!" << std::endl;
                             }
                         }
                     } // end tile.layer.feature loop
@@ -236,33 +239,32 @@ struct Worker : Nan::AsyncWorker {
 
             /* GET 'n' results based on num_results */
 
+            std::clog << "\n---\ntotal features: " << features.size() << "\n";
+            for (auto const& feature : features) {
+                std::clog << "\n" << (&feature - &features[0]) << ")\n";
+                std::clog << "x: " << feature.x << ", y: " << feature.y << ", distance: " << feature.cp_info.distance << "\n";
 
-            // std::clog << "\n---\ntotal features: " << features.size() << "\n";
-            // for (auto const& feature : features) {
-            //     std::clog << "\n" << (&feature - &features[0]) << ")\n";
-            //     std::clog << "x: " << feature.second.x << ", y: " << feature.second.y << ", distance: " << feature.second.distance << "\n";
-            //
-            //     // lng lat
-            //     const auto ll = tile_to_long_lat(tile_z, tile_x, tile_y, feature.second.x, feature.second.y);
-            //     std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
-            //
-            //     for (auto const prop : feature.first) {
-            //         // get key as string
-            //
-            //         std::string key = std::string{prop.key()};
-            //         // get value as mapbox variant
-            //         auto v = vtzero::convert_property_value<variant_type>(prop.value());
-            //         // print them out
-            //         std::clog << " - " << key << ": ";
-            //         mapbox::util::apply_visitor(print_variant(),v);
-            //         std::clog << "\n";
-            //
-            //         // lng lat
-            //         std::uint32_t extent = 4096; // TODO: pull from layer.extent()
-            //         const auto ll = tile_to_long_lat(extent,tile_z, tile_x, tile_y, feature.second.x, feature.second.y);
-            //         std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
-            //     }
-            // }
+                // lng lat
+                const auto ll = tile_to_long_lat(feature.z, feature.x, feature.y, feature.cp_info.x, feature.cp_info.y);
+                std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
+
+                for (auto const prop : feature.first) {
+                    // get key as string
+
+                    std::string key = std::string{prop.key()};
+                    // get value as mapbox variant
+                    auto v = vtzero::convert_property_value<variant_type>(prop.value());
+                    // print them out
+                    std::clog << " - " << key << ": ";
+                    mapbox::util::apply_visitor(print_variant(),v);
+                    std::clog << "\n";
+
+                    // lng lat
+                    std::uint32_t extent = 4096; // TODO: pull from layer.extent()
+                    const auto ll = tile_to_long_lat(extent,tile_z, tile_x, tile_y, feature.second.x, feature.second.y);
+                    std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
+                }
+            }
 
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());

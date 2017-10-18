@@ -1,4 +1,5 @@
 #include <mapbox/geometry/geometry.hpp>
+#include <vtzero/types.hpp>
 
 // convert the point geometry from vtzero into mapbox geometry point structure
 // https://gist.github.com/artemp/cfe855cbaf0cbc277ce80b5e768e7d0b#file-gistfile1-txt-L24
