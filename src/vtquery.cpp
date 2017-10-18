@@ -237,9 +237,8 @@ struct Worker : Nan::AsyncWorker {
             } // end tile loop
 
             /* GET 'n' results based on num_results */
-
             std::clog << "\n---\ntotal features: " << features.size() << "\n";
-            for (auto const& feature : features) {
+            for (auto feature : features) {
                 std::clog << "\n" << (&feature - &features[0]) << ")\n";
                 std::clog << "x: " << feature.x << ", y: " << feature.y << ", distance: " << feature.cp_info.distance << "\n";
 
@@ -247,13 +246,14 @@ struct Worker : Nan::AsyncWorker {
                 // const auto ll = tile_to_long_lat(4096, feature.z, feature.x, feature.y, feature.cp_info.x, feature.cp_info.y);
                 // std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
 
-                while (auto property = feature.feature.next_property()) {
+                while (auto prop = feature.feature.next_property()) {
+                    std::clog << "are we here?" << std::endl;
                 // for (auto const prop : feature.feature) {
                     // get key as string
 
                     std::string key = std::string{prop.key()};
                     // get value as mapbox variant
-                    auto v = vtzero::convert_property_value<variant_type>(prop.value());
+                    auto v = vtzero::convert_property_value<utils::variant_type>(prop.value());
                     // print them out
                     std::clog << " - " << key << ": ";
                     mapbox::util::apply_visitor(utils::print_variant(), v);
