@@ -3,7 +3,7 @@
 #include "geometry_processors.hpp"
 #include "reproject.hpp"
 
-#include <deque>
+#include <algorithm>
 #include <exception>
 #include <iostream>
 #include <map>
@@ -19,25 +19,25 @@ namespace VectorTileQuery {
 
 struct ResultObject {
     ResultObject(
-        std::uint32_t z0,
-        std::uint32_t x0,
-        std::uint32_t y0,
-        mapbox::geometry::algorithms::closest_point_info<std::int64_t> cp_info0,
-        vtzero::feature feature0)
-      : z(z0),
-        x(x0),
-        y(y0),
-        cp_info(cp_info0),
-        feature(feature0) {}
+        std::pair<double, double> ll,
+        mapbox::geometry::algorithms::closest_point_info<std::int64_t> cp_info,
+        std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> props_map)
+      : longitude(ll.first),
+        latitude(ll.second),
+        distance(cp_info.distance),
+        properties(props_map) {}
 
     ~ResultObject() = default;
 
-    std::uint32_t z;
-    std::uint32_t x;
-    std::uint32_t y;
-    mapbox::geometry::algorithms::closest_point_info<std::int64_t> cp_info;
-    vtzero::feature feature;
+    double longitude;
+    double latitude;
+    double distance;
+    std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> properties;
 };
+
+bool compareByDistance(const ResultObject &a, const ResultObject &b) {
+    return a.distance < b.distance;
+}
 
 struct TileObject {
     TileObject(std::uint32_t z0,
@@ -125,6 +125,9 @@ struct Worker : Nan::AsyncWorker {
             // Get the object from the unique_ptr
             QueryData const& data = *query_data_;
 
+            // storage mechanism for results that are within the query distance (if set)
+            std::vector<ResultObject> hits;
+
             /* QUERY POINT
 
                The query point will be in tile coordinates eventually. This means we need to convert
@@ -143,9 +146,6 @@ struct Worker : Nan::AsyncWorker {
             // std::int32_t origin_tileY = ...
             // std::uint32_t extent = ...
 
-            // storage mechanisms for features and layers
-            std::deque<vtzero::layer> layers;
-            std::vector<ResultObject> features;
 
             /* EACH TILE OBJECT
 
@@ -176,12 +176,9 @@ struct Worker : Nan::AsyncWorker {
                 while (auto layer = tile.next_layer()) {
                     // storing layers to get properties afterwards
                     // this is probably not the most efficient, but we're getting it working
-                    layers.emplace_back(layer);
+                    // layers.emplace_back(layer);
                     // auto & layer_ref = layers.back();
                     while (auto feature = layer.next_feature()) {
-
-                        // if we encounter an UNKNOWN geometry, skip the feature
-                        bool skip_feature = false;
 
                         // create a dummy default geometry structure that will be updated in the switch statement below
                         mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
@@ -209,62 +206,48 @@ struct Worker : Nan::AsyncWorker {
                                 break;
                             }
                             default: {
-                                skip_feature = true;
-                                break;
+                                continue;
                             }
                         }
 
-                        if (!skip_feature) {
-                            // implement closest point algorithm on query geometry and the query point
-                            const auto cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
+                        // implement closest point algorithm on query geometry and the query point
+                        const auto cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
 
-                            // if the distance is within the threshold, save it
-                            std::clog << "distance: " << cp_info.distance << std::endl;
-                            if (cp_info.distance <= data.radius) {
-                                ResultObject r(tile_obj.z, tile_obj.x, tile_obj.y, cp_info, feature);
-                                features.push_back(r);
-                                std::clog << "hit!" << std::endl;
+                        // if the distance is within the threshold, save it
+                        if (cp_info.distance <= data.radius) {
+
+                            // get lng/lat
+                            std::uint32_t extent = 4096; // TODO: pull from layer.extent()
+                            const auto ll = tile_to_long_lat(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, cp_info.y);
+
+                            // decode properties
+                            using variant_type = mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>;
+                            std::map<std::string, variant_type> properties_map;
+                            while (auto prop = feature.next_property()) {
+                                std::string key = std::string{prop.key()};
+                                variant_type value = vtzero::convert_property_value<variant_type>(prop.value());
+                                properties_map.insert(std::pair<std::string, variant_type>(key, value));
                             }
+
+                            ResultObject r(ll, cp_info, properties_map);
+                            hits.push_back(r);
                         }
                     } // end tile.layer.feature loop
-
-                    // if we have hits
-                    // decode properties for each hit, with a reference to the layer keys/values
-                    // (included as a pointer in vtzero::feature)
-
                 } // end tile.layer loop
-
             } // end tile loop
 
-            /* GET 'n' results based on num_results */
-            std::clog << "\n---\ntotal features: " << features.size() << "\n";
-            for (auto feature : features) {
-                std::clog << "\n" << (&feature - &features[0]) << ")\n";
-                std::clog << "x: " << feature.x << ", y: " << feature.y << ", distance: " << feature.cp_info.distance << "\n";
-
-                // lng lat
-                // const auto ll = tile_to_long_lat(4096, feature.z, feature.x, feature.y, feature.cp_info.x, feature.cp_info.y);
-                // std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
-
-                while (auto prop = feature.feature.next_property()) {
-                    std::clog << "are we here?" << std::endl;
-                // for (auto const prop : feature.feature) {
-                    // get key as string
-
-                    std::string key = std::string{prop.key()};
-                    // get value as mapbox variant
-                    auto v = vtzero::convert_property_value<utils::variant_type>(prop.value());
-                    // print them out
-                    std::clog << " - " << key << ": ";
-                    mapbox::util::apply_visitor(utils::print_variant(), v);
-                    std::clog << "\n";
-
-                    // lng lat
-                    std::uint32_t extent = 4096; // TODO: pull from layer.extent()
-                    const auto ll = tile_to_long_lat(extent, feature.z, feature.x, feature.y, feature.cp_info.x, feature.cp_info.y);
-                    std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
-                }
+            // sort hits
+            std::clog << "before sort:" << std::endl;
+            for (auto h : hits) {
+                std::clog << h.distance << std::endl;
             }
+
+            std::sort(hits.begin(), hits.end(), compareByDistance);
+            std::clog << "\nafter sort:" << std::endl;
+            for (auto h : hits) {
+                std::clog << h.distance << std::endl;
+            }
+
 
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
