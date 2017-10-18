@@ -14,7 +14,6 @@
 #include <mapbox/geometry/algorithms/closest_point_impl.hpp>
 #include <vtzero/vector_tile.hpp>
 #include <vtzero/types.hpp>
-#include <mapbox/variant.hpp>
 
 namespace VectorTileQuery {
 
@@ -245,10 +244,11 @@ struct Worker : Nan::AsyncWorker {
                 std::clog << "x: " << feature.x << ", y: " << feature.y << ", distance: " << feature.cp_info.distance << "\n";
 
                 // lng lat
-                const auto ll = tile_to_long_lat(feature.z, feature.x, feature.y, feature.cp_info.x, feature.cp_info.y);
-                std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
+                // const auto ll = tile_to_long_lat(4096, feature.z, feature.x, feature.y, feature.cp_info.x, feature.cp_info.y);
+                // std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
 
-                for (auto const prop : feature.first) {
+                while (auto property = feature.feature.next_property()) {
+                // for (auto const prop : feature.feature) {
                     // get key as string
 
                     std::string key = std::string{prop.key()};
@@ -256,12 +256,12 @@ struct Worker : Nan::AsyncWorker {
                     auto v = vtzero::convert_property_value<variant_type>(prop.value());
                     // print them out
                     std::clog << " - " << key << ": ";
-                    mapbox::util::apply_visitor(print_variant(),v);
+                    mapbox::util::apply_visitor(utils::print_variant(), v);
                     std::clog << "\n";
 
                     // lng lat
                     std::uint32_t extent = 4096; // TODO: pull from layer.extent()
-                    const auto ll = tile_to_long_lat(extent,tile_z, tile_x, tile_y, feature.second.x, feature.second.y);
+                    const auto ll = tile_to_long_lat(extent, feature.z, feature.x, feature.y, feature.cp_info.x, feature.cp_info.y);
                     std::clog << "lng: " << ll.first << ", lat: " << ll.second << "\n";
                 }
             }

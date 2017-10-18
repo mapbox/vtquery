@@ -1,5 +1,7 @@
 #pragma once
 #include <nan.h>
+#include <iostream>
+#include <mapbox/variant.hpp>
 
 namespace utils {
 
@@ -26,4 +28,15 @@ inline void CallbackError(std::string message,
     v8::Local<v8::Value> argv[1] = {Nan::Error(message.c_str())};
     Nan::MakeCallback(Nan::GetCurrentContext()->Global(), callback, 1, argv);
 }
+
+using variant_type = mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>;
+struct print_variant
+{
+    template <typename T>
+    void operator()(T const& val) const
+    {
+        std::clog << val;
+    }
+};
+
 }

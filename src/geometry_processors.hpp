@@ -1,4 +1,5 @@
 #include <mapbox/geometry/geometry.hpp>
+#include <vtzero/vector_tile.hpp>
 #include <vtzero/types.hpp>
 
 // convert the point geometry from vtzero into mapbox geometry point structure
