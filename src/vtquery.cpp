@@ -11,6 +11,7 @@
 #include <mapbox/geometry/geometry.hpp>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 #include <vtzero/types.hpp>
 #include <vtzero/vector_tile.hpp>
 
@@ -24,7 +25,7 @@ struct ResultObject {
         : longitude(ll.first),
           latitude(ll.second),
           distance(cp_info.distance),
-          properties(props_map) {}
+          properties(std::move(props_map)) {}
 
     ~ResultObject() = default;
 
@@ -75,7 +76,7 @@ struct TileObject {
 };
 
 struct QueryData {
-    QueryData(std::uint32_t num_tiles) {
+    explicit QueryData(std::uint32_t num_tiles) {
         tiles.reserve(num_tiles);
     }
     ~QueryData() = default;
