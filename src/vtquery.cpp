@@ -128,23 +128,6 @@ struct Worker : Nan::AsyncWorker {
             // storage mechanism for results that are within the query distance (if set)
             std::vector<ResultObject> hits;
 
-            /* QUERY POINT
-
-               The query point will be in tile coordinates eventually. This means we need to convert
-               lng/lat values into tile coordinates based on the z value of the current tile.
-
-               If the xy of the current tile do not intersect the lng/lat, let's determine how far away
-               the current buffer is in tile coordinates from the query point (now in tile coords). This
-               means we'll need to store the origin x/y tile values to refer back to when looping through
-               each tile.
-            */
-
-            // convert lng/lat to tile coordinates with z value (also get tile XY location)
-            // std::int64_t origin_X = ...
-            // std::int64_t origin_Y = ...
-            // std::int32_t origin_tileX = ...
-            // std::int32_t origin_tileY = ...
-            // std::uint32_t extent = ...
 
 
             /* EACH TILE OBJECT
@@ -157,23 +140,76 @@ struct Worker : Nan::AsyncWorker {
                 // tile object
                 TileObject const& tile_obj = *tile_ptr;
 
-                // calculate a relative for the current tile based on origin x/y and origin tile x/y values
-                // if the current tile x/y match the origin x/y, just create a query_point then
-                // if (tile_obj.x == origin_tileX && tile_obj.y == origin_tileY) {
-                //     mapbox::geometry::point<std::int64_t> query_point{origin_X,origin_Y};
-                // } else {
-                //     std::utin32_t diff_tileX = tile_obj.x - origin_tileX;
-                //     std::utin32_t diff_tileY = tile_obj.y - origin_tileY;
-                //     std::int64_t nX = -(diff_tileX * extent) + origin_X;
-                //     std::int64_t nY = -(diff_tileY * extent) + origin_Y;
-                //     mapbox::geometry::point<std::int64_t> query_point{nX,nY};
-                // }
-                mapbox::geometry::point<std::int64_t> query_point{10,15};
-
                 // use vtzero to get geometry info
                 vtzero::vector_tile tile{tile_obj.data};
 
                 while (auto layer = tile.next_layer()) {
+
+
+
+
+                  /* QUERY POINT
+
+                     The query point will be in tile coordinates eventually. This means we need to convert
+                     lng/lat values into tile coordinates based on the z value of the current tile.
+
+                     If the xy of the current tile do not intersect the lng/lat, let's determine how far away
+                     the current buffer is in tile coordinates from the query point (now in tile coords). This
+                     means we'll need to store the origin x/y tile values to refer back to when looping through
+                     each tile.
+
+                     We need to calculate this for every layer because the "extent" can be different per layer
+                  */
+
+                  // convert lng/lat to tile coordinates with z value (also get tile XY location)
+                  std::uint32_t extent = layer.extent();
+                  mapbox::geometry::point<std::int64_t> query_point = create_relative_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
+                  // std::int64_t origin_X = ...
+                  // std::int64_t origin_Y = ...
+                  // std::int32_t origin_tileX = ...
+                  // std::int32_t origin_tileY = ...
+                  // std::uint32_t extent = ...
+
+                  // calculate a relative for the current tile based on origin x/y and origin tile x/y values
+                  // if the current tile x/y match the origin x/y, just create a query_point then
+                  // if (tile_obj.x == origin_tileX && tile_obj.y == origin_tileY) {
+                  //     mapbox::geometry::point<std::int64_t> query_point{origin_X,origin_Y};
+                  // } else {
+                  //     std::utin32_t diff_tileX = tile_obj.x - origin_tileX;
+                  //     std::utin32_t diff_tileY = tile_obj.y - origin_tileY;
+                  //     std::int64_t nX = -(diff_tileX * extent) + origin_X;
+                  //     std::int64_t nY = -(diff_tileY * extent) + origin_Y;
+                  //     mapbox::geometry::point<std::int64_t> query_point{nX,nY};
+                  // }
+                  // mapbox::geometry::point<std::int64_t> query_point{10,15}; // move into layer loop
+
+                  /* calculate query point
+                      inputs:
+                        - query longitude
+                        - query latitude
+                        - extent
+                        - zoom level
+                        - current tile x/y
+
+                      operations
+                        - convert lng/lat to tile coordinates
+                        - get query point tileX/tileY location
+                        - get difference in origin tile location and active tile location
+                        - get relative tile coordinates
+
+                      output
+                        - relative query point (geometry.hpp point)
+                  */
+
+
+
+
+
+
+
+
+
+
                     // storing layers to get properties afterwards
                     // this is probably not the most efficient, but we're getting it working
                     // layers.emplace_back(layer);
@@ -217,8 +253,8 @@ struct Worker : Nan::AsyncWorker {
                         if (cp_info.distance <= data.radius) {
 
                             // get lng/lat
-                            std::uint32_t extent = 4096; // TODO: pull from layer.extent()
-                            const auto ll = tile_to_long_lat(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, cp_info.y);
+                            // uses "extent" grabbed above in layer loop
+                            const auto ll = convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, cp_info.y);
 
                             // decode properties
                             using variant_type = mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>;

@@ -433,8 +433,10 @@ test('mvt-fixtures: each', assert => {
 });
 
 test('real-world tests: chicago', assert => {
-  const buffer = fs.readFileSync('../mvt-fixtures/real-world/chicago/13-2098-3042.mvt');
-  vtquery([{buffer: buffer, z: 13, x: 2099, y: 3046}], [47.6, -122.3], {radius: 100}, function(err, result) {
+  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
+  const ll = [-87.7919, 41.9487]; // direct hit
+  // const ll = [-87.8229, 41.9503]; // one tile left
+  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 0}, function(err, result) {
     assert.ifError(err);
     assert.ok(true);
     assert.end();
