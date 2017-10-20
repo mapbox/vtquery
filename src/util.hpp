@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 #include <iostream>
+#include <mapbox/cheap_ruler.hpp>
 #include <mapbox/geometry/geometry.hpp>
 #include <mapbox/variant.hpp>
 #include <nan.h>
@@ -64,8 +65,8 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
     double zl_y = ((extent * z2) / 2) * (1.0 - (log(tan(lat_radian) + 1.0 / cos(lat_radian)) / M_PI));
     std::clog << "zl_x: " << zl_x << ", zl_y: " << zl_y << std::endl;
 
-    auto origin_tile_x = floor(zl_x / extent);
-    auto origin_tile_y = floor(zl_y / extent);
+    std::uint64_t origin_tile_x = static_cast<std::uint64_t>(floor(zl_x / extent));
+    std::uint64_t origin_tile_y = static_cast<std::uint64_t>(floor(zl_y / extent));
     std::clog << "origin tile x: " << origin_tile_x << ", origin tile y: " << origin_tile_y << std::endl;
     std::clog << "active tile x: " << active_tile_x << ", active tile y: " << active_tile_y << std::endl;
 
@@ -104,5 +105,20 @@ std::pair<double, double> convert_vt_to_ll(std::uint32_t extent,
     // return a geometry.hpp point instead of a pair
     // mapbox::geometry::point<std::int64_t> query_point{10,15};
     return ll;
+}
+
+/*
+  Get the distance (in meters) between two geometry.hpp points using cheap-ruler
+  https://github.com/mapbox/cheap-ruler-cpp
+
+  The first point is considered the "origin" and its latitude is used to initialize
+  the ruler. The second is considered the "feature" and is the distance to.
+*/
+namespace cr = mapbox::cheap_ruler;
+double distance_in_meters(cr::point origin_lnglat, cr::point feature_lnglat) {
+    // set up cheap ruler with query latitude
+    cr::CheapRuler ruler(origin_lnglat.y, cr::CheapRuler::Meters);
+    auto d = ruler.distance(origin_lnglat, feature_lnglat);
+    return d;
 }
 }

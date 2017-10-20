@@ -128,6 +128,9 @@ struct Worker : Nan::AsyncWorker {
             // storage mechanism for results that are within the query distance (if set)
             std::vector<ResultObject> hits;
 
+            // query point lng/lat geometry.hpp point (used for distance calculation later on)
+            mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
+
             /* EACH TILE OBJECT
 
                At this point we've verified all tiles are of the same zoom level, so we work with that
@@ -191,12 +194,19 @@ struct Worker : Nan::AsyncWorker {
                         // implement closest point algorithm on query geometry and the query point
                         const auto cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
 
+                        // convert x/y into lng/lat point
+                        // TODO(sam) use geometry.hpp points instead of custom pairs
+                        std::pair<double, double> ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, cp_info.y);
+                        mapbox::geometry::point<double> feature_lnglat{ll.first, ll.second};
+                        auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
+                        std::clog << "distance_in_meters: " << meters << std::endl;
+
                         // if the distance is within the threshold, save it
-                        if (cp_info.distance <= data.radius) {
+                        if (meters <= data.radius) {
 
                             // get lng/lat
                             // uses "extent" grabbed above in layer loop
-                            const auto ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, cp_info.y);
+                            // const auto ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, cp_info.y);
 
                             // decode properties
                             using variant_type = mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>;

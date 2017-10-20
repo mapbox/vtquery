@@ -18,3 +18,4 @@ install vtzero 556fac5
 install protozero ccf6c39
 install spatial-algorithms 2904283
 install boost 1.65.1
+install cheap-ruler 2.5.3
