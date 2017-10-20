@@ -1,42 +1,63 @@
 # vtquery
 
-query a vector tile (or multiple) with a lng/lat and radius and get an array of results
+[![Build Status](https://travis-ci.org/mapbox/vtquery.svg?branch=master)](https://travis-ci.org/mapbox/vtquery)
+[![node-cpp-skel](https://mapbox.s3.amazonaws.com/cpp-assets/node-cpp-skel-badge_blue.svg)](https://github.com/mapbox/node-cpp-skel)
 
-uses vtzero, geometry.hpp, and spatial-algorithms
+    npm install @mapbox/vtquery
 
-## Things to remember
+Get the closest features from a longitude/latitude in a set of vector tile buffers. Made possible with node-cpp-skel, vtzero, geometry.hpp, spatial-algorithms, and cheap-ruler-cpp.
 
--   dedupe based on ID in the feature if it exists
--   save a vector of data_views from vtzero once geometry
--   use vtzero to loop through and run geometry against closest_point - add data_view to vector for usage later, and keep moving
--   convert "radius" to tile coordinates
--   work within integers instead of doubles for geometry.hpp
--   determine where to load tile buffers - probably in javascript and pass an array of buffers in?
--   get feature properties from data_views once loop is finished
--   not returning geometry
--   how to handle "radius" across tiles?
-    -   what about keeping the origin relative to the current tile so if you have a tile that is outside of the bounds of the origin point, the origin value increases (or goes negative) this will give distances as real numbers, rather than interpolating based on a relative origin
+The two major use cases for this library are:
 
-## Loop architecture proposals
+1.  To get a list of the features closest to a query point
+2.  Point in polygon checks
 
-**1) double loop** - not the most efficient, but literal and easy to read
+### Response object
 
-Collect all layers in the first loop and save to a `std::deque` to avoid memory reallocation. Loop through features in that new layer copy and save all features with "hits" to a `std::vector` which points to the layer in the deque. Once this loop is finished, use layer deque and features vector to get properties and return information.
+The response object is a GeoJSON FeatureCollection with Point features containing the following in formation:
 
-**2) collect hit features, sort after**
+-   Geometry - always a `Point`. This library does not return full geometries of features. It only returns the closet point (longitude/latitude) of a feature. If the original feature is a point, the result is the actual location of that point. If the original feature is a linestring or polygon, the result is the interpolated closest latitude/longitude point of that feature. This could be _along_ a line of a polygon and not an actual node of a polygon.
+-   Properties of the feature
+-   Extra properties including:
+    -   `tilequery.geometry_type` - either "Point", "Linestring", or "Polygon"
+    -   `tilequery.distance` in meters - if distance is `0`, the query point is _within_ the geometry (point in polygon)
+    -   `tilequery.layer` which layer the feature was a part of in the vecto tile buffer
+-   An `id` if it existed in the vector tile feature
 
-Create a std::vector of features. Loop through layers, loop through their features, and run closeset point algorithm. If a hit, add to the vector of features with properties decoded. Once all features are collected, sort and return top `n` number of results specified by user.
+Here's an example response
 
-**3) collect hit features, sort after**
+```JSON
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.42901,
+          37.80633
+        ]
+      },
+      "properties": {
+        "property_one": "hello",
+        "property_two": 15,
+        "tilequery": {
+          "distance": 11.3,
+          "geometry": "Point",
+          "layer": "parks"
+        }
+      }
+    },
+    { ... },
+    { ... },
+  ]
+}
+```
 
-Same loop as 2, but instead of adding to a vector only add to an array of a set length. Each time you get a feature hit, check against all other feature distances in vector and only add if the distance is smaller than the maximum distance already in the vector.
-
-# Usage
+# API
 
 ## vtquery
-
-Query an array of Mapbox Vector Tile buffers at a particular longitude and latitude and get back
-features that either exist at the query point or features within a radius of the query point.
 
 **Parameters**
 
@@ -49,6 +70,14 @@ features that either exist at the query point or features within a radius of the
     -   `options.layers` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).&lt;[String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)>=** layers - an array of layer string names to query from. Default is all layers.
     -   `options.geometry` **[String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)=** only return features of a particular geometry type. Can be `point`, `linestring`, or `polygon`.
         Defaults to all geometry types.
+
+**Examples**
+
+```javascript
+const vtquery = require('@mapbox/vtquery');
+
+vtquery(tiles, lnglat, options, callback);
+```
 
 # Develop
 
