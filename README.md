@@ -82,8 +82,8 @@ vtquery(tiles, lnglat, options, callback);
 # Develop
 
 ```bash
-git clone git@github.com:mapbox/node-cpp-skel.git
-cd node-cpp-skel
+git clone git@github.com:mapbox/vtquery.git
+cd vtquery
 
 # Build binaries. This looks to see if there were changes in the C++ code. This does not reinstall deps.
 make
@@ -99,9 +99,8 @@ make clean
 # For example, it's super useful for making sure everything works for Travis, production, someone else's machine, etc
 make distclean
 
-# This skel uses documentation.js to auto-generate API docs.
-# If you'd like to generate docs for your code, you'll need to install documentation.js,
-# and then add your subdirectory to the docs command in package.json
+# Generate API docs from index.js
+# Requires documentation.js to be installed globally
 npm install -g documentation
 npm run docs
 ```
