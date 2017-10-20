@@ -20,7 +20,7 @@ The response object is a GeoJSON FeatureCollection with Point features containin
 -   Properties of the feature
 -   Extra properties including:
     -   `tilequery.geometry_type` - either "Point", "Linestring", or "Polygon"
-    -   `tilequery.distance` in meters - if distance is `0`, the query point is _within_ the geometry (point in polygon)
+    -   `tilequery.distance` in meters - if distance is `0.0`, the query point is _within_ the geometry (point in polygon)
     -   `tilequery.layer` which layer the feature was a part of in the vecto tile buffer
 -   An `id` if it existed in the vector tile feature
 
