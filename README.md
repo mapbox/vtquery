@@ -12,11 +12,11 @@ The two major use cases for this library are:
 1.  To get a list of the features closest to a query point
 2.  Point in polygon checks
 
-### Response object
+# Response object
 
 The response object is a GeoJSON FeatureCollection with Point features containing the following in formation:
 
--   Geometry - always a `Point`. This library does not return full geometries of features. It only returns the closet point (longitude/latitude) of a feature. If the original feature is a point, the result is the actual location of that point. If the original feature is a linestring or polygon, the result is the interpolated closest latitude/longitude point of that feature. This could be _along_ a line of a polygon and not an actual node of a polygon.
+-   Geometry - always a `Point`. This library does not return full geometries of features. It only returns the closet point (longitude/latitude) of a feature. If the original feature is a point, the result is the actual location of that point. If the original feature is a linestring or polygon, the result is the interpolated closest latitude/longitude point of that feature. This could be _along_ a line of a polygon and not an actual node of a polygon. If the query point is _within_ a polygon, the result will be the query point location.
 -   Properties of the feature
 -   Extra properties including:
     -   `tilequery.geometry_type` - either "Point", "Linestring", or "Polygon"
@@ -63,7 +63,7 @@ Here's an example response
 
 -   `tiles` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).&lt;[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)>** an array of tile objects with `buffer`, `z`, `x`, and `y` values
 -   `LngLat` **[Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).&lt;[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)>** a query point of longitude and latitude to query, `[lng, lat]`
--   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)=** 
+-   `options` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)=**
     -   `options.radius` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)=** radius - the radius to query for features. If your radius is larger than
         the extent of an individual tile, include multiple nearby buffers to collect a realstic list of features (optional, default `0`)
     -   `options.results` **[Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)=** results - the number of results/features returned from the query. (optional, default `5`)
