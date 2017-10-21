@@ -20,12 +20,16 @@ namespace VectorTileQuery {
 struct ResultObject {
     ResultObject(
         std::pair<double, double> ll,
-        mapbox::geometry::algorithms::closest_point_info<std::int64_t> cp_info,
-        std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> props_map)
+        double distance0,
+        std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> props_map,
+        std::string name,
+        std::string geom_type)
         : longitude(ll.first),
           latitude(ll.second),
-          distance(cp_info.distance),
-          properties(std::move(props_map)) {}
+          distance(distance0),
+          properties(std::move(props_map)),
+          layer_name(name),
+          geometry(geom_type) {}
 
     ~ResultObject() = default;
 
@@ -33,6 +37,8 @@ struct ResultObject {
     double latitude;
     double distance;
     std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> properties;
+    std::string layer_name;
+    std::string geometry;
 };
 
 bool compareByDistance(const ResultObject& a, const ResultObject& b) {
@@ -109,6 +115,37 @@ struct QueryData {
     std::string geometry{};
 };
 
+// pass in reference to a string and convert results to JSON formatted string
+void results_to_json_string(std::string & s, std::vector<ResultObject> results) {
+    s += "\n{\"type\":\"FeatureCollection\",\"features\":[";
+
+    // loop through results
+    std::uint32_t count = 1;
+    for (auto const& feature : results) {
+        s += "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[";
+        s += std::to_string(feature.longitude) + "," + std::to_string(feature.latitude);
+        s += "]},\"properties\":{";
+        // TODO(sam) add properties from feature
+
+        // add tilequery-specific properties
+        s += "\"tilequery\":{";
+        s += "\"distance\":";
+        std::string s_distance = std::to_string(feature.distance);
+        s += s_distance;
+        s += ",\"geometry\":\"" + feature.geometry + "\"";
+        s += ",\"layer\":\"" + feature.layer_name + "\"}";
+        s += "}";
+        if (count == results.size()) {
+            s += "}";
+        } else {
+            s += "},";
+        }
+        count++;
+    }
+
+    s += "]}";
+}
+
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
@@ -157,12 +194,14 @@ struct Worker : Nan::AsyncWorker {
 
                        We need to calculate this for every layer because the "extent" can be different per layer.
                     */
+                    std::string layer_name = std::string(layer.name());
                     std::uint32_t extent = layer.extent();
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
 
                     while (auto feature = layer.next_feature()) {
                         // create a dummy default geometry structure that will be updated in the switch statement below
                         mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
+                        std::string geom_type;
                         // get the geometry type and decode the geometry into mapbox::geometry data structures
                         switch (feature.geometry_type()) {
                         case vtzero::GeomType::POINT: {
@@ -170,6 +209,7 @@ struct Worker : Nan::AsyncWorker {
                             point_processor proc_point(mpoint);
                             vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
                             query_geometry = std::move(mpoint);
+                            geom_type = "Point";
                             break;
                         }
                         case vtzero::GeomType::LINESTRING: {
@@ -177,6 +217,7 @@ struct Worker : Nan::AsyncWorker {
                             linestring_processor proc_line(mline);
                             vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
                             query_geometry = std::move(mline);
+                            geom_type = "Linestring";
                             break;
                         }
                         case vtzero::GeomType::POLYGON: {
@@ -184,6 +225,7 @@ struct Worker : Nan::AsyncWorker {
                             polygon_processor proc_poly(mpoly);
                             vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);
                             query_geometry = std::move(mpoly);
+                            geom_type = "Polygon";
                             break;
                         }
                         default: {
@@ -217,7 +259,7 @@ struct Worker : Nan::AsyncWorker {
                                 properties_map.insert(std::pair<std::string, variant_type>(key, value));
                             }
 
-                            ResultObject r(ll, cp_info, properties_map);
+                            ResultObject r(ll, meters, properties_map, layer_name, geom_type);
                             hits.push_back(r);
                         }
                     } // end tile.layer.feature loop
@@ -235,6 +277,12 @@ struct Worker : Nan::AsyncWorker {
             for (auto h : hits) {
                 std::clog << h.distance << std::endl;
             }
+
+            std::string result_string;
+            results_to_json_string(result_string, hits);
+
+            std::clog << "results JSON string: " << result_string << std::endl;
+
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
         }
