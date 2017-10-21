@@ -152,7 +152,8 @@ struct Worker : Nan::AsyncWorker {
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* callback)
         : Base(callback),
-          query_data_(std::move(query_data)) {}
+          query_data_(std::move(query_data)),
+          result_("") {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
@@ -238,7 +239,7 @@ struct Worker : Nan::AsyncWorker {
 
                         // convert x/y into lng/lat point
                         // TODO(sam) use geometry.hpp points instead of custom pairs
-                        std::pair<double, double> ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, cp_info.y);
+                        std::pair<double, double> ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, (extent - cp_info.y));
                         mapbox::geometry::point<double> feature_lnglat{ll.first, ll.second};
                         auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
                         std::clog << "distance_in_meters: " << meters << std::endl;
@@ -278,10 +279,9 @@ struct Worker : Nan::AsyncWorker {
                 std::clog << h.distance << std::endl;
             }
 
-            std::string result_string;
-            results_to_json_string(result_string, hits);
+            results_to_json_string(result_, hits);
 
-            std::clog << "results JSON string: " << result_string << std::endl;
+            std::clog << "results JSON string: " << result_ << std::endl;
 
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
@@ -298,20 +298,17 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
-        // TODO(sam) turn results vector into JSON object
-        QueryData const& data = *query_data_;
-        std::string result = data.geometry;
-
         // std::string result("longitude: " + lng);
         const auto argc = 2u;
         v8::Local<v8::Value> argv[argc] = {
-            Nan::Null(), Nan::New<v8::String>(result).ToLocalChecked()};
+            Nan::Null(), Nan::New<v8::String>(result_).ToLocalChecked()};
 
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
         callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
 
     std::unique_ptr<QueryData> query_data_;
+    std::string result_;
 };
 
 NAN_METHOD(vtquery) {

@@ -438,6 +438,7 @@ test('real-world tests: chicago', assert => {
   // const ll = [-87.8229, 41.9503]; // one tile left
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 100}, function(err, result) {
     assert.ifError(err);
+    console.log('results: ', JSON.parse(result));
     assert.ok(true);
     assert.end();
   });
