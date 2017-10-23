@@ -60,6 +60,22 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
     } else if (lat < -89.9) {
         lat = -89.9;
     }
+
+    // def convert_ll_to_vt(lat, lon, tile_z, extent):
+    // z2 = 1 << tile_z
+    //
+    // # Zoom level coordinates
+    // lon = ((lon + 180.0) % 360.0)
+    // if lat > 89.9:
+    //     lat = 89.9
+    // elif lat < -89.9:
+    //     lat = -89.9
+    // lat_rad = math.radians(lat)
+    // zl_x = lon / (360.0 / (extent * z2))
+    // zl_y = ((extent * z2) / 2) * (1.0 - (math.log(math.tan(lat_rad) + 1.0 / math.cos(lat_rad)) / math.pi))
+    // zl_x = int(round(zl_x))
+    // zl_y = int(round(zl_y))
+    // return [zl_x, zl_y]
     double lat_radian = (lat * M_PI) / 180.0;
     double zl_x = lng / (360.0 / (extent * z2));
     double zl_y = ((extent * z2) / 2) * (1.0 - (log(tan(lat_radian) + 1.0 / cos(lat_radian)) / M_PI));
