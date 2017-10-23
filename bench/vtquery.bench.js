@@ -15,23 +15,40 @@ process.env.UV_THREADPOOL_SIZE = argv.concurrency;
 
 const fs = require('fs');
 const path = require('path');
-const assert = require('assert')
+const assert = require('assert');
 const d3_queue = require('d3-queue');
 const mvtf = require('@mapbox/mvt-fixtures');
 const vtquery = require('../lib/index.js');
+const mapnik = require('mapnik');
 const queue = d3_queue.queue();
 let runs = 0;
 
-let tiles = getTiles('bangkok');
+// let tiles = getTiles('bangkok');
+let tiles = [{buffer: fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf'), z: 13, x: 2098, y: 3042}];
 
 function run(cb) {
-  vtquery(tiles, [100.4946, 13.7547], {radius: 1000}, function(err, result) {
+  let vt = new mapnik.VectorTile(13, 2098, 3042);
+
+  vt.addData(tiles[0].buffer, function(err, vectorTile) {
     if (err) {
       return cb(err);
     }
-    ++runs;
-    return cb();
+    vt.query(-87.7799, 41.9513, {tolerance: 2000}, function(err, results) {
+      if (err) {
+        return cb(err);
+      }
+      ++runs;
+      return cb();
+    });
   });
+
+  // vtquery(tiles, [c], {radius: 2000}, function(err, result) {
+  //   if (err) {
+  //     return cb(err);
+  //   }
+  //   ++runs;
+  //   return cb();
+  // });
 }
 
 // Start monitoring time before async work begins within the defer iterator below.
