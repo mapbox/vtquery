@@ -19,21 +19,16 @@ app.get('/', function(req, res) {
 });
 
 app.get('/api', function(req, res) {
-  // get tile to query
-  console.log('zoom: ', req.query.zoom);
-  var z = 15;
-
+  var z = req.query.zoom; // currently forcing z15 so we can view buildings
   var tile = tilebelt.pointToTile(req.query.lng, req.query.lat, z);
-  console.log('sm tile: ', tile);
-
   var tileset = 'mapbox.mapbox-streets-v7';
   var x = tile[0];
   var y = tile[1];
   var url = `https://api.mapbox.com/v4/${tileset}/${z}/${x}/${y}.vector.pbf?access_token=${process.env.MapboxAccessToken}`;
+  console.info(url);
   request.get(url, {encoding: null}, function(err, req_res, body) {
     if (err) throw err;
     if (res.statusCode !== 200) throw new Error(`status code error ${res.statusCode}`);
-
 
     zlib.gunzip(body, function(err, deflated) {
       if (err) throw err;
