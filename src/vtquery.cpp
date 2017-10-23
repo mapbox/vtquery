@@ -169,12 +169,6 @@ struct Worker : Nan::AsyncWorker {
             // query point lng/lat geometry.hpp point (used for distance calculation later on)
             mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
 
-            std::clog << "layers to query: ";
-            for (auto l : data.layers) {
-                std::clog << l << ", ";
-            }
-            std::clog << "." << std::endl;
-
             /* EACH TILE OBJECT
 
                At this point we've verified all tiles are of the same zoom level, so we work with that
@@ -191,10 +185,10 @@ struct Worker : Nan::AsyncWorker {
                 while (auto layer = tile.next_layer()) {
 
                     // should we query this layer? based on user "layer" option
+                    // if there are items in the data.layers vector AND
+                    // the current layer name is not a part of that list, continue
                     std::string layer_name = std::string(layer.name());
-                    std::clog << "layer name: " << layer_name << std::endl;
-                    if (std::find(data.layers.begin(), data.layers.end(), layer_name) == data.layers.end()) {
-                      std::clog << "no match" << std::endl;
+                    if (data.layers.size() > 0 && std::find(data.layers.begin(), data.layers.end(), layer_name) == data.layers.end()) {
                       continue;
                     }
 
@@ -221,27 +215,30 @@ struct Worker : Nan::AsyncWorker {
                         // get the geometry type and decode the geometry into mapbox::geometry data structures
                         switch (feature.geometry_type()) {
                         case vtzero::GeomType::POINT: {
+                            if (data.geometry.size() > 0 && data.geometry != "point") continue;
                             mapbox::geometry::multi_point<std::int64_t> mpoint;
                             point_processor proc_point(mpoint);
                             vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
                             query_geometry = std::move(mpoint);
-                            geom_type = "Point";
+                            geom_type = "point";
                             break;
                         }
                         case vtzero::GeomType::LINESTRING: {
+                            if (data.geometry.size() > 0 && data.geometry != "linestring") continue;
                             mapbox::geometry::multi_line_string<std::int64_t> mline;
                             linestring_processor proc_line(mline);
                             vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
                             query_geometry = std::move(mline);
-                            geom_type = "Linestring";
+                            geom_type = "linestring";
                             break;
                         }
                         case vtzero::GeomType::POLYGON: {
+                            if (data.geometry.size() > 0 && data.geometry != "polygon") continue;
                             mapbox::geometry::multi_polygon<std::int64_t> mpoly;
                             polygon_processor proc_poly(mpoly);
                             vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);
                             query_geometry = std::move(mpoly);
-                            geom_type = "Polygon";
+                            geom_type = "polygon";
                             break;
                         }
                         default: {

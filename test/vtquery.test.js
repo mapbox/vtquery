@@ -455,3 +455,17 @@ test('options - layers: successfully returns only requested layers', assert => {
     assert.end();
   });
 });
+
+test('options - geometry: successfully returns only requested geometry type', assert => {
+  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
+  const ll = [-87.7914, 41.9458]; // direct hit
+  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, geometry: 'point'}, function(err, result) {
+    assert.ifError(err);
+    const gj = JSON.parse(result);
+    console.log(gj.features.length);
+    gj.features.forEach(function(feature) {
+      assert.equal(feature.properties.tilequery.geometry, 'point', 'expected original geometry');
+    });
+    assert.end();
+  });
+});
