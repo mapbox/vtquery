@@ -1,0 +1,124 @@
+<head>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.41.0/mapbox-gl.js'></script>
+  <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.41.0/mapbox-gl.css' rel='stylesheet' />
+
+  <style>
+    * {
+      box-sizing:border-box;
+      -moz-box-sizing:border-box;
+      -webkit-box-sizing:border-box;
+    }
+    body {
+      margin:0;
+      padding:0;
+      font-family: sans-serif;
+      font-size: 15px;
+      line-height: 1.5em;
+    }
+    #map { position: absolute; left: 300px; right: 0; top:0; bottom:0; width:100%; }
+    #marker {
+      border-radius: 50%;
+      width: 10px;
+      height: 10px;
+      background: #000;
+    }
+
+    #container {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 300px;
+      padding: 1px 1em;
+    }
+    .value {
+      font-family: monospace;
+      color: blue;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+
+<div id="container">
+  <h3>vtquery viz</h3>
+  <p>Experiment with the vtquery library and the options it provides. Helpful for debugging changes to the library.</p>
+  <p><strong>Click on the map to execute a query on a <em>single</em> tile.</strong></p>
+  <hr>
+  <p>Tile xyz<br><span class="value" id="form-tile">-</span></p>
+  <p>Query point<br><span class="value" id="form-query">-</span></p>
+</div>
+
+<div id="marker"></div>
+<div id="map"></div>
+
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoibWFwc2FtIiwiYSI6ImNpaWR1MXlxcDAxMTJ1M2tzYWUyeTdpY24ifQ.QG1jCTgj-WYwJa2y1W0wMw';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/light-v9',
+    zoom: 15.9,
+    center: [-122.3325, 47.6643]
+});
+map.showTileBoundaries=true;
+
+map.on('load', function(e) {
+  map.addSource('tilequery-points', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+
+  map.addLayer({
+    id: 'results',
+    type: 'circle',
+    source: 'tilequery-points',
+    paint: {
+      'circle-radius': 5,
+      'circle-color': '#0000FF'
+    }
+  });
+});
+
+var formTile = document.getElementById('form-tile');
+var formQuery = document.getElementById('form-query');
+var markerEl = document.getElementById('marker');
+var marker = new mapboxgl.Marker(markerEl).setLngLat([0,0]).addTo(map);
+map.on('click', function(e) {
+  // set marker
+  marker.setLngLat(e.lngLat);
+  var zoom = Math.floor(map.getZoom());
+
+  // update form zxy
+  var xy = pointToTile(e.lngLat.lng, e.lngLat.lat, zoom);
+  formTile.innerHTML = `${zoom}/${xy[0]}/${xy[1]}`;
+  formQuery.innerHTML = `${Math.floor(e.lngLat.lng * 10000) / 10000}, ${Math.floor(e.lngLat.lat * 10000) / 10000}`
+
+  var query = `/api?lng=${e.lngLat.lng}&lat=${e.lngLat.lat}&zoom=${zoom}`;
+
+  fetch(query).then(function(response) {
+    return response.json();
+  }).then(function(json) {
+    console.info(json);
+    map.getSource('tilequery-points').setData(json);
+  });
+});
+
+// copied from tilebelt
+// https://github.com/mapbox/tilebelt/blob/master/index.js
+var d2r = Math.PI / 180;
+function pointToTile(lon, lat, z) {
+    var tile = pointToTileFraction(lon, lat, z);
+    tile[0] = Math.floor(tile[0]);
+    tile[1] = Math.floor(tile[1]);
+    return tile;
+}
+function pointToTileFraction(lon, lat, z) {
+  var sin = Math.sin(lat * d2r),
+      z2 = Math.pow(2, z),
+      x = z2 * (lon / 360 + 0.5),
+      y = z2 * (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI);
+  x = x % z2
+  if (x < 0) x = x + z2
+  return [x, y, z];
+}
+</script>

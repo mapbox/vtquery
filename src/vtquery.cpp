@@ -1,30 +1,61 @@
 #include "vtquery.hpp"
+#include "geometry_processors.hpp"
 #include "util.hpp"
 
-#include <deque>
+#include <algorithm>
 #include <exception>
 #include <iostream>
 #include <map>
+#include <mapbox/geometry/algorithms/closest_point.hpp>
+#include <mapbox/geometry/algorithms/closest_point_impl.hpp>
+#include <mapbox/geometry/geometry.hpp>
+#include <memory>
 #include <stdexcept>
-// #include <mapbox/geometry/geometry.hpp>
-// #include <mapbox/geometry/algorithms/closest_point.hpp>
-#include <vtzero/vector_tile.hpp>
+#include <utility>
 #include <vtzero/types.hpp>
-// #include <mapbox/variant.hpp>
+#include <vtzero/vector_tile.hpp>
 
 namespace VectorTileQuery {
 
+struct ResultObject {
+    ResultObject(
+        std::pair<double, double> ll,
+        double distance0,
+        std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> props_map,
+        std::string name,
+        std::string geom_type)
+        : longitude(ll.first),
+          latitude(ll.second),
+          distance(distance0),
+          properties(std::move(props_map)),
+          layer_name(name),
+          geometry(geom_type) {}
+
+    ~ResultObject() = default;
+
+    double longitude;
+    double latitude;
+    double distance;
+    std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> properties;
+    std::string layer_name;
+    std::string geometry;
+};
+
+bool compareByDistance(const ResultObject& a, const ResultObject& b) {
+    return a.distance < b.distance;
+}
+
 struct TileObject {
     TileObject(std::uint32_t z0,
-        std::uint32_t x0,
-        std::uint32_t y0,
-        v8::Local<v8::Object> buffer)
-      : z(z0),
-        x(x0),
-        y(y0),
-        data(node::Buffer::Data(buffer),node::Buffer::Length(buffer)) {
-           buffer_ref.Reset(buffer.As<v8::Object>());
-        }
+               std::uint32_t x0,
+               std::uint32_t y0,
+               v8::Local<v8::Object> buffer)
+        : z(z0),
+          x(x0),
+          y(y0),
+          data(node::Buffer::Data(buffer), node::Buffer::Length(buffer)) {
+        buffer_ref.Reset(buffer.As<v8::Object>());
+    }
 
     // explicitly use the destructor to clean up
     // the persistent buffer ref by Reset()-ing
@@ -36,12 +67,12 @@ struct TileObject {
     // copy and move definitions
 
     // non-copyable
-    TileObject( TileObject const& ) = delete;
-    TileObject& operator=(TileObject const& ) = delete;
+    TileObject(TileObject const&) = delete;
+    TileObject& operator=(TileObject const&) = delete;
 
     // non-movable
-    TileObject( TileObject && ) = delete;
-    TileObject& operator=(TileObject && ) = delete;
+    TileObject(TileObject&&) = delete;
+    TileObject& operator=(TileObject&&) = delete;
 
     std::uint32_t z;
     std::uint32_t x;
@@ -51,7 +82,7 @@ struct TileObject {
 };
 
 struct QueryData {
-    QueryData(std::uint32_t num_tiles) {
+    explicit QueryData(std::uint32_t num_tiles) {
         tiles.reserve(num_tiles);
     }
     ~QueryData() = default;
@@ -60,12 +91,12 @@ struct QueryData {
     // copy and move definitions
 
     // non-copyable
-    QueryData( QueryData const& ) = delete;
-    QueryData& operator=(QueryData const& ) = delete;
+    QueryData(QueryData const&) = delete;
+    QueryData& operator=(QueryData const&) = delete;
 
     // non-movable
-    QueryData( QueryData && ) = delete;
-    QueryData& operator=(QueryData && ) = delete;
+    QueryData(QueryData&&) = delete;
+    QueryData& operator=(QueryData&&) = delete;
 
     // buffers object thing
     std::vector<std::unique_ptr<TileObject>> tiles;
@@ -74,12 +105,46 @@ struct QueryData {
     double latitude = 0.0;
     double longitude = 0.0;
 
+    // zoom - determined by tiles array in validation
+    std::int32_t zoom = 0;
+
     // options
     double radius = 0.0;
-    std::uint32_t results_length = 5;
+    std::uint32_t num_results = 5;
     std::vector<std::string> layers{};
     std::string geometry{};
 };
+
+// pass in reference to a string and convert results to JSON formatted string
+void results_to_json_string(std::string & s, std::vector<ResultObject> results) {
+    s += "\n{\"type\":\"FeatureCollection\",\"features\":[";
+
+    // loop through results
+    std::uint32_t count = 1;
+    for (auto const& feature : results) {
+        s += "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[";
+        s += std::to_string(feature.longitude) + "," + std::to_string(feature.latitude);
+        s += "]},\"properties\":{";
+        // TODO(sam) add properties from feature
+
+        // add tilequery-specific properties
+        s += "\"tilequery\":{";
+        s += "\"distance\":";
+        std::string s_distance = std::to_string(feature.distance);
+        s += s_distance;
+        s += ",\"geometry\":\"" + feature.geometry + "\"";
+        s += ",\"layer\":\"" + feature.layer_name + "\"}";
+        s += "}";
+        if (count == results.size()) {
+            s += "}";
+        } else {
+            s += "},";
+        }
+        count++;
+    }
+
+    s += "]}";
+}
 
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
@@ -87,7 +152,8 @@ struct Worker : Nan::AsyncWorker {
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* callback)
         : Base(callback),
-          query_data_(std::move(query_data)) {}
+          query_data_(std::move(query_data)),
+          result_("") {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
@@ -95,8 +161,132 @@ struct Worker : Nan::AsyncWorker {
     void Execute() override {
         try {
             // Get the object from the unique_ptr
-            //QueryData const& data = *query_data_;
-            // do the stuff here
+            QueryData const& data = *query_data_;
+
+            // storage mechanism for results that are within the query distance (if set)
+            std::vector<ResultObject> hits;
+
+            // query point lng/lat geometry.hpp point (used for distance calculation later on)
+            mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
+
+            /* EACH TILE OBJECT
+
+               At this point we've verified all tiles are of the same zoom level, so we work with that
+               since it has been stored in the QueryData struct
+            */
+            for (auto const& tile_ptr : data.tiles) {
+
+                // tile object
+                TileObject const& tile_obj = *tile_ptr;
+
+                // use vtzero to get geometry info
+                vtzero::vector_tile tile{tile_obj.data};
+
+                while (auto layer = tile.next_layer()) {
+
+                    // should we query this layer? based on user "layer" option
+                    // if there are items in the data.layers vector AND
+                    // the current layer name is not a part of that list, continue
+                    std::string layer_name = std::string(layer.name());
+                    if (data.layers.size() > 0 && std::find(data.layers.begin(), data.layers.end(), layer_name) == data.layers.end()) {
+                      continue;
+                    }
+
+                    /* QUERY POINT
+
+                       The query point will be in tile coordinates eventually. This means we need to convert
+                       lng/lat values into tile coordinates based on the z value of the current tile.
+
+                       If the xy of the current tile do not intersect the lng/lat, let's determine how far away
+                       the current buffer is in tile coordinates from the query point (now in tile coords). This
+                       means we'll need to store the origin x/y tile values to refer back to when looping through
+                       each tile.
+
+                       We need to calculate this for every layer because the "extent" can be different per layer.
+                    */
+                    std::uint32_t extent = layer.extent();
+                    mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
+
+                    while (auto feature = layer.next_feature()) {
+                        // create a dummy default geometry structure that will be updated in the switch statement below
+                        mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
+                        std::string geom_type;
+                        // get the geometry type and decode the geometry into mapbox::geometry data structures
+                        switch (feature.geometry_type()) {
+                        case vtzero::GeomType::POINT: {
+                            if (data.geometry.size() > 0 && data.geometry != "point") continue;
+                            mapbox::geometry::multi_point<std::int64_t> mpoint;
+                            point_processor proc_point(mpoint);
+                            vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
+                            query_geometry = std::move(mpoint);
+                            geom_type = "point";
+                            break;
+                        }
+                        case vtzero::GeomType::LINESTRING: {
+                            if (data.geometry.size() > 0 && data.geometry != "linestring") continue;
+                            mapbox::geometry::multi_line_string<std::int64_t> mline;
+                            linestring_processor proc_line(mline);
+                            vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
+                            query_geometry = std::move(mline);
+                            geom_type = "linestring";
+                            break;
+                        }
+                        case vtzero::GeomType::POLYGON: {
+                            if (data.geometry.size() > 0 && data.geometry != "polygon") continue;
+                            mapbox::geometry::multi_polygon<std::int64_t> mpoly;
+                            polygon_processor proc_poly(mpoly);
+                            vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);
+                            query_geometry = std::move(mpoly);
+                            geom_type = "polygon";
+                            break;
+                        }
+                        default: {
+                            continue;
+                        }
+                        }
+
+                        // implement closest point algorithm on query geometry and the query point
+                        const auto cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
+
+                        // convert x/y into lng/lat point
+                        // TODO(sam) use geometry.hpp points instead of custom pairs
+                        std::pair<double, double> ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, (extent - cp_info.y));
+                        mapbox::geometry::point<double> feature_lnglat{ll.first, ll.second};
+                        auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
+
+                        // if the distance is within the threshold, save it
+                        std::clog << "meters: " << meters << std::endl;
+                        if (meters <= data.radius) {
+
+                            // get lng/lat
+                            // uses "extent" grabbed above in layer loop
+                            // const auto ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, cp_info.y);
+
+                            // decode properties
+                            using variant_type = mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>;
+                            std::map<std::string, variant_type> properties_map;
+                            while (auto prop = feature.next_property()) {
+                                std::string key = std::string{prop.key()};
+                                variant_type value = vtzero::convert_property_value<variant_type>(prop.value());
+                                properties_map.insert(std::pair<std::string, variant_type>(key, value));
+                            }
+
+                            ResultObject r(ll, meters, properties_map, layer_name, geom_type);
+                            hits.push_back(r);
+                        }
+                    } // end tile.layer.feature loop
+                }     // end tile.layer loop
+            }         // end tile loop
+
+            std::clog << "number of hits: " << hits.size() << std::endl;
+
+            std::sort(hits.begin(), hits.end(), compareByDistance);
+            // for (auto h : hits) {
+            //     std::clog << h.distance << std::endl;
+            // }
+
+            results_to_json_string(result_, hits);
+
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
         }
@@ -112,17 +302,17 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
-        std::string result("todo results here");
+        // std::string result("longitude: " + lng);
         const auto argc = 2u;
         v8::Local<v8::Value> argv[argc] = {
-            Nan::Null(), Nan::New<v8::String>(result).ToLocalChecked()
-        };
+            Nan::Null(), Nan::New<v8::String>(result_).ToLocalChecked()};
 
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
         callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
 
     std::unique_ptr<QueryData> query_data_;
+    std::string result_;
 };
 
 NAN_METHOD(vtquery) {
@@ -134,11 +324,7 @@ NAN_METHOD(vtquery) {
     }
     v8::Local<v8::Function> callback = callback_val.As<v8::Function>();
 
-    // validate buffers
-      // must have `buffer` buffer
-      // must have `z` int >= 0
-      // must have `x` int >= 0
-      // must have `y` int >= 0
+    // validate tiles
     if (!info[0]->IsArray()) {
         return utils::CallbackError("first arg 'tiles' must be an array of tile objects", callback);
     }
@@ -152,7 +338,7 @@ NAN_METHOD(vtquery) {
 
     std::unique_ptr<QueryData> query_data{new QueryData(num_tiles)};
 
-    for (unsigned t=0; t < num_tiles; ++t) {
+    for (unsigned t = 0; t < num_tiles; ++t) {
         v8::Local<v8::Value> tile_val = tiles_arr_val->Get(t);
         if (!tile_val->IsObject()) {
             return utils::CallbackError("items in 'tiles' array must be objects", callback);
@@ -180,9 +366,17 @@ NAN_METHOD(vtquery) {
         if (!z_val->IsNumber()) {
             return utils::CallbackError("'z' value in 'tiles' array item is not a number", callback);
         }
-        int z = z_val->IntegerValue();
+        std::int32_t z = z_val->Int32Value();
         if (z < 0) {
             return utils::CallbackError("'z' value must not be less than zero", callback);
+        }
+        // set zoom level in QueryData struct if it's the first iteration, otherwise verify zooms match
+        if (t == 0) {
+            query_data->zoom = z;
+        } else {
+            if (z != query_data->zoom) {
+                return utils::CallbackError("'z' values do not match across all tiles in the 'tiles' array", callback);
+            }
         }
 
         if (!tile_obj->Has(Nan::New("x").ToLocalChecked())) {
@@ -192,7 +386,7 @@ NAN_METHOD(vtquery) {
         if (!x_val->IsNumber()) {
             return utils::CallbackError("'x' value in 'tiles' array item is not a number", callback);
         }
-        int x = x_val->IntegerValue();
+        std::int64_t x = x_val->IntegerValue();
         if (x < 0) {
             return utils::CallbackError("'x' value must not be less than zero", callback);
         }
@@ -204,7 +398,7 @@ NAN_METHOD(vtquery) {
         if (!y_val->IsNumber()) {
             return utils::CallbackError("'y' value in 'tiles' array item is not a number", callback);
         }
-        int y = y_val->IntegerValue();
+        std::int64_t y = y_val->IntegerValue();
         if (y < 0) {
             return utils::CallbackError("'y' value must not be less than zero", callback);
         }
@@ -233,14 +427,12 @@ NAN_METHOD(vtquery) {
     if (!lng_val->IsNumber() || !lat_val->IsNumber()) {
         return utils::CallbackError("lnglat values must be numbers", callback);
     }
+    query_data->longitude = lng_val->NumberValue();
+    query_data->latitude = lat_val->NumberValue();
 
     // validate options object if it exists
+    // defaults are set in the QueryData struct.
     if (info.Length() > 3) {
-        // set defaults
-        double radius = 0.0;
-        int results = 5;
-        bool custom_layers = false;
-        bool custom_geometry = false;
 
         if (!info[2]->IsObject()) {
             return utils::CallbackError("'options' arg must be an object", callback);
@@ -254,24 +446,30 @@ NAN_METHOD(vtquery) {
                 return utils::CallbackError("'radius' must be a number", callback);
             }
 
-            radius = radius_val->NumberValue();
-
+            double radius = radius_val->NumberValue();
             if (radius < 0.0) {
                 return utils::CallbackError("'radius' must be a positive number", callback);
             }
+
+            query_data->radius = radius;
         }
 
-        if (options->Has(Nan::New("results").ToLocalChecked())) {
-            v8::Local<v8::Value> results_val = options->Get(Nan::New("results").ToLocalChecked());
-            if (!results_val->IsNumber()) {
-                return utils::CallbackError("'results' must be a number", callback);
+        if (options->Has(Nan::New("numResults").ToLocalChecked())) {
+            v8::Local<v8::Value> num_results_val = options->Get(Nan::New("numResults").ToLocalChecked());
+            if (!num_results_val->IsNumber()) {
+                return utils::CallbackError("'numResults' must be a number", callback);
             }
 
-            results = results_val->IntegerValue();
-
-            if (results < 0) {
-                return utils::CallbackError("'results' must be a positive number", callback);
+            // TODO(sam) using std::uint32_t results in a "comparison of unsigned expression" error
+            // what's the best way to check that a number isn't negative but also assigning it a proper value?
+            std::int32_t num_results = num_results_val->Int32Value();
+            if (num_results < 0) {
+                return utils::CallbackError("'numResults' must be a positive number", callback);
             }
+
+            // TODO(sam) do we need to cast here? Or can we safely use an Int32Value knowing that it isn't negative
+            // thanks to the check above
+            query_data->num_results = static_cast<std::uint32_t>(num_results);
         }
 
         if (options->Has(Nan::New("layers").ToLocalChecked())) {
@@ -285,10 +483,7 @@ NAN_METHOD(vtquery) {
 
             // only gather layers if there are some in the array
             if (num_layers > 0) {
-                custom_layers = true;
-                std::vector<std::string> layers;
-                layers.reserve(num_layers);
-                for (unsigned j=0; j < num_layers; ++j) {
+                for (unsigned j = 0; j < num_layers; ++j) {
                     v8::Local<v8::Value> layer_val = layers_arr->Get(j);
                     if (!layer_val->IsString()) {
                         return utils::CallbackError("'layers' values must be strings", callback);
@@ -300,31 +495,30 @@ NAN_METHOD(vtquery) {
                         return utils::CallbackError("'layers' values must be non-empty strings", callback);
                     }
 
-                    std::string layer(*layer_utf8_value, layer_str_len);
-                    layers.push_back(layer);
+                    query_data->layers.emplace_back(*layer_utf8_value, static_cast<std::size_t>(layer_str_len));
                 }
             }
         }
 
         if (options->Has(Nan::New("geometry").ToLocalChecked())) {
-            custom_geometry = true;
-
             v8::Local<v8::Value> geometry_val = options->Get(Nan::New("geometry").ToLocalChecked());
             if (!geometry_val->IsString()) {
                 return utils::CallbackError("'geometry' option must be a string", callback);
             }
 
             Nan::Utf8String geometry_utf8_value(geometry_val);
-            int geometry_str_len = geometry_utf8_value.length();
+            std::int32_t geometry_str_len = geometry_utf8_value.length();
             if (geometry_str_len <= 0) {
-              return utils::CallbackError("'geometry' value must be a non-empty string", callback);
+                return utils::CallbackError("'geometry' value must be a non-empty string", callback);
             }
 
-            std::string geometry(*geometry_utf8_value, geometry_str_len);
+            std::string geometry(*geometry_utf8_value, static_cast<std::size_t>(geometry_str_len));
 
             if (geometry != "point" && geometry != "linestring" && geometry != "polygon") {
                 return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
             }
+
+            query_data->geometry = geometry;
         }
     }
 
