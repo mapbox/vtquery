@@ -25,15 +25,7 @@
   ],
   "devDependencies": {
     "@mapbox/mvt-fixtures": "3.0.0-beta5",
-    "@mapbox/sphericalmercator": "^1.0.5",
-    "@mapbox/tilebelt": "^1.0.1",
-    "aws-sdk": "^2.4.7",
-    "body-parser": "^1.18.2",
     "d3-queue": "^3.0.7",
-    "ejs": "^2.5.7",
-    "express": "^4.16.2",
-    "minimist": "~1.2.0",
-    "request": "^2.83.0",
     "tape": "^4.5.1"
   },
   "binary": {

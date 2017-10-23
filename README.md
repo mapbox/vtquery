@@ -78,3 +78,14 @@ make distclean
 npm install -g documentation
 npm run docs
 ```
+
+# Viz
+
+The viz/ directory contains a small node application that is helpful for visual QA of vtquery results. It requests Mapbox Streets tiles and adds results as points to the map. In order to request tiles, you'll need a `MapboxAccessToken` environment variable.
+
+```shell
+cd viz
+npm install
+MapboxAccessToken={token} node app.js
+# localhost:5000
+```
