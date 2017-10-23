@@ -61,41 +61,26 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
         lat = -89.9;
     }
 
-    // def convert_ll_to_vt(lat, lon, tile_z, extent):
-    // z2 = 1 << tile_z
-    //
-    // # Zoom level coordinates
-    // lon = ((lon + 180.0) % 360.0)
-    // if lat > 89.9:
-    //     lat = 89.9
-    // elif lat < -89.9:
-    //     lat = -89.9
-    // lat_rad = math.radians(lat)
-    // zl_x = lon / (360.0 / (extent * z2))
-    // zl_y = ((extent * z2) / 2) * (1.0 - (math.log(math.tan(lat_rad) + 1.0 / math.cos(lat_rad)) / math.pi))
-    // zl_x = int(round(zl_x))
-    // zl_y = int(round(zl_y))
-    // return [zl_x, zl_y]
     double lat_radian = (lat * M_PI) / 180.0;
     double zl_x = lng / (360.0 / (extent * z2));
     double zl_y = ((extent * z2) / 2) * (1.0 - (log(tan(lat_radian) + 1.0 / cos(lat_radian)) / M_PI));
-    std::clog << "zl_x: " << zl_x << ", zl_y: " << zl_y << std::endl;
+    // std::clog << "zl_x: " << zl_x << ", zl_y: " << zl_y << std::endl;
 
     std::uint64_t origin_tile_x = static_cast<std::uint64_t>(floor(zl_x / extent));
     std::uint64_t origin_tile_y = static_cast<std::uint64_t>(floor(zl_y / extent));
-    std::clog << "origin tile x: " << origin_tile_x << ", origin tile y: " << origin_tile_y << std::endl;
-    std::clog << "active tile x: " << active_tile_x << ", active tile y: " << active_tile_y << std::endl;
+    // std::clog << "origin tile x: " << origin_tile_x << ", origin tile y: " << origin_tile_y << std::endl;
+    // std::clog << "active tile x: " << active_tile_x << ", active tile y: " << active_tile_y << std::endl;
 
     std::uint64_t origin_x = std::uint32_t(fmod(floor(zl_x), extent));
     std::uint64_t origin_y = std::uint32_t(fmod(floor(zl_y), extent));
-    std::clog << "origin tile coordinate x: " << origin_x << ", origin tile coordinate y: " << origin_y << std::endl;
+    // std::clog << "origin tile coordinate x: " << origin_x << ", origin tile coordinate y: " << origin_y << std::endl;
 
     auto diff_tile_x = active_tile_x - origin_tile_x;
     auto diff_tile_y = active_tile_y - origin_tile_y;
-    std::clog << "tile difference x: " << diff_tile_x << ", y: " << diff_tile_y << std::endl;
+    // std::clog << "tile difference x: " << diff_tile_x << ", y: " << diff_tile_y << std::endl;
     auto query_x = -(diff_tile_x * extent) + origin_x;
     auto query_y = -(diff_tile_y * extent) + origin_y;
-    std::clog << "query point x: " << query_x << ", y: " << query_y << std::endl;
+    // std::clog << "query point x: " << query_x << ", y: " << query_y << std::endl;
     mapbox::geometry::point<std::int64_t> query_point{static_cast<std::int64_t>(query_x), static_cast<std::int64_t>(query_y)};
     return query_point;
 }

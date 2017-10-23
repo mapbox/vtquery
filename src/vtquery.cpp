@@ -169,6 +169,12 @@ struct Worker : Nan::AsyncWorker {
             // query point lng/lat geometry.hpp point (used for distance calculation later on)
             mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
 
+            std::clog << "layers to query: ";
+            for (auto l : data.layers) {
+                std::clog << l << ", ";
+            }
+            std::clog << "." << std::endl;
+
             /* EACH TILE OBJECT
 
                At this point we've verified all tiles are of the same zoom level, so we work with that
@@ -183,6 +189,15 @@ struct Worker : Nan::AsyncWorker {
                 vtzero::vector_tile tile{tile_obj.data};
 
                 while (auto layer = tile.next_layer()) {
+
+                    // should we query this layer? based on user "layer" option
+                    std::string layer_name = std::string(layer.name());
+                    std::clog << "layer name: " << layer_name << std::endl;
+                    if (std::find(data.layers.begin(), data.layers.end(), layer_name) == data.layers.end()) {
+                      std::clog << "no match" << std::endl;
+                      continue;
+                    }
+
                     /* QUERY POINT
 
                        The query point will be in tile coordinates eventually. This means we need to convert
@@ -195,7 +210,7 @@ struct Worker : Nan::AsyncWorker {
 
                        We need to calculate this for every layer because the "extent" can be different per layer.
                     */
-                    std::string layer_name = std::string(layer.name());
+
                     std::uint32_t extent = layer.extent();
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
 
@@ -242,9 +257,9 @@ struct Worker : Nan::AsyncWorker {
                         std::pair<double, double> ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, (extent - cp_info.y));
                         mapbox::geometry::point<double> feature_lnglat{ll.first, ll.second};
                         auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
-                        std::clog << "distance_in_meters: " << meters << std::endl;
 
                         // if the distance is within the threshold, save it
+                        std::clog << "meters: " << meters << std::endl;
                         if (meters <= data.radius) {
 
                             // get lng/lat
@@ -267,21 +282,14 @@ struct Worker : Nan::AsyncWorker {
                 }     // end tile.layer loop
             }         // end tile loop
 
-            // sort hits
-            std::clog << "before sort:" << std::endl;
-            for (auto h : hits) {
-                std::clog << h.distance << std::endl;
-            }
+            std::clog << "number of hits: " << hits.size() << std::endl;
 
             std::sort(hits.begin(), hits.end(), compareByDistance);
-            std::clog << "\nafter sort:" << std::endl;
-            for (auto h : hits) {
-                std::clog << h.distance << std::endl;
-            }
+            // for (auto h : hits) {
+            //     std::clog << h.distance << std::endl;
+            // }
 
             results_to_json_string(result_, hits);
-
-            std::clog << "results JSON string: " << result_ << std::endl;
 
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
