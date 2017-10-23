@@ -24,7 +24,7 @@
     "node-pre-gyp"
   ],
   "devDependencies": {
-    "@mapbox/mvt-fixtures": "3.0.0-beta5",
+    "@mapbox/mvt-fixtures": "3.0.0-beta6",
     "d3-queue": "^3.0.7",
     "tape": "^4.5.1"
   },

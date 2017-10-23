@@ -204,7 +204,6 @@ struct Worker : Nan::AsyncWorker {
 
                        We need to calculate this for every layer because the "extent" can be different per layer.
                     */
-
                     std::uint32_t extent = layer.extent();
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
 
