@@ -1,5 +1,8 @@
 const test = require('tape');
 const vtquery = require('../lib/index.js');
+const mvtFixtures = require('@mapbox/mvt-fixtures');
+const queue = require('d3-queue').queue;
+const fs = require('fs');
 
 test('failure: fails without callback function', assert => {
   try {
@@ -229,6 +232,28 @@ test('failure: buffer object y value is negative', assert => {
   });
 });
 
+test('failure: buffer object z values don\'t match', assert => {
+  const buffs = [
+    {
+      buffer: new Buffer('hey'),
+      z: 0,
+      x: 0,
+      y: 0
+    },
+    {
+      buffer: new Buffer('hi'),
+      z: 1,
+      x: 1,
+      y: 1
+    }
+  ];
+  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'z\' values do not match across all tiles in the \'tiles\' array');
+    assert.end();
+  });
+});
+
 test('failure: lnglat is not an array', assert => {
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], '[47.6117, -122.3444]', {}, function(err, result) {
     assert.ok(err);
@@ -293,22 +318,22 @@ test('failure: options.radius is negative', assert => {
 
 test('failure: options.results is not a number', assert => {
   const opts = {
-    results: 'hi'
+    numResults: 'hi'
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'results\' must be a number');
+    assert.equal(err.message, '\'numResults\' must be a number');
     assert.end();
   });
 });
 
 test('failure: options.results is negative', assert => {
   const opts = {
-    results: -10
+    numResults: -10
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'results\' must be a positive number');
+    assert.equal(err.message, '\'numResults\' must be a positive number');
     assert.end();
   });
 });
@@ -375,6 +400,72 @@ test('failure: options.geometry must not be empty', assert => {
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'geometry\' value must be a non-empty string');
+    assert.end();
+  });
+});
+
+test('success: defaults', assert => {
+  vtquery([{buffer: mvtFixtures.get('043').buffer, z: 0, x: 0, y: 0}], [47.6, -122.3], function(err, result) {
+    assert.ifError(err);
+    console.log(result);
+    assert.end();
+  });
+});
+
+test('mvt-fixtures: each', assert => {
+  const q = queue(5);
+
+  function testFixture(fixture, callback) {
+    vtquery([{buffer: fixture.buffer, z: 0, x: 0, y: 0}], [47.6, -122.3], function(err, result) {
+      // something if invalid fixture, make sure there's an error
+      // if valid, do something
+      return callback();
+    });
+  }
+
+  mvtFixtures.each(f => {
+    q.defer(testFixture, f);
+  });
+
+  q.awaitAll((err, data) => {
+    assert.end();
+  });
+});
+
+test('real-world tests: chicago', assert => {
+  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
+  const ll = [-87.79147982597351, 41.94584599732266]; // direct hit
+  // const ll = [-87.8229, 41.9503]; // one tile left
+  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 100}, function(err, result) {
+    assert.ifError(err);
+    // console.log('results: ', JSON.parse(result));
+    assert.end();
+  });
+});
+
+test('options - layers: successfully returns only requested layers', assert => {
+  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
+  const ll = [-87.7914, 41.9458]; // direct hit
+  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, layers: ['poi_label']}, function(err, result) {
+    assert.ifError(err);
+    const gj = JSON.parse(result);
+    gj.features.forEach(function(feature) {
+      assert.equal(feature.properties.tilequery.layer, 'poi_label', 'proper layer');
+    });
+    assert.end();
+  });
+});
+
+test('options - geometry: successfully returns only requested geometry type', assert => {
+  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
+  const ll = [-87.7914, 41.9458]; // direct hit
+  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, geometry: 'point'}, function(err, result) {
+    assert.ifError(err);
+    const gj = JSON.parse(result);
+    console.log(gj.features.length);
+    gj.features.forEach(function(feature) {
+      assert.equal(feature.properties.tilequery.geometry, 'point', 'expected original geometry');
+    });
     assert.end();
   });
 });
