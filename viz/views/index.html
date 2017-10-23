@@ -56,7 +56,7 @@
 mapboxgl.accessToken = 'pk.eyJ1IjoibWFwc2FtIiwiYSI6ImNpaWR1MXlxcDAxMTJ1M2tzYWUyeTdpY24ifQ.QG1jCTgj-WYwJa2y1W0wMw';
 var map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapsam/cj90r5wr401ei2so2z3f7p9d5',
+    style: 'mapbox://styles/mapbox/light-v9',
     zoom: 15.9,
     center: [-122.3325, 47.6643]
 });
@@ -76,7 +76,7 @@ map.on('load', function(e) {
       'circle-radius': 5,
       'circle-color': '#0000FF'
     }
-  }, 'tilequery-testing');
+  });
 });
 
 var formTile = document.getElementById('form-tile');
