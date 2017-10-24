@@ -255,7 +255,6 @@ struct Worker : Nan::AsyncWorker {
                         auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
 
                         // if the distance is within the threshold, save it
-                        std::clog << "meters: " << meters << std::endl;
                         if (meters <= data.radius) {
 
                             // get lng/lat
@@ -278,13 +277,7 @@ struct Worker : Nan::AsyncWorker {
                 }     // end tile.layer loop
             }         // end tile loop
 
-            std::clog << "number of hits: " << hits.size() << std::endl;
-
             std::sort(hits.begin(), hits.end(), compareByDistance);
-            // for (auto h : hits) {
-            //     std::clog << h.distance << std::endl;
-            // }
-
             results_to_json_string(result_, hits);
 
         } catch (const std::exception& e) {

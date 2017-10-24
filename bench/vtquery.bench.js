@@ -1,6 +1,6 @@
 "use strict";
 
-var argv = require('minimist')(process.argv.slice(2));
+const argv = require('minimist')(process.argv.slice(2));
 if (!argv.iterations || !argv.concurrency) {
   console.error('Please provide desired iterations, concurrency');
   console.error('Example: \nnode bench/vtquery.bench.js --iterations 50 --concurrency 10');
@@ -13,22 +13,42 @@ if (!argv.iterations || !argv.concurrency) {
 // top of a JS file (like we do here)
 process.env.UV_THREADPOOL_SIZE = argv.concurrency;
 
-var fs = require('fs');
-var path = require('path');
-var assert = require('assert')
-var d3_queue = require('d3-queue');
-var vtquery = require('../lib/index.js');
-var queue = d3_queue.queue();
-var runs = 0;
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert');
+const d3_queue = require('d3-queue');
+const mvtf = require('@mapbox/mvt-fixtures');
+const vtquery = require('../lib/index.js');
+const mapnik = require('mapnik');
+const queue = d3_queue.queue();
+let runs = 0;
+
+// let tiles = getTiles('bangkok');
+let tiles = [{buffer: fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf'), z: 13, x: 2098, y: 3042}];
 
 function run(cb) {
-  vtquery({ louder: false }, function(err, result) {
+  let vt = new mapnik.VectorTile(13, 2098, 3042);
+
+  vt.addData(tiles[0].buffer, function(err, vectorTile) {
+    if (err) {
+      return cb(err);
+    }
+    vt.query(-87.7799, 41.9513, {tolerance: 2000}, function(err, results) {
       if (err) {
         return cb(err);
       }
       ++runs;
       return cb();
+    });
   });
+
+  // vtquery(tiles, [c], {radius: 2000}, function(err, result) {
+  //   if (err) {
+  //     return cb(err);
+  //   }
+  //   ++runs;
+  //   return cb();
+  // });
 }
 
 // Start monitoring time before async work begins within the defer iterator below.
@@ -43,7 +63,7 @@ for (var i = 0; i < argv.iterations; i++) {
 queue.awaitAll(function(error) {
   if (error) throw error;
   if (runs != argv.iterations) {
-    throw new Error("Error: did not run as expected");
+    throw new Error(`Error: did not run as expected - ${runs} != ${argv.iterations}`);
   }
   // check rate
   time = +(new Date()) - time;
@@ -62,3 +82,16 @@ queue.awaitAll(function(error) {
   //assert.equal(rate > 1000, true, 'speed not at least 1000/second ( rate was ' + rate + ' runs/s )');
 
 });
+
+function getTiles(name) {
+  let tiles = [];
+  let dir = `./node_modules/@mapbox/mvt-fixtures/real-world/${name}`;
+  var files = fs.readdirSync(dir);
+  files.forEach(function(file) {
+    let buffer = fs.readFileSync(path.join(dir, '/', file));
+    file = file.replace('.mvt', '');
+    let zxy = file.split('-');
+    tiles.push({ buffer: buffer, z: parseInt(zxy[0]), x: parseInt(zxy[1]), y: parseInt(zxy[2]) });
+  });
+  return tiles;
+}
