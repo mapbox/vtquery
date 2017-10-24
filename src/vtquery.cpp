@@ -27,8 +27,8 @@ struct ResultObject {
         : coordinates(p),
           distance(distance0),
           properties(std::move(props_map)),
-          layer_name(name),
-          geometry(geom_type) {}
+          layer_name(std::move(name)),
+          geometry(std::move(geom_type)) {}
 
     ~ResultObject() = default;
 
@@ -116,18 +116,18 @@ void results_to_json_string(std::string & s, std::vector<ResultObject> results) 
     // loop through results
     std::uint32_t count = 1;
     for (auto const& feature : results) {
-        s += "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[";
+        s += R"({"type":"Feature","geometry":{"type":"Point","coordinates":[)";
         s += std::to_string(feature.coordinates.x) + "," + std::to_string(feature.coordinates.y);
-        s += "]},\"properties\":{";
+        s += R"(]},"properties":{)";
         // TODO(sam) add properties from feature
 
         // add tilequery-specific properties
-        s += "\"tilequery\":{";
-        s += "\"distance\":";
+        s += R"("tilequery":{)";
+        s += R"("distance":)";
         std::string s_distance = std::to_string(feature.distance);
         s += s_distance;
-        s += ",\"geometry\":\"" + feature.geometry + "\"";
-        s += ",\"layer\":\"" + feature.layer_name + "\"}";
+        s += R"(,"geometry":")" + feature.geometry + R"(")";
+        s += R"(,"layer":")" + feature.layer_name + R"("})";
         s += "}";
         if (count == results.size()) {
             s += "}";
@@ -147,7 +147,6 @@ struct Worker : Nan::AsyncWorker {
            Nan::Callback* callback)
         : Base(callback),
           query_data_(std::move(query_data)),
-          results_(),
           result_string_("") {}
 
     // The Execute() function is getting called when the worker starts to run.
@@ -183,7 +182,7 @@ struct Worker : Nan::AsyncWorker {
                     // if there are items in the data.layers vector AND
                     // the current layer name is not a part of that list, continue
                     std::string layer_name = std::string(layer.name());
-                    if (data.layers.size() > 0 && std::find(data.layers.begin(), data.layers.end(), layer_name) == data.layers.end()) {
+                    if (!data.layers.empty() && std::find(data.layers.begin(), data.layers.end(), layer_name) == data.layers.end()) {
                       continue;
                     }
 
@@ -209,7 +208,8 @@ struct Worker : Nan::AsyncWorker {
                         // get the geometry type and decode the geometry into mapbox::geometry data structures
                         switch (feature.geometry_type()) {
                         case vtzero::GeomType::POINT: {
-                            if (data.geometry.size() > 0 && data.geometry != "point") continue;
+                            if (!data.geometry.empty() && data.geometry != "point") { continue;
+}
                             mapbox::geometry::multi_point<std::int64_t> mpoint;
                             point_processor proc_point(mpoint);
                             vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
@@ -218,7 +218,8 @@ struct Worker : Nan::AsyncWorker {
                             break;
                         }
                         case vtzero::GeomType::LINESTRING: {
-                            if (data.geometry.size() > 0 && data.geometry != "linestring") continue;
+                            if (!data.geometry.empty() && data.geometry != "linestring") { continue;
+}
                             mapbox::geometry::multi_line_string<std::int64_t> mline;
                             linestring_processor proc_line(mline);
                             vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
@@ -227,7 +228,8 @@ struct Worker : Nan::AsyncWorker {
                             break;
                         }
                         case vtzero::GeomType::POLYGON: {
-                            if (data.geometry.size() > 0 && data.geometry != "polygon") continue;
+                            if (!data.geometry.empty() && data.geometry != "polygon") { continue;
+}
                             mapbox::geometry::multi_polygon<std::int64_t> mpoly;
                             polygon_processor proc_poly(mpoly);
                             vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);

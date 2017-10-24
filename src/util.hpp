@@ -81,11 +81,11 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
 */
 template <typename CoordinateType>
 mapbox::geometry::point<double> convert_vt_to_ll(std::uint32_t extent,
-                                           std::uint32_t z,
-                                           std::uint32_t x,
-                                           std::uint32_t y,
-                                           CoordinateType px,
-                                           CoordinateType py) {
+                                                 std::uint32_t z,
+                                                 std::uint32_t x,
+                                                 std::uint32_t y,
+                                                 CoordinateType px,
+                                                 CoordinateType py) {
     double z2 = 1 << z;
     double ex = static_cast<double>(extent);
     double size = ex * z2;
