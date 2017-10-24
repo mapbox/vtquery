@@ -53,26 +53,26 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
                                                          std::uint32_t active_tile_x,
                                                          std::uint32_t active_tile_y) {
 
-    std::uint32_t z2 = 1 << zoom; // number of tiles 'across' a particular zoom level
-    lng = fmod((lng + 180.0), 360.0);
+    lng = std::fmod((lng + 180.0), 360.0);
     if (lat > 89.9) {
         lat = 89.9;
     } else if (lat < -89.9) {
         lat = -89.9;
     }
 
+    double z2 = static_cast<double>(1 << zoom); // number of tiles 'across' a particular zoom level
     double lat_radian = (lat * M_PI) / 180.0;
     double zl_x = lng / (360.0 / (extent * z2));
     double zl_y = ((extent * z2) / 2) * (1.0 - (std::log(std::tan(lat_radian) + 1.0 / std::cos(lat_radian)) / M_PI));
-    std::uint64_t origin_tile_x = static_cast<std::uint64_t>(std::floor(zl_x / extent));
-    std::uint64_t origin_tile_y = static_cast<std::uint64_t>(std::floor(zl_y / extent));
-    std::uint64_t origin_x = std::uint32_t(std::fmod(std::floor(zl_x), extent));
-    std::uint64_t origin_y = std::uint32_t(std::fmod(std::floor(zl_y), extent));
-    auto diff_tile_x = active_tile_x - origin_tile_x;
-    auto diff_tile_y = active_tile_y - origin_tile_y;
-    auto query_x = -(diff_tile_x * extent) + origin_x;
-    auto query_y = -(diff_tile_y * extent) + origin_y;
-    mapbox::geometry::point<std::int64_t> query_point{static_cast<std::int64_t>(query_x), static_cast<std::int64_t>(query_y)};
+    std::int64_t origin_tile_x = static_cast<std::int64_t>(std::floor(zl_x / extent));
+    std::int64_t origin_tile_y = static_cast<std::int64_t>(std::floor(zl_y / extent));
+    std::int64_t origin_x = std::int64_t(std::fmod(std::floor(zl_x), extent));
+    std::int64_t origin_y = std::int64_t(std::fmod(std::floor(zl_y), extent));
+    std::int64_t diff_tile_x = active_tile_x - origin_tile_x;
+    std::int64_t diff_tile_y = active_tile_y - origin_tile_y;
+    std::int64_t query_x = -(diff_tile_x * extent) + origin_x;
+    std::int64_t query_y = -(diff_tile_y * extent) + origin_y;
+    mapbox::geometry::point<std::int64_t> query_point{query_x, query_y};
     return query_point;
 }
 
