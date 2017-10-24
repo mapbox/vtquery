@@ -462,7 +462,7 @@ test('options - geometry: successfully returns only requested geometry type', as
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, geometry: 'point'}, function(err, result) {
     assert.ifError(err);
     const gj = JSON.parse(result);
-    console.log(gj.features.length);
+    assert.equal(gj.features.length, 6, 'expected number of features');
     gj.features.forEach(function(feature) {
       assert.equal(feature.properties.tilequery.geometry, 'point', 'expected original geometry');
     });

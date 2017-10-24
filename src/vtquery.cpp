@@ -19,13 +19,12 @@ namespace VectorTileQuery {
 
 struct ResultObject {
     ResultObject(
-        std::pair<double, double> ll,
+        mapbox::geometry::point<double> p,
         double distance0,
         std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> props_map,
         std::string name,
         std::string geom_type)
-        : longitude(ll.first),
-          latitude(ll.second),
+        : coordinates(p),
           distance(distance0),
           properties(std::move(props_map)),
           layer_name(name),
@@ -33,17 +32,12 @@ struct ResultObject {
 
     ~ResultObject() = default;
 
-    double longitude;
-    double latitude;
+    mapbox::geometry::point<double> coordinates;
     double distance;
     std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> properties;
     std::string layer_name;
     std::string geometry;
 };
-
-bool compareByDistance(const ResultObject& a, const ResultObject& b) {
-    return a.distance < b.distance;
-}
 
 struct TileObject {
     TileObject(std::uint32_t z0,
@@ -123,7 +117,7 @@ void results_to_json_string(std::string & s, std::vector<ResultObject> results) 
     std::uint32_t count = 1;
     for (auto const& feature : results) {
         s += "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[";
-        s += std::to_string(feature.longitude) + "," + std::to_string(feature.latitude);
+        s += std::to_string(feature.coordinates.x) + "," + std::to_string(feature.coordinates.y);
         s += "]},\"properties\":{";
         // TODO(sam) add properties from feature
 
@@ -153,7 +147,8 @@ struct Worker : Nan::AsyncWorker {
            Nan::Callback* callback)
         : Base(callback),
           query_data_(std::move(query_data)),
-          result_("") {}
+          results_(),
+          result_string_("") {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
@@ -164,7 +159,7 @@ struct Worker : Nan::AsyncWorker {
             QueryData const& data = *query_data_;
 
             // storage mechanism for results that are within the query distance (if set)
-            std::vector<ResultObject> hits;
+            // std::vector<ResultObject> hits;
 
             // query point lng/lat geometry.hpp point (used for distance calculation later on)
             mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
@@ -246,22 +241,17 @@ struct Worker : Nan::AsyncWorker {
                         }
 
                         // implement closest point algorithm on query geometry and the query point
-                        const auto cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
+                        auto const cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
 
                         // convert x/y into lng/lat point
                         // TODO(sam) use geometry.hpp points instead of custom pairs
-                        std::pair<double, double> ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, (extent - cp_info.y));
-                        mapbox::geometry::point<double> feature_lnglat{ll.first, ll.second};
+                        auto feature_lnglat = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, (extent - cp_info.y));
                         auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
 
                         // if the distance is within the threshold, save it
                         if (meters <= data.radius) {
 
-                            // get lng/lat
-                            // uses "extent" grabbed above in layer loop
-                            // const auto ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, cp_info.y);
-
-                            // decode properties
+                            // decode properties (will be libvectortile eventually)
                             using variant_type = mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>;
                             std::map<std::string, variant_type> properties_map;
                             while (auto prop = feature.next_property()) {
@@ -270,15 +260,17 @@ struct Worker : Nan::AsyncWorker {
                                 properties_map.insert(std::pair<std::string, variant_type>(key, value));
                             }
 
-                            ResultObject r(ll, meters, properties_map, layer_name, geom_type);
-                            hits.push_back(r);
+                            ResultObject r(feature_lnglat, meters, properties_map, layer_name, geom_type);
+                            results_.push_back(r);
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
             }         // end tile loop
 
-            std::sort(hits.begin(), hits.end(), compareByDistance);
-            results_to_json_string(result_, hits);
+            // sort features based on distance
+            std::sort(results_.begin(), results_.end(), [](const ResultObject& a, const ResultObject& b) { return a.distance < b.distance; });
+
+            // TODO(sam) create new results vector (from results_) of length specific to num_results option
 
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
@@ -295,17 +287,20 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
-        // std::string result("longitude: " + lng);
-        const auto argc = 2u;
+        results_to_json_string(result_string_, results_);
+
+        auto const argc = 2u;
         v8::Local<v8::Value> argv[argc] = {
-            Nan::Null(), Nan::New<v8::String>(result_).ToLocalChecked()};
+            Nan::Null(), Nan::New<v8::String>(result_string_).ToLocalChecked()
+        };
 
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
         callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
 
     std::unique_ptr<QueryData> query_data_;
-    std::string result_;
+    std::vector<ResultObject> results_;
+    std::string result_string_;
 };
 
 NAN_METHOD(vtquery) {
