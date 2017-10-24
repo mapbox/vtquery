@@ -208,8 +208,9 @@ struct Worker : Nan::AsyncWorker {
                         // get the geometry type and decode the geometry into mapbox::geometry data structures
                         switch (feature.geometry_type()) {
                         case vtzero::GeomType::POINT: {
-                            if (!data.geometry.empty() && data.geometry != "point") { continue;
-}
+                            if (!data.geometry.empty() && data.geometry != "point") {
+                                continue;
+                            }
                             mapbox::geometry::multi_point<std::int64_t> mpoint;
                             point_processor proc_point(mpoint);
                             vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
@@ -218,8 +219,9 @@ struct Worker : Nan::AsyncWorker {
                             break;
                         }
                         case vtzero::GeomType::LINESTRING: {
-                            if (!data.geometry.empty() && data.geometry != "linestring") { continue;
-}
+                            if (!data.geometry.empty() && data.geometry != "linestring") {
+                                continue;
+                            }
                             mapbox::geometry::multi_line_string<std::int64_t> mline;
                             linestring_processor proc_line(mline);
                             vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
@@ -228,8 +230,9 @@ struct Worker : Nan::AsyncWorker {
                             break;
                         }
                         case vtzero::GeomType::POLYGON: {
-                            if (!data.geometry.empty() && data.geometry != "polygon") { continue;
-}
+                            if (!data.geometry.empty() && data.geometry != "polygon") {
+                                continue;
+                            }
                             mapbox::geometry::multi_polygon<std::int64_t> mpoly;
                             polygon_processor proc_poly(mpoly);
                             vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);
