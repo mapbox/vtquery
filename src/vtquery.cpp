@@ -157,9 +157,6 @@ struct Worker : Nan::AsyncWorker {
             // Get the object from the unique_ptr
             QueryData const& data = *query_data_;
 
-            // storage mechanism for results that are within the query distance (if set)
-            // std::vector<ResultObject> hits;
-
             // query point lng/lat geometry.hpp point (used for distance calculation later on)
             mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
 
@@ -249,7 +246,6 @@ struct Worker : Nan::AsyncWorker {
                         auto const cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
 
                         // convert x/y into lng/lat point
-                        // TODO(sam) use geometry.hpp points instead of custom pairs
                         auto feature_lnglat = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, (extent - cp_info.y));
                         auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
 
@@ -266,7 +262,7 @@ struct Worker : Nan::AsyncWorker {
                             }
 
                             ResultObject r(feature_lnglat, meters, properties_map, layer_name, geom_type);
-                            results_.push_back(r);
+                            results_.emplace_back(r);
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
