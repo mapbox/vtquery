@@ -17,6 +17,8 @@
 
 namespace VectorTileQuery {
 
+enum class GeomType { point, linestring, polygon, all };
+
 struct ResultObject {
     ResultObject(
         mapbox::geometry::point<double> p,
@@ -106,7 +108,7 @@ struct QueryData {
     double radius = 0.0;
     std::uint32_t num_results = 5;
     std::vector<std::string> layers{};
-    std::string geometry{};
+    GeomType geometry{};
 };
 
 // pass in reference to a string and convert results to JSON formatted string
@@ -126,7 +128,7 @@ void results_to_json_string(std::string & s, std::vector<ResultObject> results) 
         s += R"("distance":)";
         std::string s_distance = std::to_string(feature.distance);
         s += s_distance;
-        s += R"(,"geometry":")" + feature.geometry + R"(")";
+        // s += R"(,"geometry":")" + feature.geometry + R"(")";
         s += R"(,"layer":")" + feature.layer_name + R"("})";
         s += "}";
         if (count == results.size()) {
@@ -205,7 +207,7 @@ struct Worker : Nan::AsyncWorker {
                         // get the geometry type and decode the geometry into mapbox::geometry data structures
                         switch (feature.geometry_type()) {
                         case vtzero::GeomType::POINT: {
-                            if (!data.geometry.empty() && data.geometry != "point") {
+                            if (data.geometry != GeomType::all && data.geometry != GeomType::point) {
                                 continue;
                             }
                             mapbox::geometry::multi_point<std::int64_t> mpoint;
@@ -216,7 +218,7 @@ struct Worker : Nan::AsyncWorker {
                             break;
                         }
                         case vtzero::GeomType::LINESTRING: {
-                            if (!data.geometry.empty() && data.geometry != "linestring") {
+                            if (data.geometry != GeomType::all && data.geometry != GeomType::linestring) {
                                 continue;
                             }
                             mapbox::geometry::multi_line_string<std::int64_t> mline;
@@ -227,7 +229,7 @@ struct Worker : Nan::AsyncWorker {
                             break;
                         }
                         case vtzero::GeomType::POLYGON: {
-                            if (!data.geometry.empty() && data.geometry != "polygon") {
+                            if (data.geometry != GeomType::all && data.geometry != GeomType::polygon) {
                                 continue;
                             }
                             mapbox::geometry::multi_polygon<std::int64_t> mpoly;
@@ -502,12 +504,17 @@ NAN_METHOD(vtquery) {
             }
 
             std::string geometry(*geometry_utf8_value, static_cast<std::size_t>(geometry_str_len));
-
-            if (geometry != "point" && geometry != "linestring" && geometry != "polygon") {
-                return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
+            if (geometry == "point") {
+                query_data->geometry = GeomType::point;
+            } else if (geometry == "linestring") {
+                query_data->geometry = GeomType::linestring;
+            } else if (geometry == "polygon") {
+                query_data->geometry = GeomType::polygon;
+            } else {
+              return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
             }
-
-            query_data->geometry = geometry;
+        } else {
+            query_data->geometry = GeomType::all;
         }
     }
 
