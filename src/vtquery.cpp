@@ -17,7 +17,13 @@
 
 namespace VectorTileQuery {
 
-enum class GeomType { point, linestring, polygon, all };
+enum GeomType { point, linestring, polygon, all, unknown };
+static const char * GeomTypeStrings[] = { "point", "linestring", "polygon", "uknown", "unknown" };
+const char * getGeomTypeString( int enumVal )
+{
+  return GeomTypeStrings[enumVal];
+}
+
 
 struct ResultObject {
     ResultObject(
@@ -25,7 +31,7 @@ struct ResultObject {
         double distance0,
         std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> props_map,
         std::string name,
-        std::string geom_type)
+        GeomType geom_type)
         : coordinates(p),
           distance(distance0),
           properties(std::move(props_map)),
@@ -38,7 +44,7 @@ struct ResultObject {
     double distance;
     std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> properties;
     std::string layer_name;
-    std::string geometry;
+    GeomType geometry;
 };
 
 struct TileObject {
@@ -128,7 +134,8 @@ void results_to_json_string(std::string & s, std::vector<ResultObject> results) 
         s += R"("distance":)";
         std::string s_distance = std::to_string(feature.distance);
         s += s_distance;
-        // s += R"(,"geometry":")" + feature.geometry + R"(")";
+        std::string g = getGeomTypeString(feature.geometry);
+        s += R"(,"geometry":")" + g + R"(")";
         s += R"(,"layer":")" + feature.layer_name + R"("})";
         s += "}";
         if (count == results.size()) {
@@ -200,10 +207,10 @@ struct Worker : Nan::AsyncWorker {
                     std::uint32_t extent = layer.extent();
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
 
+                    GeomType geom_type = GeomType::unknown;
                     while (auto feature = layer.next_feature()) {
                         // create a dummy default geometry structure that will be updated in the switch statement below
                         mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
-                        std::string geom_type;
                         // get the geometry type and decode the geometry into mapbox::geometry data structures
                         switch (feature.geometry_type()) {
                         case vtzero::GeomType::POINT: {
@@ -214,7 +221,7 @@ struct Worker : Nan::AsyncWorker {
                             point_processor proc_point(mpoint);
                             vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
                             query_geometry = std::move(mpoint);
-                            geom_type = "point";
+                            geom_type = GeomType::point;
                             break;
                         }
                         case vtzero::GeomType::LINESTRING: {
@@ -225,7 +232,7 @@ struct Worker : Nan::AsyncWorker {
                             linestring_processor proc_line(mline);
                             vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
                             query_geometry = std::move(mline);
-                            geom_type = "linestring";
+                            geom_type = GeomType::linestring;
                             break;
                         }
                         case vtzero::GeomType::POLYGON: {
@@ -236,7 +243,7 @@ struct Worker : Nan::AsyncWorker {
                             polygon_processor proc_poly(mpoly);
                             vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);
                             query_geometry = std::move(mpoly);
-                            geom_type = "polygon";
+                            geom_type = GeomType::polygon;
                             break;
                         }
                         default: {
