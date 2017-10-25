@@ -36,7 +36,7 @@ struct ResultObject {
           distance(distance0),
           properties(std::move(props_map)),
           layer_name(std::move(name)),
-          geometry(std::move(geom_type)) {}
+          original_geometry_type(std::move(geom_type)) {}
 
     ~ResultObject() = default;
 
@@ -44,7 +44,7 @@ struct ResultObject {
     double distance;
     std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> properties;
     std::string layer_name;
-    GeomType geometry;
+    GeomType original_geometry_type;
 };
 
 struct TileObject {
@@ -114,7 +114,7 @@ struct QueryData {
     double radius = 0.0;
     std::uint32_t num_results = 5;
     std::vector<std::string> layers{};
-    GeomType geometry{};
+    GeomType geometry_filter_type = GeomType::all;
 };
 
 // pass in reference to a string and convert results to JSON formatted string
@@ -134,7 +134,7 @@ void results_to_json_string(std::string & s, std::vector<ResultObject> results) 
         s += R"("distance":)";
         std::string s_distance = std::to_string(feature.distance);
         s += s_distance;
-        std::string g = getGeomTypeString(feature.geometry);
+        std::string g = getGeomTypeString(feature.original_geometry_type);
         s += R"(,"geometry":")" + g + R"(")";
         s += R"(,"layer":")" + feature.layer_name + R"("})";
         s += "}";
@@ -206,44 +206,43 @@ struct Worker : Nan::AsyncWorker {
                     */
                     std::uint32_t extent = layer.extent();
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
-
-                    GeomType geom_type = GeomType::unknown;
+                    GeomType original_geometry_type = GeomType::unknown; // set to unknown but this will get overwritten
                     while (auto feature = layer.next_feature()) {
                         // create a dummy default geometry structure that will be updated in the switch statement below
                         mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
                         // get the geometry type and decode the geometry into mapbox::geometry data structures
                         switch (feature.geometry_type()) {
                         case vtzero::GeomType::POINT: {
-                            if (data.geometry != GeomType::all && data.geometry != GeomType::point) {
+                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::point) {
                                 continue;
                             }
                             mapbox::geometry::multi_point<std::int64_t> mpoint;
                             point_processor proc_point(mpoint);
                             vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
                             query_geometry = std::move(mpoint);
-                            geom_type = GeomType::point;
+                            original_geometry_type = GeomType::point;
                             break;
                         }
                         case vtzero::GeomType::LINESTRING: {
-                            if (data.geometry != GeomType::all && data.geometry != GeomType::linestring) {
+                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::linestring) {
                                 continue;
                             }
                             mapbox::geometry::multi_line_string<std::int64_t> mline;
                             linestring_processor proc_line(mline);
                             vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
                             query_geometry = std::move(mline);
-                            geom_type = GeomType::linestring;
+                            original_geometry_type = GeomType::linestring;
                             break;
                         }
                         case vtzero::GeomType::POLYGON: {
-                            if (data.geometry != GeomType::all && data.geometry != GeomType::polygon) {
+                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::polygon) {
                                 continue;
                             }
                             mapbox::geometry::multi_polygon<std::int64_t> mpoly;
                             polygon_processor proc_poly(mpoly);
                             vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);
                             query_geometry = std::move(mpoly);
-                            geom_type = GeomType::polygon;
+                            original_geometry_type = GeomType::polygon;
                             break;
                         }
                         default: {
@@ -270,7 +269,7 @@ struct Worker : Nan::AsyncWorker {
                                 properties_map.insert(std::pair<std::string, variant_type>(key, value));
                             }
 
-                            ResultObject r(feature_lnglat, meters, properties_map, layer_name, geom_type);
+                            ResultObject r(feature_lnglat, meters, properties_map, layer_name, original_geometry_type);
                             results_.emplace_back(r);
                         }
                     } // end tile.layer.feature loop
@@ -512,16 +511,14 @@ NAN_METHOD(vtquery) {
 
             std::string geometry(*geometry_utf8_value, static_cast<std::size_t>(geometry_str_len));
             if (geometry == "point") {
-                query_data->geometry = GeomType::point;
+                query_data->geometry_filter_type = GeomType::point;
             } else if (geometry == "linestring") {
-                query_data->geometry = GeomType::linestring;
+                query_data->geometry_filter_type = GeomType::linestring;
             } else if (geometry == "polygon") {
-                query_data->geometry = GeomType::polygon;
+                query_data->geometry_filter_type = GeomType::polygon;
             } else {
               return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
             }
-        } else {
-            query_data->geometry = GeomType::all;
         }
     }
 
