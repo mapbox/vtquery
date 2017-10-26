@@ -448,8 +448,8 @@ test('options - layers: successfully returns only requested layers', assert => {
   const ll = [-87.7914, 41.9458]; // direct hit
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, layers: ['poi_label']}, function(err, result) {
     assert.ifError(err);
-    const gj = JSON.parse(result);
-    gj.features.forEach(function(feature) {
+    console.log(JSON.stringify(result));
+    result.features.forEach(function(feature) {
       assert.equal(feature.properties.tilequery.layer, 'poi_label', 'proper layer');
     });
     assert.end();
@@ -461,9 +461,9 @@ test('options - geometry: successfully returns only requested geometry type', as
   const ll = [-87.7914, 41.9458]; // direct hit
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, geometry: 'point'}, function(err, result) {
     assert.ifError(err);
-    const gj = JSON.parse(result);
-    assert.equal(gj.features.length, 6, 'expected number of features');
-    gj.features.forEach(function(feature) {
+    console.log(JSON.stringify(result));
+    assert.equal(result.features.length, 6, 'expected number of features');
+    result.features.forEach(function(feature) {
       assert.equal(feature.properties.tilequery.geometry, 'point', 'expected original geometry');
     });
     assert.end();

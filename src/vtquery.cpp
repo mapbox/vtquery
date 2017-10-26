@@ -120,46 +120,13 @@ struct QueryData {
     GeomType geometry_filter_type = GeomType::all;
 };
 
-// pass in reference to a string and convert results to JSON formatted string
-void results_to_json_string(std::string & s, std::vector<ResultObject> results) {
-    s += "\n{\"type\":\"FeatureCollection\",\"features\":[";
-
-    // loop through results
-    std::uint32_t count = 1;
-    for (auto const& feature : results) {
-        s += R"({"type":"Feature","geometry":{"type":"Point","coordinates":[)";
-        s += std::to_string(feature.coordinates.x) + "," + std::to_string(feature.coordinates.y);
-        s += R"(]},"properties":{)";
-        // TODO(sam) add properties from feature
-
-        // add tilequery-specific properties
-        s += R"("tilequery":{)";
-        s += R"("distance":)";
-        std::string s_distance = std::to_string(feature.distance);
-        s += s_distance;
-        std::string g = getGeomTypeString(feature.original_geometry_type);
-        s += R"(,"geometry":")" + g + R"(")";
-        s += R"(,"layer":")" + feature.layer_name + R"("})";
-        s += "}";
-        if (count == results.size()) {
-            s += "}";
-        } else {
-            s += "},";
-        }
-        count++;
-    }
-
-    s += "]}";
-}
-
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* callback)
         : Base(callback),
-          query_data_(std::move(query_data)),
-          result_string_("") {}
+          query_data_(std::move(query_data)) {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
@@ -299,11 +266,52 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
-        results_to_json_string(result_string_, results_);
+        // results_to_json_string(result_string_, results_);
+        v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
+        v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
+        std::uint32_t features_size = 0;
+
+        results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
+
+        // for each result object
+        for (auto const& feature : results_) {
+            v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
+
+            // create geometry object
+            v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
+            geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
+            v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>();
+            coordinates_array->Set(0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
+            coordinates_array->Set(1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
+            geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
+            feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
+
+            // create properties object
+            v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
+            v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
+
+            // set properties.tilquery
+            tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
+            std::string og_geom = getGeomTypeString(feature.original_geometry_type);
+            tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
+            tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
+            properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
+
+            // TODO(sam) set the other properties
+            // add properties to feature
+            feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
+
+
+            // add feature to features array
+            features_array->Set(features_size, feature_obj);
+            features_size++;
+        }
+
+        results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
 
         auto const argc = 2u;
         v8::Local<v8::Value> argv[argc] = {
-            Nan::Null(), Nan::New<v8::String>(result_string_).ToLocalChecked()
+            Nan::Null(), results_object
         };
 
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
@@ -312,7 +320,6 @@ struct Worker : Nan::AsyncWorker {
 
     std::unique_ptr<QueryData> query_data_;
     std::vector<ResultObject> results_;
-    std::string result_string_;
 };
 
 NAN_METHOD(vtquery) {
