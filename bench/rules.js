@@ -22,22 +22,6 @@ module.exports = [
     ]
   },
   {
-    description: '9 tiles, chicago, super large radius',
-    queryPoint: [-87.7164, 41.8705],
-    options: { radius: 10000 },
-    tiles: [
-      { z: 13, x: 2098, y: 3043, buffer: getTile('chicago', '13-2098-3043.mvt') },
-      { z: 13, x: 2099, y: 3043, buffer: getTile('chicago', '13-2099-3043.mvt') },
-      { z: 13, x: 2100, y: 3043, buffer: getTile('chicago', '13-2100-3043.mvt') },
-      { z: 13, x: 2098, y: 3044, buffer: getTile('chicago', '13-2098-3044.mvt') },
-      { z: 13, x: 2099, y: 3044, buffer: getTile('chicago', '13-2099-3044.mvt') },
-      { z: 13, x: 2100, y: 3044, buffer: getTile('chicago', '13-2100-3044.mvt') },
-      { z: 13, x: 2098, y: 3045, buffer: getTile('chicago', '13-2098-3045.mvt') },
-      { z: 13, x: 2099, y: 3045, buffer: getTile('chicago', '13-2099-3045.mvt') },
-      { z: 13, x: 2100, y: 3045, buffer: getTile('chicago', '13-2100-3045.mvt') }
-    ]
-  },
-  {
     description: '9 tiles, chicago - only points',
     queryPoint: [-87.7164, 41.8705],
     options: { radius: 1000, geometry: 'point' },
