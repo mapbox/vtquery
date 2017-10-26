@@ -26,13 +26,12 @@ const char * getGeomTypeString( int enumVal )
 
 
 struct ResultObject {
-    using variant_type = mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>;
-    using properties_type = std::map<std::string, variant_type>;
+    using properties_type = std::vector<std::pair<std::string, vtzero::property_value_view>>;
 
     ResultObject(
         mapbox::geometry::point<double> p,
         double distance0,
-        std::map<std::string, ResultObject::variant_type> props_map,
+        std::vector<std::pair<std::string, vtzero::property_value_view>> props_map,
         std::string name,
         GeomType geom_type)
         : coordinates(p),
@@ -45,7 +44,7 @@ struct ResultObject {
 
     mapbox::geometry::point<double> coordinates;
     double distance;
-    std::map<std::string, ResultObject::variant_type> properties;
+    std::vector<std::pair<std::string, vtzero::property_value_view>> properties;
     std::string layer_name;
     GeomType original_geometry_type;
 };
@@ -119,6 +118,25 @@ struct QueryData {
     std::vector<std::string> layers{};
     GeomType geometry_filter_type = GeomType::all;
 };
+
+v8::Local<v8::Value> get_property_value(const vtzero::property_value_view value) {
+    switch (value.type()) {
+    case vtzero::property_value_type::string_value:
+        return Nan::New<v8::String>(std::string(value.string_value())).ToLocalChecked();
+    case vtzero::property_value_type::float_value:
+        return Nan::New<v8::Number>(double(value.float_value()));
+    case vtzero::property_value_type::double_value:
+        return Nan::New<v8::Number>(value.double_value());
+    case vtzero::property_value_type::int_value:
+        return Nan::New<v8::Number>(value.int_value());
+    case vtzero::property_value_type::uint_value:
+        return Nan::New<v8::Number>(value.uint_value());
+    case vtzero::property_value_type::sint_value:
+        return Nan::New<v8::Number>(value.sint_value());
+    default: // case vtzero::property_value_type::bool_value:
+        return Nan::New<v8::Boolean>(value.bool_value());
+    }
+}
 
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
@@ -231,15 +249,14 @@ struct Worker : Nan::AsyncWorker {
                         if (meters <= data.radius) {
 
                             // decode properties (will be libvectortile eventually)
-                            using variant_type = ResultObject::variant_type;
-                            ResultObject::properties_type properties_map;
+                            ResultObject::properties_type properties_list;
                             while (auto prop = feature.next_property()) {
                                 std::string key = std::string{prop.key()};
-                                variant_type value = vtzero::convert_property_value<variant_type>(prop.value());
-                                properties_map.insert(std::pair<std::string, variant_type>(key, value));
+                                vtzero::property_value_view value = prop.value();
+                                properties_list.emplace_back(std::pair<std::string, vtzero::property_value_view>(key, value));
                             }
 
-                            ResultObject r(feature_lnglat, meters, properties_map, layer_name, original_geometry_type);
+                            ResultObject r(feature_lnglat, meters, properties_list, layer_name, original_geometry_type);
                             results_.emplace_back(r);
                         }
                     } // end tile.layer.feature loop
@@ -288,6 +305,10 @@ struct Worker : Nan::AsyncWorker {
             // create properties object
             v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
             v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
+            for (auto const& prop : feature.properties) {
+                auto prop_val = get_property_value(prop.second);
+                properties_obj->Set(Nan::New<v8::String>(prop.first).ToLocalChecked(),  prop_val);
+            }
 
             // set properties.tilquery
             tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
@@ -296,7 +317,6 @@ struct Worker : Nan::AsyncWorker {
             tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
             properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
 
-            // TODO(sam) set the other properties
             // add properties to feature
             feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
 
