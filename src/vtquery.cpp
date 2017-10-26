@@ -26,10 +26,13 @@ const char * getGeomTypeString( int enumVal )
 
 
 struct ResultObject {
+    using variant_type = mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>;
+    using properties_type = std::map<std::string, variant_type>;
+
     ResultObject(
         mapbox::geometry::point<double> p,
         double distance0,
-        std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> props_map,
+        std::map<std::string, ResultObject::variant_type> props_map,
         std::string name,
         GeomType geom_type)
         : coordinates(p),
@@ -42,7 +45,7 @@ struct ResultObject {
 
     mapbox::geometry::point<double> coordinates;
     double distance;
-    std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> properties;
+    std::map<std::string, ResultObject::variant_type> properties;
     std::string layer_name;
     GeomType original_geometry_type;
 };
@@ -261,8 +264,8 @@ struct Worker : Nan::AsyncWorker {
                         if (meters <= data.radius) {
 
                             // decode properties (will be libvectortile eventually)
-                            using variant_type = mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>;
-                            std::map<std::string, variant_type> properties_map;
+                            using variant_type = ResultObject::variant_type;
+                            ResultObject::properties_type properties_map;
                             while (auto prop = feature.next_property()) {
                                 std::string key = std::string{prop.key()};
                                 variant_type value = vtzero::convert_property_value<variant_type>(prop.value());
