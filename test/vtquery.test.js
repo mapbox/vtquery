@@ -462,7 +462,7 @@ test('options - geometry: successfully returns only polygons', assert => {
 });
 
 test('success: returns all possible data value types', assert => {
-  const tiles = [{buffer: fs.readFileSync('../mvt-fixtures/fixtures/038/tile.mvt'), z: 15, x: 5248, y: 11436}];
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
   const opts = {
     radius: 800 // about the width of a z15 tile
   }
