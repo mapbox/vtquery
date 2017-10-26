@@ -17,13 +17,15 @@
 
 namespace VectorTileQuery {
 
-enum GeomType { point, linestring, polygon, all, unknown };
-static const char * GeomTypeStrings[] = { "point", "linestring", "polygon", "uknown", "unknown" };
-const char * getGeomTypeString( int enumVal )
-{
-  return GeomTypeStrings[enumVal];
+enum GeomType { point,
+                linestring,
+                polygon,
+                all,
+                unknown };
+static const char* GeomTypeStrings[] = {"point", "linestring", "polygon", "uknown", "unknown"};
+const char* getGeomTypeString(int enumVal) {
+    return GeomTypeStrings[enumVal];
 }
-
 
 struct ResultObject {
     using properties_type = std::vector<std::pair<std::string, vtzero::property_value_view>>;
@@ -38,7 +40,7 @@ struct ResultObject {
           distance(distance0),
           properties(std::move(props_map)),
           layer_name(std::move(name)),
-          original_geometry_type(std::move(geom_type)) {}
+          original_geometry_type(geom_type) {}
 
     ~ResultObject() = default;
 
@@ -177,7 +179,7 @@ struct Worker : Nan::AsyncWorker {
                     // the current layer name is not a part of that list, continue
                     std::string layer_name = std::string(layer.name());
                     if (!data.layers.empty() && std::find(data.layers.begin(), data.layers.end(), layer_name) == data.layers.end()) {
-                      continue;
+                        continue;
                     }
 
                     /* QUERY POINT
@@ -320,7 +322,6 @@ struct Worker : Nan::AsyncWorker {
             // add properties to feature
             feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
 
-
             // add feature to features array
             features_array->Set(features_size, feature_obj);
             features_size++;
@@ -330,8 +331,7 @@ struct Worker : Nan::AsyncWorker {
 
         auto const argc = 2u;
         v8::Local<v8::Value> argv[argc] = {
-            Nan::Null(), results_object
-        };
+            Nan::Null(), results_object};
 
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
         callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
@@ -546,7 +546,7 @@ NAN_METHOD(vtquery) {
             } else if (geometry == "polygon") {
                 query_data->geometry_filter_type = GeomType::polygon;
             } else {
-              return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
+                return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
             }
         }
     }
