@@ -292,6 +292,7 @@ struct Worker : Nan::AsyncWorker {
         // for each result object
         for (auto const& feature : results_) {
             v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
+            feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
 
             // create geometry object
             v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
@@ -306,8 +307,7 @@ struct Worker : Nan::AsyncWorker {
             v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
             v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
             for (auto const& prop : feature.properties) {
-                auto prop_val = get_property_value(prop.second);
-                properties_obj->Set(Nan::New<v8::String>(prop.first).ToLocalChecked(),  prop_val);
+                properties_obj->Set(Nan::New<v8::String>(prop.first).ToLocalChecked(), get_property_value(prop.second));
             }
 
             // set properties.tilquery

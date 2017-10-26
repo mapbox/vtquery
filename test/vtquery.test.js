@@ -1,6 +1,6 @@
 const test = require('tape');
 const vtquery = require('../lib/index.js');
-const mvtFixtures = require('@mapbox/mvt-fixtures');
+const mvtf = require('@mapbox/mvt-fixtures');
 const queue = require('d3-queue').queue;
 const fs = require('fs');
 
@@ -404,43 +404,9 @@ test('failure: options.geometry must not be empty', assert => {
   });
 });
 
-test('success: defaults', assert => {
-  vtquery([{buffer: mvtFixtures.get('043').buffer, z: 0, x: 0, y: 0}], [47.6, -122.3], function(err, result) {
-    assert.ifError(err);
-    console.log(result);
-    assert.end();
-  });
-});
-
-test('mvt-fixtures: each', assert => {
-  const q = queue(5);
-
-  function testFixture(fixture, callback) {
-    vtquery([{buffer: fixture.buffer, z: 0, x: 0, y: 0}], [47.6, -122.3], function(err, result) {
-      // something if invalid fixture, make sure there's an error
-      // if valid, do something
-      return callback();
-    });
-  }
-
-  mvtFixtures.each(f => {
-    q.defer(testFixture, f);
-  });
-
-  q.awaitAll((err, data) => {
-    assert.end();
-  });
-});
-
-test('real-world tests: chicago', assert => {
-  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
-  const ll = [-87.79147982597351, 41.94584599732266]; // direct hit
-  // const ll = [-87.8229, 41.9503]; // one tile left
-  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 100}, function(err, result) {
-    assert.ifError(err);
-    // console.log('results: ', JSON.parse(result));
-    assert.end();
-  });
+test('options - defaults: success', assert => {
+  // todo
+  assert.end();
 });
 
 test('options - layers: successfully returns only requested layers', assert => {
@@ -448,7 +414,6 @@ test('options - layers: successfully returns only requested layers', assert => {
   const ll = [-87.7914, 41.9458]; // direct hit
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, layers: ['poi_label']}, function(err, result) {
     assert.ifError(err);
-    console.log(JSON.stringify(result));
     result.features.forEach(function(feature) {
       assert.equal(feature.properties.tilequery.layer, 'poi_label', 'proper layer');
     });
@@ -456,16 +421,89 @@ test('options - layers: successfully returns only requested layers', assert => {
   });
 });
 
-test('options - geometry: successfully returns only requested geometry type', assert => {
+test('options - geometry: successfully returns only points', assert => {
   const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
   const ll = [-87.7914, 41.9458]; // direct hit
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, geometry: 'point'}, function(err, result) {
     assert.ifError(err);
-    console.log(JSON.stringify(result));
     assert.equal(result.features.length, 6, 'expected number of features');
     result.features.forEach(function(feature) {
       assert.equal(feature.properties.tilequery.geometry, 'point', 'expected original geometry');
     });
+    assert.end();
+  });
+});
+
+test('options - geometry: successfully returns only linestrings', assert => {
+  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
+  const ll = [-87.7914, 41.9458]; // direct hit
+  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 200, geometry: 'linestring'}, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 6, 'expected number of features');
+    result.features.forEach(function(feature) {
+      assert.equal(feature.properties.tilequery.geometry, 'linestring', 'expected original geometry');
+    });
+    assert.end();
+  });
+});
+
+
+test('options - geometry: successfully returns only polygons', assert => {
+  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
+  const ll = [-87.7914, 41.9458]; // direct hit
+  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 200, geometry: 'polygon'}, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 3, 'expected number of features');
+    result.features.forEach(function(feature) {
+      assert.equal(feature.properties.tilequery.geometry, 'polygon', 'expected original geometry');
+    });
+    assert.end();
+  });
+});
+
+test('success: returns all possible data value types', assert => {
+  const tiles = [{buffer: fs.readFileSync('../mvt-fixtures/fixtures/038/tile.mvt'), z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800 // about the width of a z15 tile
+  }
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    const p = result.features[0].properties;
+
+    assert.equal(typeof p.string_value, 'string', 'expected value type');
+    assert.equal(typeof p.bool_value, 'boolean', 'expected value type');
+    assert.equal(typeof p.int_value, 'number', 'expected value type');
+    assert.equal(typeof p.double_value, 'number', 'expected value type');
+    assert.ok(p.double_value % 1 !== 0, 'expected decimal');
+    assert.equal(typeof p.float_value, 'number', 'expected value type');
+    assert.ok(p.float_value % 1 !== 0, 'expected decimal');
+    assert.equal(typeof p.sint_value, 'number', 'expected value type');
+    assert.ok(p.sint_value < 0, 'expected signedness');
+    assert.equal(typeof p.uint_value, 'number', 'expected value type');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('success: does not throw on unknown geometry type', assert => {
+  const tiles = [{buffer: mvtf.get('003').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800 // about the width of a z15 tile
+  }
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.ifError(err);
+    assert.notOk(result.features.length);
+    assert.end();
+  });
+});
+
+test('error: throws on invalid tile that is missing geometry type', assert => {
+  const tiles = [{buffer: mvtf.get('004').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800 // about the width of a z15 tile
+  }
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'Missing geometry field in feature (spec 4.2)', 'expected error message');
     assert.end();
   });
 });
