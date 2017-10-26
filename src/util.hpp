@@ -79,20 +79,19 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
 /*
   Create a geometry.hpp point from vector tile coordinates
 */
-template <typename CoordinateType>
+using alg = mapbox::geometry::algorithms::closest_point_info
 mapbox::geometry::point<double> convert_vt_to_ll(std::uint32_t extent,
                                                  std::uint32_t z,
                                                  std::uint32_t x,
                                                  std::uint32_t y,
-                                                 CoordinateType px,
-                                                 CoordinateType py) {
+                                                 alg::closest_point_info cp_info) {
     double z2 = 1 << z;
     double ex = static_cast<double>(extent);
     double size = ex * z2;
     double x0 = ex * x;
     double y0 = static_cast<double>(extent) * y;
-    double y2 = 180.0 - (py + y0) * 360.0 / size;
-    double x1 = (static_cast<double>(px) + x0) * 360.0 / size - 180.0;
+    double y2 = 180.0 - (cp_info.y + y0) * 360.0 / size;
+    double x1 = (static_cast<double>(cp_info.x) + x0) * 360.0 / size - 180.0;
     double y1 = 360.0 / M_PI * std::atan(std::exp(y2 * M_PI / 180.0)) - 90.0;
     mapbox::geometry::point<double> ll{x1, y1};
     return ll;
