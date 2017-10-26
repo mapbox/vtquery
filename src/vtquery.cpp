@@ -266,7 +266,6 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
-        // results_to_json_string(result_string_, results_);
         v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
         v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
         std::uint32_t features_size = 0;
