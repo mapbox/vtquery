@@ -63,18 +63,17 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
 
     double z2 = static_cast<double>(1 << zoom); // number of tiles 'across' a particular zoom level
     double lat_radian = (lat * M_PI) / 180.0;
-    double zl_x = lng / (360.0 / (extent * z2));
-    double zl_y = ((extent * z2) / 2.0) * (1.0 - (std::log(std::tan(lat_radian) + 1.0 / std::cos(lat_radian)) / M_PI));
-    std::int64_t origin_tile_x = static_cast<std::int64_t>(std::floor(zl_x / extent));
-    std::int64_t origin_tile_y = static_cast<std::int64_t>(std::floor(zl_y / extent));
-    std::int64_t origin_x = std::int64_t(std::fmod(std::floor(zl_x), extent));
-    std::int64_t origin_y = std::int64_t(std::fmod(std::floor(zl_y), extent));
+    std::int64_t zl_x = static_cast<std::int64_t>(lng / (360.0 / (extent * z2)));
+    std::int64_t zl_y = static_cast<std::int64_t>(((extent * z2) / 2.0) * (1.0 - (std::log(std::tan(lat_radian) + 1.0 / std::cos(lat_radian)) / M_PI)));
+    std::int64_t origin_tile_x = zl_x / extent;
+    std::int64_t origin_tile_y = zl_y / extent;
+    std::int64_t origin_x = zl_x % extent;
+    std::int64_t origin_y = zl_y % extent;
     std::int64_t diff_tile_x = active_tile_x - origin_tile_x;
     std::int64_t diff_tile_y = active_tile_y - origin_tile_y;
-    std::int64_t query_x = -(diff_tile_x * extent) + origin_x;
-    std::int64_t query_y = -(diff_tile_y * extent) + origin_y;
-    mapbox::geometry::point<std::int64_t> query_point{query_x, query_y};
-    return query_point;
+    std::int64_t query_x = origin_x - (diff_tile_x * extent);
+    std::int64_t query_y = origin_y - (diff_tile_y * extent);
+    return mapbox::geometry::point<std::int64_t> {query_x, query_y};
 }
 
 /*
