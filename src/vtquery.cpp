@@ -250,7 +250,7 @@ struct Worker : Nan::AsyncWorker {
 
                         // convert x/y into lng/lat point
                         // TODO(sam) use geometry.hpp points instead of custom pairs
-                        std::pair<double, double> ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, (extent - cp_info.y));
+                        std::pair<double, double> ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, cp_info.y);
                         mapbox::geometry::point<double> feature_lnglat{ll.first, ll.second};
                         auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
 

@@ -21,7 +21,7 @@
       border-radius: 50%;
       width: 10px;
       height: 10px;
-      background: #000;
+      background: #FFDC00;
     }
 
     #container {
@@ -62,6 +62,11 @@ var map = new mapboxgl.Map({
 });
 map.showTileBoundaries=true;
 
+map.addControl(new mapboxgl.ScaleControl({
+    maxWidth: 300,
+    unit: 'metric'
+}));
+
 map.on('load', function(e) {
   map.addSource('tilequery-points', {
     type: 'geojson',
@@ -73,9 +78,29 @@ map.on('load', function(e) {
     type: 'circle',
     source: 'tilequery-points',
     paint: {
-      'circle-radius': 5,
-      'circle-color': '#0000FF'
+      'circle-color': '#0074D9',
+      'circle-radius': 5
     }
+  });
+
+  map.addSource('buffer-polygon', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+
+  map.addLayer({
+    id: 'buffer',
+    type: 'line',
+    source: 'buffer-polygon',
+    paint: {
+      'line-opacity': 0.5,
+      'line-color': '#F012BE',
+      'line-width': 5
+    }
+  });
+
+  map.on('mousemove', 'results', function(e) {
+    console.log(e);
   });
 });
 
@@ -93,14 +118,22 @@ map.on('click', function(e) {
   formTile.innerHTML = `${zoom}/${xy[0]}/${xy[1]}`;
   formQuery.innerHTML = `${Math.floor(e.lngLat.lng * 10000) / 10000}, ${Math.floor(e.lngLat.lat * 10000) / 10000}`
 
-  var query = `/api?lng=${e.lngLat.lng}&lat=${e.lngLat.lat}&zoom=${zoom}`;
+  var query = `/query?lng=${e.lngLat.lng}&lat=${e.lngLat.lat}&zoom=${zoom}`;
+  var buffer = `/buffer?lng=${e.lngLat.lng}&lat=${e.lngLat.lat}&radius=100`;
 
-  fetch(query).then(function(response) {
-    return response.json();
-  }).then(function(json) {
-    console.info(json);
-    map.getSource('tilequery-points').setData(json);
+  fetch(buffer).then(function(bufRes) {
+    return bufRes.json();
+  }).then(function(bufferJSON) {
+    map.getSource('buffer-polygon').setData(bufferJSON);
+
+    fetch(query).then(function(res) {
+      return res.json();
+    }).then(function(vtqueryJSON) {
+      map.getSource('tilequery-points').setData(JSON.parse(vtqueryJSON));
+    });
   });
+
+
 });
 
 // copied from tilebelt

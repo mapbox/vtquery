@@ -5,6 +5,7 @@ var request = require('request');
 var zlib = require('zlib');
 
 var tilebelt = require('@mapbox/tilebelt');
+var turf = require('@turf/turf');
 var vtquery = require('../lib/index.js');
 
 var app = express();
@@ -18,7 +19,14 @@ app.get('/', function(req, res) {
   return res.render('./index.html');
 });
 
-app.get('/api', function(req, res) {
+app.get('/buffer', function(req, res) {
+  var radius = parseFloat(req.query.radius) / 1000.0;
+  var point = turf.point([parseFloat(req.query.lng), parseFloat(req.query.lat)]);
+  var gj = turf.buffer(point, radius);
+  res.json(gj);
+});
+
+app.get('/query', function(req, res) {
   var z = req.query.zoom; // currently forcing z15 so we can view buildings
   var tile = tilebelt.pointToTile(req.query.lng, req.query.lat, z);
   var tileset = 'mapbox.mapbox-streets-v7';
@@ -36,7 +44,7 @@ app.get('/api', function(req, res) {
       vtquery([{buffer: deflated, z: parseInt(z), x: parseInt(x), y: parseInt(y)}], [parseFloat(req.query.lng), parseFloat(req.query.lat)], {radius: 100}, function(err, results) {
         if (err) throw err;
 
-        return res.json(JSON.parse(results));
+        return res.json(results);
       });
     });
   });

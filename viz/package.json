@@ -12,6 +12,7 @@
   "devDependencies": {
     "@mapbox/sphericalmercator": "^1.0.5",
     "@mapbox/tilebelt": "^1.0.1",
+    "@turf/turf": "^4.7.3",
     "body-parser": "^1.18.2",
     "ejs": "^2.5.7",
     "express": "^4.16.2",
