@@ -61,6 +61,10 @@ var map = new mapboxgl.Map({
     center: [-122.3325, 47.6643]
 });
 map.showTileBoundaries=true;
+map.addControl(new mapboxgl.ScaleControl({
+    maxWidth: 300,
+    unit: 'metric'
+}));
 
 map.on('load', function(e) {
   map.addSource('tilequery-points', {

@@ -36,7 +36,7 @@ app.get('/api', function(req, res) {
       vtquery([{buffer: deflated, z: parseInt(z), x: parseInt(x), y: parseInt(y)}], [parseFloat(req.query.lng), parseFloat(req.query.lat)], {radius: 100}, function(err, results) {
         if (err) throw err;
 
-        return res.json(JSON.parse(results));
+        return res.json(results);
       });
     });
   });

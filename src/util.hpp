@@ -104,7 +104,7 @@ mapbox::geometry::point<double> convert_vt_to_ll(std::uint32_t extent,
   The first point is considered the "origin" and its latitude is used to initialize
   the ruler. The second is considered the "feature" and is the distance to.
 */
-double distance_in_meters(mapbox::geometry::point<double> const & origin_lnglat, mapbox::geometry::point<double> const & feature_lnglat) {
+double distance_in_meters(mapbox::geometry::point<double> const& origin_lnglat, mapbox::geometry::point<double> const& feature_lnglat) {
     // set up cheap ruler with query latitude
     mapbox::cheap_ruler::CheapRuler ruler(origin_lnglat.y, mapbox::cheap_ruler::CheapRuler::Meters);
     auto d = ruler.distance(origin_lnglat, feature_lnglat);
