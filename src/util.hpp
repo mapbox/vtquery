@@ -3,6 +3,7 @@
 #include <iostream>
 #include <mapbox/cheap_ruler.hpp>
 #include <mapbox/geometry/geometry.hpp>
+#include <mapbox/geometry/algorithms/closest_point.hpp>
 #include <mapbox/variant.hpp>
 #include <nan.h>
 
@@ -62,40 +63,38 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
 
     double z2 = static_cast<double>(1 << zoom); // number of tiles 'across' a particular zoom level
     double lat_radian = (lat * M_PI) / 180.0;
-    double zl_x = lng / (360.0 / (extent * z2));
-    double zl_y = ((extent * z2) / 2) * (1.0 - (std::log(std::tan(lat_radian) + 1.0 / std::cos(lat_radian)) / M_PI));
-    std::int64_t origin_tile_x = static_cast<std::int64_t>(std::floor(zl_x / extent));
-    std::int64_t origin_tile_y = static_cast<std::int64_t>(std::floor(zl_y / extent));
-    std::int64_t origin_x = std::int64_t(std::fmod(std::floor(zl_x), extent));
-    std::int64_t origin_y = std::int64_t(std::fmod(std::floor(zl_y), extent));
+    std::int64_t zl_x = static_cast<std::int64_t>(lng / (360.0 / (extent * z2)));
+    std::int64_t zl_y = static_cast<std::int64_t>(((extent * z2) / 2.0) * (1.0 - (std::log(std::tan(lat_radian) + 1.0 / std::cos(lat_radian)) / M_PI)));
+    std::int64_t origin_tile_x = zl_x / extent;
+    std::int64_t origin_tile_y = zl_y / extent;
+    std::int64_t origin_x = zl_x % extent;
+    std::int64_t origin_y = zl_y % extent;
     std::int64_t diff_tile_x = active_tile_x - origin_tile_x;
     std::int64_t diff_tile_y = active_tile_y - origin_tile_y;
-    std::int64_t query_x = -(diff_tile_x * extent) + origin_x;
-    std::int64_t query_y = -(diff_tile_y * extent) + origin_y;
-    mapbox::geometry::point<std::int64_t> query_point{query_x, query_y};
-    return query_point;
+    std::int64_t query_x = origin_x - (diff_tile_x * extent);
+    std::int64_t query_y = origin_y - (diff_tile_y * extent);
+    return mapbox::geometry::point<std::int64_t> {query_x, query_y};
 }
 
 /*
   Create a geometry.hpp point from vector tile coordinates
 */
-template <typename CoordinateType>
+using alg = mapbox::geometry::algorithms::closest_point_info<std::int64_t>;
+
 mapbox::geometry::point<double> convert_vt_to_ll(std::uint32_t extent,
                                                  std::uint32_t z,
                                                  std::uint32_t x,
                                                  std::uint32_t y,
-                                                 CoordinateType px,
-                                                 CoordinateType py) {
-    double z2 = 1 << z;
+                                                 alg::closest_point_info cp_info) {
+    double z2 = static_cast<double>(static_cast<std::int64_t>(1) << z);
     double ex = static_cast<double>(extent);
     double size = ex * z2;
     double x0 = ex * x;
-    double y0 = static_cast<double>(extent) * y;
-    double y2 = 180.0 - (py + y0) * 360.0 / size;
-    double x1 = (static_cast<double>(px) + x0) * 360.0 / size - 180.0;
+    double y0 = ex * y;
+    double y2 = 180.0 - (cp_info.y + y0) * 360.0 / size;
+    double x1 = (static_cast<double>(cp_info.x) + x0) * 360.0 / size - 180.0;
     double y1 = 360.0 / M_PI * std::atan(std::exp(y2 * M_PI / 180.0)) - 90.0;
-    mapbox::geometry::point<double> ll{x1, y1};
-    return ll;
+    return mapbox::geometry::point<double> {x1, y1};
 }
 
 /*

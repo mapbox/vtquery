@@ -26,7 +26,6 @@
   "devDependencies": {
     "@mapbox/mvt-fixtures": "3.0.0-beta7",
     "d3-queue": "^3.0.7",
-    "mapnik": "^3.6.2",
     "minimist": "^1.2.0",
     "tape": "^4.5.1"
   },
