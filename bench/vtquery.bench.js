@@ -30,13 +30,12 @@ rules.forEach(function(rule) {
 
 ruleQueue.awaitAll(function(err, res) {
   if (err) throw err;
-  log('Done with all rules.');
+  process.stdout.write('\n');
 });
 
 function runRule(rule, ruleCallback) {
 
-  log(`\n${ruleCount}: ${rule.description}`);
-  log(`${JSON.stringify(rule.options)}`);
+  process.stdout.write(`\n${ruleCount}: ${rule.description}`);
 
   let runs = 0;
   let runsQueue = Queue();
@@ -73,7 +72,7 @@ function runRule(rule, ruleCallback) {
     } else {
     // number of milliseconds per iteration
       var rate = runs/(time/1000);
-      log('Results: \n- ' + rate.toFixed(0) + ' runs/s (runs:' + runs + ' ms:' + time + ' )');
+      process.stdout.write(' - ' + rate.toFixed(0) + ' runs/s (' + time + 'ms)');
     }
 
     // There may be instances when you want to assert some performance metric

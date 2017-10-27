@@ -17,32 +17,36 @@
 
 namespace VectorTileQuery {
 
-enum GeomType { point, linestring, polygon, all, unknown };
-static const char * GeomTypeStrings[] = { "point", "linestring", "polygon", "uknown", "unknown" };
-const char * getGeomTypeString( int enumVal )
-{
-  return GeomTypeStrings[enumVal];
+enum GeomType { point,
+                linestring,
+                polygon,
+                all,
+                unknown };
+static const char* GeomTypeStrings[] = {"point", "linestring", "polygon", "uknown", "unknown"};
+const char* getGeomTypeString(int enumVal) {
+    return GeomTypeStrings[enumVal];
 }
 
-
 struct ResultObject {
+    using properties_type = std::vector<std::pair<std::string, vtzero::property_value_view>>;
+
     ResultObject(
         mapbox::geometry::point<double> p,
         double distance0,
-        std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> props_map,
+        std::vector<std::pair<std::string, vtzero::property_value_view>> props_map,
         std::string name,
         GeomType geom_type)
         : coordinates(p),
           distance(distance0),
           properties(std::move(props_map)),
           layer_name(std::move(name)),
-          original_geometry_type(std::move(geom_type)) {}
+          original_geometry_type(geom_type) {}
 
     ~ResultObject() = default;
 
     mapbox::geometry::point<double> coordinates;
     double distance;
-    std::map<std::string, mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>> properties;
+    std::vector<std::pair<std::string, vtzero::property_value_view>> properties;
     std::string layer_name;
     GeomType original_geometry_type;
 };
@@ -117,36 +121,23 @@ struct QueryData {
     GeomType geometry_filter_type = GeomType::all;
 };
 
-// pass in reference to a string and convert results to JSON formatted string
-void results_to_json_string(std::string & s, std::vector<ResultObject> results) {
-    s += "\n{\"type\":\"FeatureCollection\",\"features\":[";
-
-    // loop through results
-    std::uint32_t count = 1;
-    for (auto const& feature : results) {
-        s += R"({"type":"Feature","geometry":{"type":"Point","coordinates":[)";
-        s += std::to_string(feature.coordinates.x) + "," + std::to_string(feature.coordinates.y);
-        s += R"(]},"properties":{)";
-        // TODO(sam) add properties from feature
-
-        // add tilequery-specific properties
-        s += R"("tilequery":{)";
-        s += R"("distance":)";
-        std::string s_distance = std::to_string(feature.distance);
-        s += s_distance;
-        std::string g = getGeomTypeString(feature.original_geometry_type);
-        s += R"(,"geometry":")" + g + R"(")";
-        s += R"(,"layer":")" + feature.layer_name + R"("})";
-        s += "}";
-        if (count == results.size()) {
-            s += "}";
-        } else {
-            s += "},";
-        }
-        count++;
+v8::Local<v8::Value> get_property_value(const vtzero::property_value_view value) {
+    switch (value.type()) {
+    case vtzero::property_value_type::string_value:
+        return Nan::New<v8::String>(std::string(value.string_value())).ToLocalChecked();
+    case vtzero::property_value_type::float_value:
+        return Nan::New<v8::Number>(double(value.float_value()));
+    case vtzero::property_value_type::double_value:
+        return Nan::New<v8::Number>(value.double_value());
+    case vtzero::property_value_type::int_value:
+        return Nan::New<v8::Number>(value.int_value());
+    case vtzero::property_value_type::uint_value:
+        return Nan::New<v8::Number>(value.uint_value());
+    case vtzero::property_value_type::sint_value:
+        return Nan::New<v8::Number>(value.sint_value());
+    default: // case vtzero::property_value_type::bool_value:
+        return Nan::New<v8::Boolean>(value.bool_value());
     }
-
-    s += "]}";
 }
 
 struct Worker : Nan::AsyncWorker {
@@ -155,8 +146,7 @@ struct Worker : Nan::AsyncWorker {
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* callback)
         : Base(callback),
-          query_data_(std::move(query_data)),
-          result_string_("") {}
+          query_data_(std::move(query_data)) {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
@@ -189,7 +179,7 @@ struct Worker : Nan::AsyncWorker {
                     // the current layer name is not a part of that list, continue
                     std::string layer_name = std::string(layer.name());
                     if (!data.layers.empty() && std::find(data.layers.begin(), data.layers.end(), layer_name) == data.layers.end()) {
-                      continue;
+                        continue;
                     }
 
                     /* QUERY POINT
@@ -261,15 +251,14 @@ struct Worker : Nan::AsyncWorker {
                         if (meters <= data.radius) {
 
                             // decode properties (will be libvectortile eventually)
-                            using variant_type = mapbox::util::variant<std::string, float, double, int64_t, uint64_t, bool>;
-                            std::map<std::string, variant_type> properties_map;
+                            ResultObject::properties_type properties_list;
                             while (auto prop = feature.next_property()) {
                                 std::string key = std::string{prop.key()};
-                                variant_type value = vtzero::convert_property_value<variant_type>(prop.value());
-                                properties_map.insert(std::pair<std::string, variant_type>(key, value));
+                                vtzero::property_value_view value = prop.value();
+                                properties_list.emplace_back(std::pair<std::string, vtzero::property_value_view>(key, value));
                             }
 
-                            ResultObject r(feature_lnglat, meters, properties_map, layer_name, original_geometry_type);
+                            ResultObject r(feature_lnglat, meters, properties_list, layer_name, original_geometry_type);
                             results_.emplace_back(r);
                         }
                     } // end tile.layer.feature loop
@@ -296,12 +285,53 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
-        results_to_json_string(result_string_, results_);
+        v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
+        v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
+        std::uint32_t features_size = 0;
+
+        results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
+
+        // for each result object
+        for (auto const& feature : results_) {
+            v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
+            feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
+
+            // create geometry object
+            v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
+            geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
+            v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>();
+            coordinates_array->Set(0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
+            coordinates_array->Set(1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
+            geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
+            feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
+
+            // create properties object
+            v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
+            v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
+            for (auto const& prop : feature.properties) {
+                properties_obj->Set(Nan::New<v8::String>(prop.first).ToLocalChecked(), get_property_value(prop.second));
+            }
+
+            // set properties.tilquery
+            tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
+            std::string og_geom = getGeomTypeString(feature.original_geometry_type);
+            tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
+            tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
+            properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
+
+            // add properties to feature
+            feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
+
+            // add feature to features array
+            features_array->Set(features_size, feature_obj);
+            features_size++;
+        }
+
+        results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
 
         auto const argc = 2u;
         v8::Local<v8::Value> argv[argc] = {
-            Nan::Null(), Nan::New<v8::String>(result_string_).ToLocalChecked()
-        };
+            Nan::Null(), results_object};
 
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
         callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
@@ -309,7 +339,6 @@ struct Worker : Nan::AsyncWorker {
 
     std::unique_ptr<QueryData> query_data_;
     std::vector<ResultObject> results_;
-    std::string result_string_;
 };
 
 NAN_METHOD(vtquery) {
@@ -517,7 +546,7 @@ NAN_METHOD(vtquery) {
             } else if (geometry == "polygon") {
                 query_data->geometry_filter_type = GeomType::polygon;
             } else {
-              return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
+                return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
             }
         }
     }
