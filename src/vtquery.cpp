@@ -244,7 +244,7 @@ struct Worker : Nan::AsyncWorker {
                         auto const cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
 
                         // convert x/y into lng/lat point
-                        auto feature_lnglat = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info.x, (extent - cp_info.y));
+                        auto feature_lnglat = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info);
                         auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
 
                         // if the distance is within the threshold, save it

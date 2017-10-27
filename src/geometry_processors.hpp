@@ -13,7 +13,7 @@ struct point_processor {
     }
 
     void points_point(vtzero::point const& point) const {
-        mpoint_.emplace_back(point.x, 4096.0 - point.y);
+        mpoint_.emplace_back(point.x, point.y);
     }
 
     void points_end() const {
@@ -32,7 +32,7 @@ struct linestring_processor {
     }
 
     void linestring_point(vtzero::point const& point) const {
-        mline_.back().emplace_back(point.x, 4096.0 - point.y);
+        mline_.back().emplace_back(point.x, point.y);
     }
 
     void linestring_end() const noexcept {
@@ -49,7 +49,7 @@ struct polygon_processor {
     }
 
     void ring_point(vtzero::point const& point) {
-        ring_.emplace_back(point.x, 4096.0 - point.y);
+        ring_.emplace_back(point.x, point.y);
     }
 
     void ring_end(bool is_outer) {
