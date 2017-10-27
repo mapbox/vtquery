@@ -27,28 +27,28 @@ let runs = 0;
 let tiles = [{buffer: fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf'), z: 13, x: 2098, y: 3042}];
 
 function run(cb) {
-  let vt = new mapnik.VectorTile(13, 2098, 3042);
-
-  vt.addData(tiles[0].buffer, function(err, vectorTile) {
-    if (err) {
-      return cb(err);
-    }
-    vt.query(-87.7799, 41.9513, {tolerance: 2000}, function(err, results) {
-      if (err) {
-        return cb(err);
-      }
-      ++runs;
-      return cb();
-    });
-  });
-
-  // vtquery(tiles, [c], {radius: 2000}, function(err, result) {
+  // let vt = new mapnik.VectorTile(13, 2098, 3042);
+  //
+  // vt.addData(tiles[0].buffer, function(err, vectorTile) {
   //   if (err) {
   //     return cb(err);
   //   }
-  //   ++runs;
-  //   return cb();
+  //   vt.query(-87.7799, 41.9513, {tolerance: 2000}, function(err, results) {
+  //     if (err) {
+  //       return cb(err);
+  //     }
+  //     ++runs;
+  //     return cb();
+  //   });
   // });
+
+  vtquery(tiles, [-87.7799, 41.9513], {radius: 2000}, function(err, result) {
+    if (err) {
+      return cb(err);
+    }
+    ++runs;
+    return cb();
+  });
 }
 
 // Start monitoring time before async work begins within the defer iterator below.
