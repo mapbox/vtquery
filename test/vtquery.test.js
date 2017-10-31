@@ -409,6 +409,28 @@ test('options - defaults: success', assert => {
   assert.end();
 });
 
+test('options - radius: all results within radius', assert => {
+  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
+  const ll = [-87.7914, 41.9458]; // direct hit
+  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, { numResults: 100, radius: 1000 }, function(err, result) {
+    assert.ifError(err);
+    result.features.forEach(function(feature) {
+      assert.ok(feature.properties.tilequery.distance <= 1000, 'less than radius');
+    });
+    assert.end();
+  });
+});
+
+test('options - numResults: successfully limits results', assert => {
+  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
+  const ll = [-87.7914, 41.9458]; // direct hit
+  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, { numResults: 1, radius: 1000 }, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 1, 'expected length');
+    assert.end();
+  });
+});
+
 test('options - layers: successfully returns only requested layers', assert => {
   const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
   const ll = [-87.7914, 41.9458]; // direct hit
@@ -426,7 +448,7 @@ test('options - geometry: successfully returns only points', assert => {
   const ll = [-87.7914, 41.9458]; // direct hit
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, geometry: 'point'}, function(err, result) {
     assert.ifError(err);
-    assert.equal(result.features.length, 6, 'expected number of features');
+    assert.equal(result.features.length, 5, 'expected number of features');
     result.features.forEach(function(feature) {
       assert.equal(feature.properties.tilequery.geometry, 'point', 'expected original geometry');
     });
@@ -439,7 +461,7 @@ test('options - geometry: successfully returns only linestrings', assert => {
   const ll = [-87.7914, 41.9458]; // direct hit
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 200, geometry: 'linestring'}, function(err, result) {
     assert.ifError(err);
-    assert.equal(result.features.length, 6, 'expected number of features');
+    assert.equal(result.features.length, 5, 'expected number of features');
     result.features.forEach(function(feature) {
       assert.equal(feature.properties.tilequery.geometry, 'linestring', 'expected original geometry');
     });
@@ -453,7 +475,7 @@ test('options - geometry: successfully returns only polygons', assert => {
   const ll = [-87.7914, 41.9458]; // direct hit
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 200, geometry: 'polygon'}, function(err, result) {
     assert.ifError(err);
-    assert.equal(result.features.length, 3, 'expected number of features');
+    assert.equal(result.features.length, 5, 'expected number of features');
     result.features.forEach(function(feature) {
       assert.equal(feature.properties.tilequery.geometry, 'polygon', 'expected original geometry');
     });

@@ -268,8 +268,6 @@ struct Worker : Nan::AsyncWorker {
             // sort features based on distance
             std::sort(results_.begin(), results_.end(), [](const ResultObject& a, const ResultObject& b) { return a.distance < b.distance; });
 
-            // TODO(sam) create new results vector (from results_) of length specific to num_results option
-
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
         }
@@ -284,6 +282,10 @@ struct Worker : Nan::AsyncWorker {
     // - Finally, you call the user's callback with your results
     void HandleOKCallback() override {
         Nan::HandleScope scope;
+
+        // number of results to loop through
+        QueryData const& data = *query_data_;
+        std::uint32_t num_results = data.num_results;
 
         v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
         v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
@@ -325,6 +327,9 @@ struct Worker : Nan::AsyncWorker {
             // add feature to features array
             features_array->Set(features_size, feature_obj);
             features_size++;
+            if (features_size >= num_results) {
+              break;
+            }
         }
 
         results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
