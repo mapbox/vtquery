@@ -164,6 +164,12 @@ struct Worker : Nan::AsyncWorker {
                At this point we've verified all tiles are of the same zoom level, so we work with that
                since it has been stored in the QueryData struct
             */
+            std::uint32_t numFeatures = 0;
+            std::uint32_t numPoints = 0;
+            std::uint32_t numLinestrings = 0;
+            std::uint32_t numPolygons = 0;
+            std::uint32_t numHits = 0;
+
             for (auto const& tile_ptr : data.tiles) {
 
                 // tile object
@@ -198,11 +204,13 @@ struct Worker : Nan::AsyncWorker {
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
                     GeomType original_geometry_type = GeomType::unknown; // set to unknown but this will get overwritten
                     while (auto feature = layer.next_feature()) {
+                        ++numFeatures;
                         // create a dummy default geometry structure that will be updated in the switch statement below
                         mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
                         // get the geometry type and decode the geometry into mapbox::geometry data structures
                         switch (feature.geometry_type()) {
                         case vtzero::GeomType::POINT: {
+                            ++numPoints;
                             if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::point) {
                                 continue;
                             }
@@ -214,6 +222,7 @@ struct Worker : Nan::AsyncWorker {
                             break;
                         }
                         case vtzero::GeomType::LINESTRING: {
+                            ++numLinestrings;
                             if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::linestring) {
                                 continue;
                             }
@@ -225,6 +234,7 @@ struct Worker : Nan::AsyncWorker {
                             break;
                         }
                         case vtzero::GeomType::POLYGON: {
+                            ++numPolygons;
                             if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::polygon) {
                                 continue;
                             }
@@ -248,7 +258,8 @@ struct Worker : Nan::AsyncWorker {
                         auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
 
                         // if the distance is within the threshold, save it
-                        if (meters <= data.radius) {
+                        if (meters <= data.radius + 1) {
+                            ++numHits;
 
                             // decode properties (will be libvectortile eventually)
                             ResultObject::properties_type properties_list;
@@ -264,6 +275,14 @@ struct Worker : Nan::AsyncWorker {
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
             }         // end tile loop
+
+
+            // std::cout << "\n" << std::endl;
+            // std::cout << "features: " << numFeatures << std::endl;
+            // std::cout << "points: " << numPoints << std::endl;
+            // std::cout << "linestrings: " << numLinestrings << std::endl;
+            // std::cout << "polygons: " << numPolygons << std::endl;
+            // std::cout << "hits: " << numHits << std::endl;
 
             // sort features based on distance
             std::sort(results_.begin(), results_.end(), [](const ResultObject& a, const ResultObject& b) { return a.distance < b.distance; });
