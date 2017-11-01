@@ -5,6 +5,8 @@ const path = require('path');
 const mvtf = require('@mapbox/mvt-fixtures');
 
 module.exports = [
+
+  // point in polygon "within/intersects"
   {
     description: 'pip: many building polygons',
     queryPoint: [120.9667, 14.6028],
@@ -21,6 +23,8 @@ module.exports = [
       { z: 16, x: 54789, y: 30080, buffer: fs.readFileSync('./test/fixtures/manila-buildings-16-54789-30080.mvt')}
     ]
   },
+
+  // queries "closest point"
   {
     description: 'query: many building polygons, single layer',
     queryPoint: [120.9667, 14.6028],
@@ -29,14 +33,6 @@ module.exports = [
       { z: 16, x: 54789, y: 30080, buffer: fs.readFileSync('./test/fixtures/manila-buildings-16-54789-30080.mvt')}
     ]
   },
-  // {
-  //   description: 'query: points, TODO',
-  //   queryPoint: [120.991, 14.6147],
-  //   options: { radius: 3000, geometry: 'linestring' },
-  //   tiles: [
-  //     { z: 14, x: 13698, y: 7519, buffer: fs.readFileSync('./test/fixtures/manila-roads-terrain-14-13698-7519.mvt')}
-  //   ]
-  // },
   {
     description: 'query: linestrings, mapbox streets roads',
     queryPoint: [120.991, 14.6147],
@@ -77,6 +73,8 @@ module.exports = [
       { z: 15, x: 5240, y: 12667, buffer: fs.readFileSync('./test/fixtures/sf-15-5240-12667.mvt')}
     ]
   },
+
+  // elevation
   {
     description: 'elevation: terrain tile nepal',
     queryPoint: [85.2765, 28.0537],
@@ -84,87 +82,33 @@ module.exports = [
     tiles: [
       { z: 13, x: 6036, y: 3430, buffer: getTile('nepal', '13-6036-3430.mvt')}
     ]
+  },
+
+  // geometry
+  {
+    description: 'geometry: 2000 points in a single tile',
+    queryPoint: [-122.3302, 47.6639],
+    options: { radius: 500, geometry: 'point' },
+    tiles: [
+      { z: 16, x: 10498, y: 22872, buffer: fs.readFileSync('./test/fixtures/points-16-10498-22872.mvt')}
+    ]
+  },
+  {
+    description: 'geometry: 2000 linestrings in a single tile',
+    queryPoint: [-122.3302, 47.6639],
+    options: { radius: 500, geometry: 'linestring' },
+    tiles: [
+      { z: 16, x: 10498, y: 22872, buffer: fs.readFileSync('./test/fixtures/linestrings-16-10498-22872.mvt')}
+    ]
+  },
+  {
+    description: 'geometry: 2000 polygons in a single tile',
+    queryPoint: [-122.3302, 47.6639],
+    options: { radius: 500, geometry: 'polygon' },
+    tiles: [
+      { z: 16, x: 10498, y: 22872, buffer: fs.readFileSync('./test/fixtures/polygons-16-10498-22872.mvt')}
+    ]
   }
-  // {
-  //   description: '9 tiles, nepal terrain, radius 1000',
-  //   queryPoint: [-87.7164, 41.8705],
-  //   options: { radius: 1000 },
-  //   tiles: [
-  //     { z: 13, x: 2098, y: 3043, buffer: getTile('chicago', '13-2098-3043.mvt') },
-  //     { z: 13, x: 2099, y: 3043, buffer: getTile('chicago', '13-2099-3043.mvt') },
-  //     { z: 13, x: 2100, y: 3043, buffer: getTile('chicago', '13-2100-3043.mvt') },
-  //     { z: 13, x: 2098, y: 3044, buffer: getTile('chicago', '13-2098-3044.mvt') },
-  //     { z: 13, x: 2099, y: 3044, buffer: getTile('chicago', '13-2099-3044.mvt') },
-  //     { z: 13, x: 2100, y: 3044, buffer: getTile('chicago', '13-2100-3044.mvt') },
-  //     { z: 13, x: 2098, y: 3045, buffer: getTile('chicago', '13-2098-3045.mvt') },
-  //     { z: 13, x: 2099, y: 3045, buffer: getTile('chicago', '13-2099-3045.mvt') },
-  //     { z: 13, x: 2100, y: 3045, buffer: getTile('chicago', '13-2100-3045.mvt') }
-  //   ]
-  // },
-  // {
-  //   description: '9 tiles, chicago, only points',
-  //   queryPoint: [-87.7164, 41.8705],
-  //   options: { radius: 1000, geometry: 'point' },
-  //   tiles: [
-  //     { z: 13, x: 2098, y: 3043, buffer: getTile('chicago', '13-2098-3043.mvt') },
-  //     { z: 13, x: 2099, y: 3043, buffer: getTile('chicago', '13-2099-3043.mvt') },
-  //     { z: 13, x: 2100, y: 3043, buffer: getTile('chicago', '13-2100-3043.mvt') },
-  //     { z: 13, x: 2098, y: 3044, buffer: getTile('chicago', '13-2098-3044.mvt') },
-  //     { z: 13, x: 2099, y: 3044, buffer: getTile('chicago', '13-2099-3044.mvt') },
-  //     { z: 13, x: 2100, y: 3044, buffer: getTile('chicago', '13-2100-3044.mvt') },
-  //     { z: 13, x: 2098, y: 3045, buffer: getTile('chicago', '13-2098-3045.mvt') },
-  //     { z: 13, x: 2099, y: 3045, buffer: getTile('chicago', '13-2099-3045.mvt') },
-  //     { z: 13, x: 2100, y: 3045, buffer: getTile('chicago', '13-2100-3045.mvt') }
-  //   ]
-  // },
-  // {
-  //   description: 'mbx streets no radius',
-  //   queryPoint: [-87.7371, 41.8838],
-  //   options: { radius: 0 },
-  //   tiles: [
-  //     { z: 13, x: 2099, y: 3044, buffer: getTile('chicago', '13-2099-3044.mvt') }
-  //   ]
-  // },
-  // {
-  //   description: 'mbx streets 2000 radius',
-  //   queryPoint: [-87.7371, 41.8838],
-  //   options: { radius: 2000 },
-  //   tiles: [
-  //     { z: 13, x: 2099, y: 3044, buffer: getTile('chicago', '13-2099-3044.mvt') }
-  //   ]
-  // },
-  // {
-  //   description: 'mbx streets only points',
-  //   queryPoint: [-87.7371, 41.8838],
-  //   options: { radius: 2000, geometry: 'point' },
-  //   tiles: [
-  //     { z: 13, x: 2099, y: 3044, buffer: getTile('chicago', '13-2099-3044.mvt') }
-  //   ]
-  // },
-  // {
-  //   description: 'mbx streets only linestrings',
-  //   queryPoint: [-87.7371, 41.8838],
-  //   options: { radius: 2000, geometry: 'linestring' },
-  //   tiles: [
-  //     { z: 13, x: 2099, y: 3044, buffer: getTile('chicago', '13-2099-3044.mvt') }
-  //   ]
-  // },
-  // {
-  //   description: 'mbx streets only polys',
-  //   queryPoint: [-87.7371, 41.8838],
-  //   options: { radius: 2000, geometry: 'polygon' },
-  //   tiles: [
-  //     { z: 13, x: 2099, y: 3044, buffer: getTile('chicago', '13-2099-3044.mvt') }
-  //   ]
-  // },
-  // {
-  //   description: 'complex multipolygon',
-  //   queryPoint: [10.6759453345, 64.8680179376],
-  //   options: { radius: 4000, geometry: 'polygon' },
-  //   tiles: [
-  //     { z: 12, x: 2169, y: 1069, buffer: getTile('norway', '12-2169-1069.mvt') }
-  //   ]
-  // }
 ];
 
 function getTile(name, file) {
