@@ -277,7 +277,6 @@ struct Worker : Nan::AsyncWorker {
             }         // end tile loop
 
 
-            // std::cout << "\n" << std::endl;
             // std::cout << "features: " << numFeatures << std::endl;
             // std::cout << "points: " << numPoints << std::endl;
             // std::cout << "linestrings: " << numLinestrings << std::endl;
