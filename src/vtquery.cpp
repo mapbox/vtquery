@@ -151,8 +151,8 @@ struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
     Worker(std::unique_ptr<QueryData> query_data,
-           Nan::Callback* callback)
-        : Base(callback),
+           Nan::Callback* cb)
+        : Base(cb),
           query_data_(std::move(query_data)),
           results_(),
           sorted_results_() {}
@@ -354,7 +354,7 @@ struct Worker : Nan::AsyncWorker {
             Nan::Null(), results_object};
 
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
-        callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
+        cb->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
 
     std::unique_ptr<QueryData> query_data_;
