@@ -30,24 +30,59 @@ const char* getGeomTypeString(int enumVal) {
 struct ResultObject {
     using properties_type = std::vector<std::pair<std::string, vtzero::property_value_view>>;
 
-    ResultObject(
-        mapbox::geometry::point<double> p,
-        double distance0,
-        std::vector<std::pair<std::string, vtzero::property_value_view>> props_map,
-        std::string name,
-        GeomType geom_type)
-        : coordinates(p),
-          distance(distance0),
-          properties(std::move(props_map)),
-          layer_name(std::move(name)),
-          original_geometry_type(geom_type) {}
+    // move constructor
+    // optimized way of taking all the memory at once
+    // when you want to change ownership of the data
+    // made by default
 
+    // custom constructor
+    ResultObject(
+        std::vector<std::pair<std::string, vtzero::property_value_view>> && props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
+        std::string const& name,
+        mapbox::geometry::point<double> && p,
+        double distance0,
+        GeomType geom_type)
+        : properties(std::move(props_map)),
+          layer_name(name),
+          coordinates(std::move(p)),
+          distance(distance0), // these are small enough that we can just copy
+          original_geometry_type(geom_type) {} // these are small enough that we can just copy
+
+    // copy constructor
+    // helpful when you need to make an entirely new copy of a result object
+    // useful for duplicating data
+    // made by default
+    // ResultObject(
+    //     mapbox::geometry::point<double> const& p, // p is a reference (someone else has control of this) to a constant value
+    //     double const& distance0,
+    //     std::vector<std::pair<std::string, vtzero::property_value_view>> const& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
+    //     std::string const& name,
+    //     GeomType const& geom_type)
+    //     : coordinates(p), // creating a new p value, since the original is a const reference
+    //       distance(distance0),
+    //       properties(props_map),
+    //       layer_name(name),
+    //       original_geometry_type(geom_type) {}
+
+
+
+    // assume resultobject
+    // taking an r-value of another ResultObject and "moving" it
+    // this allows us to have another result object and make a new one
+    // use the default pattern to construct it
+    ResultObject(ResultObject &&) = default;
+
+    // non-copyable object
+    // there is no way the code will ever copy
+    ResultObject(ResultObject const&) = delete;
+
+    // use the default destructor
     ~ResultObject() = default;
 
-    mapbox::geometry::point<double> coordinates;
-    double distance;
     std::vector<std::pair<std::string, vtzero::property_value_view>> properties;
     std::string layer_name;
+    mapbox::geometry::point<double> coordinates;
+    double distance;
     GeomType original_geometry_type;
 };
 
@@ -258,16 +293,29 @@ struct Worker : Nan::AsyncWorker {
                                 properties_list.emplace_back(std::pair<std::string, vtzero::property_value_view>(key, value));
                             }
 
-                            ResultObject r(feature_lnglat, meters, properties_list, layer_name, original_geometry_type);
-                            results_.emplace_back(r);
+                            // emplace_back allows us to put a new object directly into the vector
+                            // wherease push_back we need to create a new object in memory and move it into the vector
+                            results_.emplace_back(std::move(properties_list),
+                                                  layer_name,
+                                                  std::move(feature_lnglat),
+                                                  meters,
+                                                  original_geometry_type);
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
             }         // end tile loop
 
+            // create sort vector
+            sorted_results_.reserve(results_.size());
+            for (auto & r : results_) {
+              sorted_results_.push_back(&r); // save the pointer of r
+            }
+
+            std::sort(sorted_results_.begin(), sorted_results_.end(), [](ResultObject const * a,  ResultObject const * b) { return a->distance < b->distance; });
+
 
             // sort features based on distance
-            std::sort(results_.begin(), results_.end(), [](const ResultObject& a, const ResultObject& b) { return a.distance < b.distance; });
+            // std::sort(results_.begin(), results_.end(), [](const ResultObject& a, const ResultObject& b) { return a.distance < b.distance; });
 
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
@@ -295,7 +343,7 @@ struct Worker : Nan::AsyncWorker {
         results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
 
         // for each result object
-        for (auto const& feature : results_) {
+        for (auto feature : sorted_results_) {
             v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
             feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
 
@@ -303,23 +351,23 @@ struct Worker : Nan::AsyncWorker {
             v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
             geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
             v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>();
-            coordinates_array->Set(0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
-            coordinates_array->Set(1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
+            coordinates_array->Set(0, Nan::New<v8::Number>(feature->coordinates.x)); // latitude
+            coordinates_array->Set(1, Nan::New<v8::Number>(feature->coordinates.y)); // longitude
             geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
             feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
 
             // create properties object
             v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
             v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
-            for (auto const& prop : feature.properties) {
+            for (auto const& prop : feature->properties) {
                 properties_obj->Set(Nan::New<v8::String>(prop.first).ToLocalChecked(), get_property_value(prop.second));
             }
 
             // set properties.tilquery
-            tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
-            std::string og_geom = getGeomTypeString(feature.original_geometry_type);
+            tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature->distance));
+            std::string og_geom = getGeomTypeString(feature->original_geometry_type);
             tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
-            tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
+            tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature->layer_name).ToLocalChecked());
             properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
 
             // add properties to feature
@@ -344,7 +392,8 @@ struct Worker : Nan::AsyncWorker {
     }
 
     std::unique_ptr<QueryData> query_data_;
-    std::vector<ResultObject> results_;
+    std::deque<ResultObject> results_;
+    std::vector<ResultObject*> sorted_results_;
 };
 
 NAN_METHOD(vtquery) {
