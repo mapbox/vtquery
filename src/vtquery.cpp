@@ -67,9 +67,10 @@ struct TileObject {
         : z(z0),
           x(x0),
           y(y0),
-          data(node::Buffer::Data(buffer), node::Buffer::Length(buffer)) {
-        buffer_ref.Reset(buffer.As<v8::Object>());
-    }
+          data(node::Buffer::Data(buffer), node::Buffer::Length(buffer)),
+          buffer_ref() {
+            buffer_ref.Reset(buffer.As<v8::Object>());
+          }
 
     // explicitly use the destructor to clean up
     // the persistent buffer ref by Reset()-ing
@@ -96,13 +97,17 @@ struct TileObject {
 };
 
 struct QueryData {
-    explicit QueryData(std::uint32_t num_tiles) {
-        tiles.reserve(num_tiles);
-    }
-    ~QueryData() = default;
-
-    // guarantee that objects are not being copied by deleting the
-    // copy and move definitions
+    explicit QueryData(std::uint32_t num_tiles)
+      : tiles(),
+        layers(),
+        latitude(0.0),
+        longitude(0.0),
+        radius(0.0),
+        zoom(0),
+        num_results(5),
+        geometry_filter_type(GeomType::all) {
+          tiles.reserve(num_tiles);
+        }
 
     // non-copyable
     QueryData(QueryData const&) = delete;
@@ -114,19 +119,13 @@ struct QueryData {
 
     // buffers object thing
     std::vector<std::unique_ptr<TileObject>> tiles;
-
-    // lng/lat
-    double latitude = 0.0;
-    double longitude = 0.0;
-
-    // zoom - determined by tiles array in validation
-    std::int32_t zoom = 0;
-
-    // options
-    double radius = 0.0;
-    std::uint32_t num_results = 5;
-    std::vector<std::string> layers{};
-    GeomType geometry_filter_type = GeomType::all;
+    std::vector<std::string> layers;
+    double latitude;
+    double longitude;
+    double radius;
+    std::int32_t zoom;
+    std::uint32_t num_results;
+    GeomType geometry_filter_type;
 };
 
 v8::Local<v8::Value> get_property_value(const vtzero::property_value_view value) {
@@ -154,7 +153,9 @@ struct Worker : Nan::AsyncWorker {
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* callback)
         : Base(callback),
-          query_data_(std::move(query_data)) {}
+          query_data_(std::move(query_data)),
+          results_(),
+          sorted_results_() {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
@@ -382,7 +383,8 @@ NAN_METHOD(vtquery) {
         return utils::CallbackError("'tiles' array must be of length greater than 0", callback);
     }
 
-    std::unique_ptr<QueryData> query_data{new QueryData(num_tiles)};
+    // TODO(sam) - create this at the end and include defaults as standalone values here and override before constructing
+    std::unique_ptr<QueryData> query_data = std::make_unique<QueryData>(num_tiles);
 
     for (unsigned t = 0; t < num_tiles; ++t) {
         v8::Local<v8::Value> tile_val = tiles_arr_val->Get(t);
