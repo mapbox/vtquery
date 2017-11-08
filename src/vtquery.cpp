@@ -32,19 +32,19 @@ struct ResultObject {
 
     // custom constructor
     ResultObject(
-        std::vector<std::pair<std::string, vtzero::property_value_view>> && props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
+        std::vector<std::pair<std::string, vtzero::property_value_view>>&& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
         std::string const& name,
-        mapbox::geometry::point<double> && p,
+        mapbox::geometry::point<double>&& p,
         double distance0,
         GeomType geom_type)
         : properties(std::move(props_map)),
           layer_name(name),
           coordinates(std::move(p)),
-          distance(distance0), // these are small enough that we can just copy
+          distance(distance0),                 // these are small enough that we can just copy
           original_geometry_type(geom_type) {} // these are small enough that we can just copy
 
     // default move constructor
-    ResultObject(ResultObject &&) = default;
+    ResultObject(ResultObject&&) = default;
 
     // non-copyable object - there is no way the code will ever copy
     ResultObject(ResultObject const&) = delete;
@@ -69,8 +69,8 @@ struct TileObject {
           y(y0),
           data(node::Buffer::Data(buffer), node::Buffer::Length(buffer)),
           buffer_ref() {
-            buffer_ref.Reset(buffer.As<v8::Object>());
-          }
+        buffer_ref.Reset(buffer.As<v8::Object>());
+    }
 
     // explicitly use the destructor to clean up
     // the persistent buffer ref by Reset()-ing
@@ -98,16 +98,16 @@ struct TileObject {
 
 struct QueryData {
     explicit QueryData(std::uint32_t num_tiles)
-      : tiles(),
-        layers(),
-        latitude(0.0),
-        longitude(0.0),
-        radius(0.0),
-        zoom(0),
-        num_results(5),
-        geometry_filter_type(GeomType::all) {
-          tiles.reserve(num_tiles);
-        }
+        : tiles(),
+          layers(),
+          latitude(0.0),
+          longitude(0.0),
+          radius(0.0),
+          zoom(0),
+          num_results(5),
+          geometry_filter_type(GeomType::all) {
+        tiles.reserve(num_tiles);
+    }
 
     // non-copyable
     QueryData(QueryData const&) = delete;
@@ -281,12 +281,12 @@ struct Worker : Nan::AsyncWorker {
 
             // create sort vector
             sorted_results_.reserve(results_.size());
-            for (auto & r : results_) {
-              sorted_results_.push_back(&r); // save the pointer of r
+            for (auto& r : results_) {
+                sorted_results_.push_back(&r); // save the pointer of r
             }
 
             // sort based on distance
-            std::sort(sorted_results_.begin(), sorted_results_.end(), [](ResultObject const * a,  ResultObject const * b) { return a->distance < b->distance; });
+            std::sort(sorted_results_.begin(), sorted_results_.end(), [](ResultObject const* a, ResultObject const* b) { return a->distance < b->distance; });
 
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
@@ -343,7 +343,7 @@ struct Worker : Nan::AsyncWorker {
             features_array->Set(features_size, feature_obj);
             features_size++;
             if (features_size >= num_results) {
-              break;
+                break;
             }
         }
 
