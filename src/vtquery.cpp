@@ -151,8 +151,8 @@ struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
     Worker(std::unique_ptr<QueryData> query_data,
-           Nan::Callback* callback)
-        : Base(callback),
+           Nan::Callback* cb)
+        : Base(cb),
           query_data_(std::move(query_data)),
           results_(),
           sorted_results_() {}
