@@ -30,11 +30,6 @@ const char* getGeomTypeString(int enumVal) {
 struct ResultObject {
     using properties_type = std::vector<std::pair<std::string, vtzero::property_value_view>>;
 
-    // move constructor
-    // optimized way of taking all the memory at once
-    // when you want to change ownership of the data
-    // made by default
-
     // custom constructor
     ResultObject(
         std::vector<std::pair<std::string, vtzero::property_value_view>> && props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
@@ -48,32 +43,10 @@ struct ResultObject {
           distance(distance0), // these are small enough that we can just copy
           original_geometry_type(geom_type) {} // these are small enough that we can just copy
 
-    // copy constructor
-    // helpful when you need to make an entirely new copy of a result object
-    // useful for duplicating data
-    // made by default
-    // ResultObject(
-    //     mapbox::geometry::point<double> const& p, // p is a reference (someone else has control of this) to a constant value
-    //     double const& distance0,
-    //     std::vector<std::pair<std::string, vtzero::property_value_view>> const& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
-    //     std::string const& name,
-    //     GeomType const& geom_type)
-    //     : coordinates(p), // creating a new p value, since the original is a const reference
-    //       distance(distance0),
-    //       properties(props_map),
-    //       layer_name(name),
-    //       original_geometry_type(geom_type) {}
-
-
-
-    // assume resultobject
-    // taking an r-value of another ResultObject and "moving" it
-    // this allows us to have another result object and make a new one
-    // use the default pattern to construct it
+    // default move constructor
     ResultObject(ResultObject &&) = default;
 
-    // non-copyable object
-    // there is no way the code will ever copy
+    // non-copyable object - there is no way the code will ever copy
     ResultObject(ResultObject const&) = delete;
 
     // use the default destructor
@@ -311,11 +284,8 @@ struct Worker : Nan::AsyncWorker {
               sorted_results_.push_back(&r); // save the pointer of r
             }
 
+            // sort based on distance
             std::sort(sorted_results_.begin(), sorted_results_.end(), [](ResultObject const * a,  ResultObject const * b) { return a->distance < b->distance; });
-
-
-            // sort features based on distance
-            // std::sort(results_.begin(), results_.end(), [](const ResultObject& a, const ResultObject& b) { return a.distance < b.distance; });
 
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
@@ -324,11 +294,6 @@ struct Worker : Nan::AsyncWorker {
 
     // The HandleOKCallback() is getting called when Execute() successfully
     // completed.
-    // - In case Execute() invoked SetErrorMessage("") this function is not
-    // getting called.
-    // - You have access to Javascript v8 objects again
-    // - You have to translate from C++ member variables to Javascript v8 objects
-    // - Finally, you call the user's callback with your results
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
