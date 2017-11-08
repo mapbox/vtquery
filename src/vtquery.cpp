@@ -33,13 +33,13 @@ struct ResultObject {
     // custom constructor
     ResultObject(
         std::vector<std::pair<std::string, vtzero::property_value_view>> && props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
-        std::string const& name,
+        std::string  name,
         mapbox::geometry::point<double> && p,
         double distance0,
         GeomType geom_type)
         : properties(std::move(props_map)),
-          layer_name(name),
-          coordinates(std::move(p)),
+          layer_name(std::move(name)),
+          coordinates(p),
           distance(distance0), // these are small enough that we can just copy
           original_geometry_type(geom_type) {} // these are small enough that we can just copy
 
@@ -68,7 +68,7 @@ struct TileObject {
           x(x0),
           y(y0),
           data(node::Buffer::Data(buffer), node::Buffer::Length(buffer)),
-          buffer_ref() {
+          {
             buffer_ref.Reset(buffer.As<v8::Object>());
           }
 
@@ -98,8 +98,8 @@ struct TileObject {
 
 struct QueryData {
     explicit QueryData(std::uint32_t num_tiles)
-      : tiles(),
-        layers(),
+      : ,
+        ,
         latitude(0.0),
         longitude(0.0),
         radius(0.0),
@@ -151,11 +151,11 @@ struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
     Worker(std::unique_ptr<QueryData> query_data,
-           Nan::Callback* cb)
-        : Base(cb),
+           Nan::Callback* callback)
+        : Base(callback),
           query_data_(std::move(query_data)),
-          results_(),
-          sorted_results_() {}
+          ,
+          {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
@@ -271,7 +271,7 @@ struct Worker : Nan::AsyncWorker {
                             // wherease push_back we need to create a new object in memory and move it into the vector
                             results_.emplace_back(std::move(properties_list),
                                                   layer_name,
-                                                  std::move(feature_lnglat),
+                                                  feature_lnglat,
                                                   meters,
                                                   original_geometry_type);
                         }
@@ -354,7 +354,7 @@ struct Worker : Nan::AsyncWorker {
             Nan::Null(), results_object};
 
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
-        cb->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
+        callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
 
     std::unique_ptr<QueryData> query_data_;

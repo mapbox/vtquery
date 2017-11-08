@@ -2,8 +2,8 @@
 #include <cmath>
 #include <iostream>
 #include <mapbox/cheap_ruler.hpp>
-#include <mapbox/geometry/geometry.hpp>
 #include <mapbox/geometry/algorithms/closest_point.hpp>
+#include <mapbox/geometry/geometry.hpp>
 #include <mapbox/variant.hpp>
 #include <nan.h>
 
@@ -73,7 +73,7 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
     std::int64_t diff_tile_y = active_tile_y - origin_tile_y;
     std::int64_t query_x = origin_x - (diff_tile_x * extent);
     std::int64_t query_y = origin_y - (diff_tile_y * extent);
-    return mapbox::geometry::point<std::int64_t> {query_x, query_y};
+    return mapbox::geometry::point<std::int64_t>{query_x, query_y};
 }
 
 /*
@@ -89,10 +89,10 @@ mapbox::geometry::point<double> convert_vt_to_ll(std::uint32_t extent,
     double size = ex * z2;
     double x0 = ex * x;
     double y0 = ex * y;
-    double y2 = 180.0 - (static_case<double>(cp_info.y) + y0) * 360.0 / size;
+    double y2 = 180.0 - (static_cast<double>(cp_info.y) + y0) * 360.0 / size;
     double x1 = (static_cast<double>(cp_info.x) + x0) * 360.0 / size - 180.0;
     double y1 = 360.0 / M_PI * std::atan(std::exp(y2 * M_PI / 180.0)) - 90.0;
-    return mapbox::geometry::point<double> {x1, y1};
+    return mapbox::geometry::point<double>{x1, y1};
 }
 
 /*
