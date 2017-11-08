@@ -89,7 +89,7 @@ mapbox::geometry::point<double> convert_vt_to_ll(std::uint32_t extent,
     double size = ex * z2;
     double x0 = ex * x;
     double y0 = ex * y;
-    double y2 = 180.0 - (cp_info.y + y0) * 360.0 / size;
+    double y2 = 180.0 - (static_case<double>(cp_info.y) + y0) * 360.0 / size;
     double x1 = (static_cast<double>(cp_info.x) + x0) * 360.0 / size - 180.0;
     double y1 = 360.0 / M_PI * std::atan(std::exp(y2 * M_PI / 180.0)) - 90.0;
     return mapbox::geometry::point<double> {x1, y1};
