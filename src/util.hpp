@@ -108,4 +108,4 @@ double distance_in_meters(mapbox::geometry::point<double> const& origin_lnglat, 
     auto d = ruler.distance(origin_lnglat, feature_lnglat);
     return d;
 }
-}
+} // namespace utils
