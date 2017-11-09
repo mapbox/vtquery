@@ -1,8 +1,11 @@
 const test = require('tape');
+const path = require('path');
 const vtquery = require('../lib/index.js');
 const mvtf = require('@mapbox/mvt-fixtures');
 const queue = require('d3-queue').queue;
 const fs = require('fs');
+
+const bufferSF = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/sanfrancisco/15-5238-12666.mvt'));
 
 test('failure: fails without callback function', assert => {
   try {
@@ -410,9 +413,9 @@ test('options - defaults: success', assert => {
 });
 
 test('options - radius: all results within radius', assert => {
-  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
-  const ll = [-87.7914, 41.9458]; // direct hit
-  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, { numResults: 100, radius: 1000 }, function(err, result) {
+  const buffer = bufferSF;
+  const ll = [-122.4477, 37.7665]; // direct hit
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { numResults: 100, radius: 1000 }, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
       assert.ok(feature.properties.tilequery.distance <= 1000, 'less than radius');
@@ -422,9 +425,9 @@ test('options - radius: all results within radius', assert => {
 });
 
 test('options - numResults: successfully limits results', assert => {
-  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
-  const ll = [-87.7914, 41.9458]; // direct hit
-  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, { numResults: 1, radius: 1000 }, function(err, result) {
+  const buffer = bufferSF;
+  const ll = [-122.4477, 37.7665]; // direct hit
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { numResults: 1, radius: 1000 }, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 1, 'expected length');
     assert.end();
@@ -432,9 +435,9 @@ test('options - numResults: successfully limits results', assert => {
 });
 
 test('options - layers: successfully returns only requested layers', assert => {
-  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
-  const ll = [-87.7914, 41.9458]; // direct hit
-  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, layers: ['poi_label']}, function(err, result) {
+  const buffer = bufferSF;
+  const ll = [-122.4477, 37.7665]; // direct hit
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, {radius: 2000, layers: ['poi_label']}, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
       assert.equal(feature.properties.tilequery.layer, 'poi_label', 'proper layer');
@@ -444,9 +447,9 @@ test('options - layers: successfully returns only requested layers', assert => {
 });
 
 test('options - geometry: successfully returns only points', assert => {
-  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
-  const ll = [-87.7914, 41.9458]; // direct hit
-  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 2000, geometry: 'point'}, function(err, result) {
+  const buffer = bufferSF;
+  const ll = [-122.4477, 37.7665]; // direct hit
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, {radius: 2000, geometry: 'point'}, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 5, 'expected number of features');
     result.features.forEach(function(feature) {
@@ -457,9 +460,9 @@ test('options - geometry: successfully returns only points', assert => {
 });
 
 test('options - geometry: successfully returns only linestrings', assert => {
-  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
-  const ll = [-87.7914, 41.9458]; // direct hit
-  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 200, geometry: 'linestring'}, function(err, result) {
+  const buffer = bufferSF;
+  const ll = [-122.4477, 37.7665]; // direct hit
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, {radius: 200, geometry: 'linestring'}, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 5, 'expected number of features');
     result.features.forEach(function(feature) {
@@ -471,9 +474,9 @@ test('options - geometry: successfully returns only linestrings', assert => {
 
 
 test('options - geometry: successfully returns only polygons', assert => {
-  const buffer = fs.readFileSync('./mapbox-streets-v7-13-2098-3042.vector.pbf');
-  const ll = [-87.7914, 41.9458]; // direct hit
-  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3042}], ll, {radius: 200, geometry: 'polygon'}, function(err, result) {
+  const buffer = bufferSF;
+  const ll = [-122.4477, 37.7665]; // direct hit
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, {radius: 200, geometry: 'polygon'}, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 5, 'expected number of features');
     result.features.forEach(function(feature) {
