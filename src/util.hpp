@@ -2,8 +2,8 @@
 #include <cmath>
 #include <iostream>
 #include <mapbox/cheap_ruler.hpp>
-#include <mapbox/geometry/geometry.hpp>
 #include <mapbox/geometry/algorithms/closest_point.hpp>
+#include <mapbox/geometry/geometry.hpp>
 #include <mapbox/variant.hpp>
 #include <nan.h>
 
@@ -73,28 +73,26 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
     std::int64_t diff_tile_y = active_tile_y - origin_tile_y;
     std::int64_t query_x = origin_x - (diff_tile_x * extent);
     std::int64_t query_y = origin_y - (diff_tile_y * extent);
-    return mapbox::geometry::point<std::int64_t> {query_x, query_y};
+    return mapbox::geometry::point<std::int64_t>{query_x, query_y};
 }
 
 /*
   Create a geometry.hpp point from vector tile coordinates
 */
-using alg = mapbox::geometry::algorithms::closest_point_info<std::int64_t>;
-
 mapbox::geometry::point<double> convert_vt_to_ll(std::uint32_t extent,
                                                  std::uint32_t z,
                                                  std::uint32_t x,
                                                  std::uint32_t y,
-                                                 alg::closest_point_info cp_info) {
+                                                 mapbox::geometry::algorithms::closest_point_info<std::int64_t> cp_info) {
     double z2 = static_cast<double>(static_cast<std::int64_t>(1) << z);
     double ex = static_cast<double>(extent);
     double size = ex * z2;
     double x0 = ex * x;
     double y0 = ex * y;
-    double y2 = 180.0 - (cp_info.y + y0) * 360.0 / size;
+    double y2 = 180.0 - (static_cast<double>(cp_info.y) + y0) * 360.0 / size;
     double x1 = (static_cast<double>(cp_info.x) + x0) * 360.0 / size - 180.0;
     double y1 = 360.0 / M_PI * std::atan(std::exp(y2 * M_PI / 180.0)) - 90.0;
-    return mapbox::geometry::point<double> {x1, y1};
+    return mapbox::geometry::point<double>{x1, y1};
 }
 
 /*
@@ -110,4 +108,4 @@ double distance_in_meters(mapbox::geometry::point<double> const& origin_lnglat, 
     auto d = ruler.distance(origin_lnglat, feature_lnglat);
     return d;
 }
-}
+} // namespace utils

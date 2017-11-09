@@ -86,6 +86,6 @@ function log(message) {
   if (argv.output && argv.output === 'json') {
     // handle JSON output
   } else {
-    console.log(message);
+    process.stdout.write(message);
   }
 }
