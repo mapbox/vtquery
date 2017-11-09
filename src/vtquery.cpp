@@ -30,24 +30,32 @@ const char* getGeomTypeString(int enumVal) {
 struct ResultObject {
     using properties_type = std::vector<std::pair<std::string, vtzero::property_value_view>>;
 
+    // custom constructor
     ResultObject(
-        mapbox::geometry::point<double> p,
+        std::vector<std::pair<std::string, vtzero::property_value_view>>&& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
+        std::string const& name,
+        mapbox::geometry::point<double>&& p,
         double distance0,
-        std::vector<std::pair<std::string, vtzero::property_value_view>> props_map,
-        std::string name,
         GeomType geom_type)
-        : coordinates(p),
-          distance(distance0),
-          properties(std::move(props_map)),
-          layer_name(std::move(name)),
-          original_geometry_type(geom_type) {}
+        : properties(std::move(props_map)),
+          layer_name(name),
+          coordinates(std::move(p)),
+          distance(distance0),                 // these are small enough that we can just copy
+          original_geometry_type(geom_type) {} // these are small enough that we can just copy
 
+    // default move constructor
+    ResultObject(ResultObject&&) = default;
+
+    // non-copyable object - there is no way the code will ever copy
+    ResultObject(ResultObject const&) = delete;
+
+    // use the default destructor
     ~ResultObject() = default;
 
-    mapbox::geometry::point<double> coordinates;
-    double distance;
     std::vector<std::pair<std::string, vtzero::property_value_view>> properties;
     std::string layer_name;
+    mapbox::geometry::point<double> coordinates;
+    double distance;
     GeomType original_geometry_type;
 };
 
@@ -59,7 +67,8 @@ struct TileObject {
         : z(z0),
           x(x0),
           y(y0),
-          data(node::Buffer::Data(buffer), node::Buffer::Length(buffer)) {
+          data(node::Buffer::Data(buffer), node::Buffer::Length(buffer)),
+          buffer_ref() {
         buffer_ref.Reset(buffer.As<v8::Object>());
     }
 
@@ -88,13 +97,17 @@ struct TileObject {
 };
 
 struct QueryData {
-    explicit QueryData(std::uint32_t num_tiles) {
+    explicit QueryData(std::uint32_t num_tiles)
+        : tiles(),
+          layers(),
+          latitude(0.0),
+          longitude(0.0),
+          radius(0.0),
+          zoom(0),
+          num_results(5),
+          geometry_filter_type(GeomType::all) {
         tiles.reserve(num_tiles);
     }
-    ~QueryData() = default;
-
-    // guarantee that objects are not being copied by deleting the
-    // copy and move definitions
 
     // non-copyable
     QueryData(QueryData const&) = delete;
@@ -106,19 +119,13 @@ struct QueryData {
 
     // buffers object thing
     std::vector<std::unique_ptr<TileObject>> tiles;
-
-    // lng/lat
-    double latitude = 0.0;
-    double longitude = 0.0;
-
-    // zoom - determined by tiles array in validation
-    std::int32_t zoom = 0;
-
-    // options
-    double radius = 0.0;
-    std::uint32_t num_results = 5;
-    std::vector<std::string> layers{};
-    GeomType geometry_filter_type = GeomType::all;
+    std::vector<std::string> layers;
+    double latitude;
+    double longitude;
+    double radius;
+    std::int32_t zoom;
+    std::uint32_t num_results;
+    GeomType geometry_filter_type;
 };
 
 v8::Local<v8::Value> get_property_value(const vtzero::property_value_view value) {
@@ -144,9 +151,11 @@ struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
     Worker(std::unique_ptr<QueryData> query_data,
-           Nan::Callback* callback)
-        : Base(callback),
-          query_data_(std::move(query_data)) {}
+           Nan::Callback* cb)
+        : Base(cb),
+          query_data_(std::move(query_data)),
+          results_(),
+          sorted_results_() {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
@@ -258,16 +267,26 @@ struct Worker : Nan::AsyncWorker {
                                 properties_list.emplace_back(std::pair<std::string, vtzero::property_value_view>(key, value));
                             }
 
-                            ResultObject r(feature_lnglat, meters, properties_list, layer_name, original_geometry_type);
-                            results_.emplace_back(r);
+                            // emplace_back allows us to put a new object directly into the vector
+                            // wherease push_back we need to create a new object in memory and move it into the vector
+                            results_.emplace_back(std::move(properties_list),
+                                                  layer_name,
+                                                  std::move(feature_lnglat),
+                                                  meters,
+                                                  original_geometry_type);
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
             }         // end tile loop
 
+            // create sort vector
+            sorted_results_.reserve(results_.size());
+            for (auto& r : results_) {
+                sorted_results_.push_back(&r); // save the pointer of r
+            }
 
-            // sort features based on distance
-            std::sort(results_.begin(), results_.end(), [](const ResultObject& a, const ResultObject& b) { return a.distance < b.distance; });
+            // sort based on distance
+            std::sort(sorted_results_.begin(), sorted_results_.end(), [](ResultObject const* a, ResultObject const* b) { return a->distance < b->distance; });
 
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
@@ -276,11 +295,6 @@ struct Worker : Nan::AsyncWorker {
 
     // The HandleOKCallback() is getting called when Execute() successfully
     // completed.
-    // - In case Execute() invoked SetErrorMessage("") this function is not
-    // getting called.
-    // - You have access to Javascript v8 objects again
-    // - You have to translate from C++ member variables to Javascript v8 objects
-    // - Finally, you call the user's callback with your results
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
@@ -295,7 +309,7 @@ struct Worker : Nan::AsyncWorker {
         results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
 
         // for each result object
-        for (auto const& feature : results_) {
+        for (auto feature : sorted_results_) {
             v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
             feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
 
@@ -303,23 +317,23 @@ struct Worker : Nan::AsyncWorker {
             v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
             geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
             v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>();
-            coordinates_array->Set(0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
-            coordinates_array->Set(1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
+            coordinates_array->Set(0, Nan::New<v8::Number>(feature->coordinates.x)); // latitude
+            coordinates_array->Set(1, Nan::New<v8::Number>(feature->coordinates.y)); // longitude
             geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
             feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
 
             // create properties object
             v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
             v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
-            for (auto const& prop : feature.properties) {
+            for (auto const& prop : feature->properties) {
                 properties_obj->Set(Nan::New<v8::String>(prop.first).ToLocalChecked(), get_property_value(prop.second));
             }
 
             // set properties.tilquery
-            tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
-            std::string og_geom = getGeomTypeString(feature.original_geometry_type);
+            tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature->distance));
+            std::string og_geom = getGeomTypeString(feature->original_geometry_type);
             tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
-            tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
+            tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature->layer_name).ToLocalChecked());
             properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
 
             // add properties to feature
@@ -329,7 +343,7 @@ struct Worker : Nan::AsyncWorker {
             features_array->Set(features_size, feature_obj);
             features_size++;
             if (features_size >= num_results) {
-              break;
+                break;
             }
         }
 
@@ -344,7 +358,8 @@ struct Worker : Nan::AsyncWorker {
     }
 
     std::unique_ptr<QueryData> query_data_;
-    std::vector<ResultObject> results_;
+    std::deque<ResultObject> results_;
+    std::vector<ResultObject*> sorted_results_;
 };
 
 NAN_METHOD(vtquery) {
@@ -368,7 +383,8 @@ NAN_METHOD(vtquery) {
         return utils::CallbackError("'tiles' array must be of length greater than 0", callback);
     }
 
-    std::unique_ptr<QueryData> query_data{new QueryData(num_tiles)};
+    // TODO(sam) - create this at the end and include defaults as standalone values here and override before constructing
+    std::unique_ptr<QueryData> query_data = std::make_unique<QueryData>(num_tiles);
 
     for (unsigned t = 0; t < num_tiles; ++t) {
         v8::Local<v8::Value> tile_val = tiles_arr_val->Get(t);

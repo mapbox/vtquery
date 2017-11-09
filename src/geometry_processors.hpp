@@ -42,7 +42,8 @@ struct linestring_processor {
 
 struct polygon_processor {
     polygon_processor(mapbox::geometry::multi_polygon<std::int64_t>& mpoly)
-        : mpoly_(mpoly) {}
+        : mpoly_(mpoly),
+          ring_() {}
 
     void ring_begin(std::uint32_t count) {
         ring_.reserve(count);
