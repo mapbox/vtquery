@@ -1,5 +1,5 @@
 #include "vtquery.hpp"
-#include "geometry_processors.hpp"
+// #include "geometry_processors.hpp"
 #include "util.hpp"
 
 #include <algorithm>
@@ -9,6 +9,7 @@
 #include <mapbox/geometry/algorithms/closest_point.hpp>
 #include <mapbox/geometry/algorithms/closest_point_impl.hpp>
 #include <mapbox/geometry/geometry.hpp>
+#include <mapbox/vector_tile.hpp>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -28,11 +29,9 @@ const char* getGeomTypeString(int enumVal) {
 }
 
 struct ResultObject {
-    using properties_type = std::vector<std::pair<std::string, vtzero::property_value_view>>;
-
     // custom constructor
     ResultObject(
-        std::vector<std::pair<std::string, vtzero::property_value_view>>&& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
+        mapbox::feature::property_map&& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
         std::string const& name,
         mapbox::geometry::point<double>&& p,
         double distance0,
@@ -52,7 +51,7 @@ struct ResultObject {
     // use the default destructor
     ~ResultObject() = default;
 
-    std::vector<std::pair<std::string, vtzero::property_value_view>> properties;
+    mapbox::feature::property_map properties;
     std::string layer_name;
     mapbox::geometry::point<double> coordinates;
     double distance;
@@ -128,24 +127,24 @@ struct QueryData {
     GeomType geometry_filter_type;
 };
 
-v8::Local<v8::Value> get_property_value(const vtzero::property_value_view value) {
-    switch (value.type()) {
-    case vtzero::property_value_type::string_value:
-        return Nan::New<v8::String>(std::string(value.string_value())).ToLocalChecked();
-    case vtzero::property_value_type::float_value:
-        return Nan::New<v8::Number>(double(value.float_value()));
-    case vtzero::property_value_type::double_value:
-        return Nan::New<v8::Number>(value.double_value());
-    case vtzero::property_value_type::int_value:
-        return Nan::New<v8::Number>(value.int_value());
-    case vtzero::property_value_type::uint_value:
-        return Nan::New<v8::Number>(value.uint_value());
-    case vtzero::property_value_type::sint_value:
-        return Nan::New<v8::Number>(value.sint_value());
-    default: // case vtzero::property_value_type::bool_value:
-        return Nan::New<v8::Boolean>(value.bool_value());
-    }
-}
+// v8::Local<v8::Value> get_property_value(const vtzero::property_value_view value) {
+//     switch (value.type()) {
+//     case vtzero::property_value_type::string_value:
+//         return Nan::New<v8::String>(std::string(value.string_value())).ToLocalChecked();
+//     case vtzero::property_value_type::float_value:
+//         return Nan::New<v8::Number>(double(value.float_value()));
+//     case vtzero::property_value_type::double_value:
+//         return Nan::New<v8::Number>(value.double_value());
+//     case vtzero::property_value_type::int_value:
+//         return Nan::New<v8::Number>(value.int_value());
+//     case vtzero::property_value_type::uint_value:
+//         return Nan::New<v8::Number>(value.uint_value());
+//     case vtzero::property_value_type::sint_value:
+//         return Nan::New<v8::Number>(value.sint_value());
+//     default: // case vtzero::property_value_type::bool_value:
+//         return Nan::New<v8::Boolean>(value.bool_value());
+//     }
+// }
 
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
@@ -207,47 +206,51 @@ struct Worker : Nan::AsyncWorker {
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
                     GeomType original_geometry_type = GeomType::unknown; // set to unknown but this will get overwritten
                     while (auto feature = layer.next_feature()) {
+
+                        // extract geometry - mapbox::geometry::geometry<std::int64_t>
+                        auto query_geometry = mapbox::vector_tile::extract_geometry(feature);
+
                         // create a dummy default geometry structure that will be updated in the switch statement below
-                        mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
-                        // get the geometry type and decode the geometry into mapbox::geometry data structures
-                        switch (feature.geometry_type()) {
-                        case vtzero::GeomType::POINT: {
-                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::point) {
-                                continue;
-                            }
-                            mapbox::geometry::multi_point<std::int64_t> mpoint;
-                            point_processor proc_point(mpoint);
-                            vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
-                            query_geometry = std::move(mpoint);
-                            original_geometry_type = GeomType::point;
-                            break;
-                        }
-                        case vtzero::GeomType::LINESTRING: {
-                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::linestring) {
-                                continue;
-                            }
-                            mapbox::geometry::multi_line_string<std::int64_t> mline;
-                            linestring_processor proc_line(mline);
-                            vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
-                            query_geometry = std::move(mline);
-                            original_geometry_type = GeomType::linestring;
-                            break;
-                        }
-                        case vtzero::GeomType::POLYGON: {
-                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::polygon) {
-                                continue;
-                            }
-                            mapbox::geometry::multi_polygon<std::int64_t> mpoly;
-                            polygon_processor proc_poly(mpoly);
-                            vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);
-                            query_geometry = std::move(mpoly);
-                            original_geometry_type = GeomType::polygon;
-                            break;
-                        }
-                        default: {
-                            continue;
-                        }
-                        }
+                        // mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
+                        // // get the geometry type and decode the geometry into mapbox::geometry data structures
+                        // switch (feature.geometry_type()) {
+                        // case vtzero::GeomType::POINT: {
+                        //     if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::point) {
+                        //         continue;
+                        //     }
+                        //     mapbox::geometry::multi_point<std::int64_t> mpoint;
+                        //     point_processor proc_point(mpoint);
+                        //     vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
+                        //     query_geometry = std::move(mpoint);
+                        //     original_geometry_type = GeomType::point;
+                        //     break;
+                        // }
+                        // case vtzero::GeomType::LINESTRING: {
+                        //     if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::linestring) {
+                        //         continue;
+                        //     }
+                        //     mapbox::geometry::multi_line_string<std::int64_t> mline;
+                        //     linestring_processor proc_line(mline);
+                        //     vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
+                        //     query_geometry = std::move(mline);
+                        //     original_geometry_type = GeomType::linestring;
+                        //     break;
+                        // }
+                        // case vtzero::GeomType::POLYGON: {
+                        //     if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::polygon) {
+                        //         continue;
+                        //     }
+                        //     mapbox::geometry::multi_polygon<std::int64_t> mpoly;
+                        //     polygon_processor proc_poly(mpoly);
+                        //     vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);
+                        //     query_geometry = std::move(mpoly);
+                        //     original_geometry_type = GeomType::polygon;
+                        //     break;
+                        // }
+                        // default: {
+                        //     continue;
+                        // }
+                        // }
 
                         // implement closest point algorithm on query geometry and the query point
                         auto const cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
@@ -260,16 +263,11 @@ struct Worker : Nan::AsyncWorker {
                         if (meters <= data.radius + 1) { // TODO(sam) https://github.com/mapbox/vtquery/issues/36
 
                             // decode properties (will be libvectortile eventually)
-                            ResultObject::properties_type properties_list;
-                            while (auto prop = feature.next_property()) {
-                                std::string key = std::string{prop.key()};
-                                vtzero::property_value_view value = prop.value();
-                                properties_list.emplace_back(std::pair<std::string, vtzero::property_value_view>(key, value));
-                            }
+                            auto props = mapbox::vector_tile::extract_properties(feature);
 
                             // emplace_back allows us to put a new object directly into the vector
                             // wherease push_back we need to create a new object in memory and move it into the vector
-                            results_.emplace_back(std::move(properties_list),
+                            results_.emplace_back(std::move(props),
                                                   layer_name,
                                                   std::move(feature_lnglat),
                                                   meters,
