@@ -163,6 +163,9 @@ void set_property(mapbox::feature::property_map::value_type const& property,
     mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
 }
 
+// properties_obj->Set(Nan::New<v8::String>(prop.first).ToLocalChecked(), get_property_value(prop.second));
+
+
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
@@ -226,26 +229,27 @@ struct Worker : Nan::AsyncWorker {
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
                     GeomType original_geometry_type = GeomType::unknown; // set to unknown but this will get overwritten
                     while (auto feature = layer.next_feature()) {
+                        mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
                         switch (feature.geometry_type()) {
                         case vtzero::GeomType::POINT: {
                             if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::point) {
                                 continue;
                             }
-                            auto query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
+                            query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
                             break;
                         }
                         case vtzero::GeomType::LINESTRING: {
                             if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::linestring) {
                                 continue;
                             }
-                            auto query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
+                            query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
                             break;
                         }
                         case vtzero::GeomType::POLYGON: {
                             if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::polygon) {
                                 continue;
                             }
-                            auto query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
+                            query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
                             break;
                         }
                         default: {
@@ -269,7 +273,7 @@ struct Worker : Nan::AsyncWorker {
                                                std::move(feature_lnglat),
                                                meters,
                                                original_geometry_type);
-                                results_.push_back(r);
+                                results_.emplace_back(std::move(r));
                                 results_sorted_.emplace(&r);
                             } else if (meters < results_sorted_.top()->distance) {
                                 results_sorted_.pop();
@@ -279,7 +283,7 @@ struct Worker : Nan::AsyncWorker {
                                                std::move(feature_lnglat),
                                                meters,
                                                original_geometry_type);
-                                results_.push_back(r);
+                                results_.emplace_back(std::move(r));
                                 results_sorted_.emplace(&r);
                             }
                         }
