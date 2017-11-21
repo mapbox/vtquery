@@ -252,14 +252,11 @@ struct Worker : Nan::AsyncWorker {
                         // implement closest point algorithm on query geometry and the query point
                         auto const cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
 
-                        // convert x/y into lng/lat point
-                        auto feature_lnglat = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info);
-                        auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
+                        // if radius is zero, and the distnace is zero, we have a point inside a polygon
+                        // closest_point algorithm sets 0.0 if a boost::geometry::within test returns true
+                        if (data.radius == 0.0 && cp_info.distance == 0.0) {
+                            mapbox::geometry::point<double> original_coords{data.latitude, data.longitude};
 
-                        // if the distance is within the threshold, save it
-                        if (meters <= data.radius + 1) { // TODO(sam) https://github.com/mapbox/vtquery/issues/36
-
-                            // decode properties (will be libvectortile eventually)
                             ResultObject::properties_type properties_list;
                             while (auto prop = feature.next_property()) {
                                 std::string key = std::string{prop.key()};
@@ -267,26 +264,55 @@ struct Worker : Nan::AsyncWorker {
                                 properties_list.emplace_back(std::pair<std::string, vtzero::property_value_view>(key, value));
                             }
 
-                            // emplace_back allows us to put a new object directly into the vector
-                            // wherease push_back we need to create a new object in memory and move it into the vector
                             results_.emplace_back(std::move(properties_list),
                                                   layer_name,
-                                                  std::move(feature_lnglat),
-                                                  meters,
+                                                  std::move(original_coords),
+                                                  0.0,
                                                   original_geometry_type);
+
+                        // otherwise let's check if the distance from the query point is within our desired radius
+                        } else {
+                            // convert x/y into lng/lat point
+                            auto feature_lnglat = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info);
+                            auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
+
+                            // if the distance is within the threshold, save it
+                            if (meters <= data.radius) { // TODO(sam) https://github.com/mapbox/vtquery/issues/36
+
+                                // decode properties (will be libvectortile eventually)
+                                ResultObject::properties_type properties_list;
+                                while (auto prop = feature.next_property()) {
+                                    std::string key = std::string{prop.key()};
+                                    vtzero::property_value_view value = prop.value();
+                                    properties_list.emplace_back(std::pair<std::string, vtzero::property_value_view>(key, value));
+                                }
+
+                                // emplace_back allows us to put a new object directly into the vector
+                                // wherease push_back we need to create a new object in memory and move it into the vector
+                                results_.emplace_back(std::move(properties_list),
+                                                      layer_name,
+                                                      std::move(feature_lnglat),
+                                                      meters,
+                                                      original_geometry_type);
+                            }
                         }
+
+
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
             }         // end tile loop
 
             // create sort vector
+
             sorted_results_.reserve(results_.size());
             for (auto& r : results_) {
                 sorted_results_.push_back(&r); // save the pointer of r
             }
 
-            // sort based on distance
-            std::sort(sorted_results_.begin(), sorted_results_.end(), [](ResultObject const* a, ResultObject const* b) { return a->distance < b->distance; });
+            // sort based on distance (unless radius is zero, in which case there is no need to sort)
+            if (data.radius > 0.0) {
+                std::sort(sorted_results_.begin(), sorted_results_.end(), [](ResultObject const* a, ResultObject const* b) { return a->distance < b->distance; });
+            }
 
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());

@@ -414,7 +414,7 @@ test('options - defaults: success', assert => {
 
 test('options - radius: all results within radius', assert => {
   const buffer = bufferSF;
-  const ll = [-122.4477, 37.7665]; // direct hit
+  const ll = [-122.4477, 37.7665];
   vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { numResults: 100, radius: 1000 }, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
@@ -424,9 +424,20 @@ test('options - radius: all results within radius', assert => {
   });
 });
 
+test('options - radius=0: only returns "point in polygon" results (on a building)', assert => {
+  const buffer = bufferSF;
+  const ll = [-122.4527, 37.7689]; // direct hit on a building
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { radius: 0, layers: ['building'] }, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 1, 'only one building returned');
+    assert.deepEqual(result.features[0].properties.tilequery, { distance: 0.0, layer: 'building', geometry: 'polygon' }, 'expected tilequery info');
+    assert.end();
+  });
+});
+
 test('options - numResults: successfully limits results', assert => {
   const buffer = bufferSF;
-  const ll = [-122.4477, 37.7665]; // direct hit
+  const ll = [-122.4477, 37.7665];
   vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { numResults: 1, radius: 1000 }, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 1, 'expected length');
@@ -436,7 +447,7 @@ test('options - numResults: successfully limits results', assert => {
 
 test('options - layers: successfully returns only requested layers', assert => {
   const buffer = bufferSF;
-  const ll = [-122.4477, 37.7665]; // direct hit
+  const ll = [-122.4477, 37.7665];
   vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, {radius: 2000, layers: ['poi_label']}, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
@@ -448,7 +459,7 @@ test('options - layers: successfully returns only requested layers', assert => {
 
 test('options - geometry: successfully returns only points', assert => {
   const buffer = bufferSF;
-  const ll = [-122.4477, 37.7665]; // direct hit
+  const ll = [-122.4477, 37.7665];
   vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, {radius: 2000, geometry: 'point'}, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 5, 'expected number of features');
@@ -461,7 +472,7 @@ test('options - geometry: successfully returns only points', assert => {
 
 test('options - geometry: successfully returns only linestrings', assert => {
   const buffer = bufferSF;
-  const ll = [-122.4477, 37.7665]; // direct hit
+  const ll = [-122.4477, 37.7665];
   vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, {radius: 200, geometry: 'linestring'}, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 5, 'expected number of features');
@@ -475,7 +486,7 @@ test('options - geometry: successfully returns only linestrings', assert => {
 
 test('options - geometry: successfully returns only polygons', assert => {
   const buffer = bufferSF;
-  const ll = [-122.4477, 37.7665]; // direct hit
+  const ll = [-122.4477, 37.7665];
   vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, {radius: 200, geometry: 'polygon'}, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 5, 'expected number of features');
