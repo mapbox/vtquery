@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <exception>
 #include <iostream>
+#include <queue>
 #include <map>
 #include <mapbox/geometry/algorithms/closest_point.hpp>
 #include <mapbox/geometry/algorithms/closest_point_impl.hpp>
@@ -29,6 +30,12 @@ const char* getGeomTypeString(int enumVal) {
 }
 
 struct ResultObject {
+    mapbox::feature::property_map properties;
+    std::string layer_name;
+    mapbox::geometry::point<double> coordinates;
+    double distance;
+    GeomType original_geometry_type;
+
     // custom constructor
     ResultObject(
         mapbox::feature::property_map&& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
@@ -39,8 +46,8 @@ struct ResultObject {
         : properties(std::move(props_map)),
           layer_name(name),
           coordinates(std::move(p)),
-          distance(distance0),                 // these are small enough that we can just copy
-          original_geometry_type(geom_type) {} // these are small enough that we can just copy
+          distance(distance0),
+          original_geometry_type(geom_type) {}
 
     // default move constructor
     ResultObject(ResultObject&&) = default;
@@ -51,11 +58,11 @@ struct ResultObject {
     // use the default destructor
     ~ResultObject() = default;
 
-    mapbox::feature::property_map properties;
-    std::string layer_name;
-    mapbox::geometry::point<double> coordinates;
-    double distance;
-    GeomType original_geometry_type;
+    // less than operator between result objects
+    bool operator< (ResultObject const& rhs) const {
+        return this->distance < rhs.distance;
+    }
+
 };
 
 struct TileObject {
@@ -127,34 +134,47 @@ struct QueryData {
     GeomType geometry_filter_type;
 };
 
-// v8::Local<v8::Value> get_property_value(const vtzero::property_value_view value) {
-//     switch (value.type()) {
-//     case vtzero::property_value_type::string_value:
-//         return Nan::New<v8::String>(std::string(value.string_value())).ToLocalChecked();
-//     case vtzero::property_value_type::float_value:
-//         return Nan::New<v8::Number>(double(value.float_value()));
-//     case vtzero::property_value_type::double_value:
-//         return Nan::New<v8::Number>(value.double_value());
-//     case vtzero::property_value_type::int_value:
-//         return Nan::New<v8::Number>(value.int_value());
-//     case vtzero::property_value_type::uint_value:
-//         return Nan::New<v8::Number>(value.uint_value());
-//     case vtzero::property_value_type::sint_value:
-//         return Nan::New<v8::Number>(value.sint_value());
-//     default: // case vtzero::property_value_type::bool_value:
-//         return Nan::New<v8::Boolean>(value.bool_value());
-//     }
-// }
+struct property_value_visitor {
+    v8::Local<v8::Object> & properties_obj;
+    std::string const& key;
+
+    template <typename T>
+    void operator() (T) {}
+
+    void operator() (bool v) {
+        properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Boolean>(v));
+    }
+    void operator() (uint64_t v) {
+        properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
+    }
+    void operator() (int64_t v) {
+        properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
+    }
+    void operator() (double v) {
+        properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
+    }
+    void operator() (std::string const& v) {
+        properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::String>(v).ToLocalChecked());
+    }
+};
+
+void set_property(mapbox::feature::property_map::value_type const& property,
+                  v8::Local<v8::Object> & properties_obj) {
+    mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
+}
 
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
+
+    std::unique_ptr<QueryData> query_data_;
+    std::deque<ResultObject> results_;
+    std::priority_queue<std::unique_ptr<ResultObject>> results_sorted_;
 
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* cb)
         : Base(cb),
           query_data_(std::move(query_data)),
-          results_(),
-          sorted_results_() {}
+          results_() {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
@@ -206,51 +226,32 @@ struct Worker : Nan::AsyncWorker {
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
                     GeomType original_geometry_type = GeomType::unknown; // set to unknown but this will get overwritten
                     while (auto feature = layer.next_feature()) {
-
-                        // extract geometry - mapbox::geometry::geometry<std::int64_t>
-                        auto query_geometry = mapbox::vector_tile::extract_geometry(feature);
-
-                        // create a dummy default geometry structure that will be updated in the switch statement below
-                        // mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
-                        // // get the geometry type and decode the geometry into mapbox::geometry data structures
-                        // switch (feature.geometry_type()) {
-                        // case vtzero::GeomType::POINT: {
-                        //     if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::point) {
-                        //         continue;
-                        //     }
-                        //     mapbox::geometry::multi_point<std::int64_t> mpoint;
-                        //     point_processor proc_point(mpoint);
-                        //     vtzero::decode_point_geometry(feature.geometry(), false, proc_point);
-                        //     query_geometry = std::move(mpoint);
-                        //     original_geometry_type = GeomType::point;
-                        //     break;
-                        // }
-                        // case vtzero::GeomType::LINESTRING: {
-                        //     if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::linestring) {
-                        //         continue;
-                        //     }
-                        //     mapbox::geometry::multi_line_string<std::int64_t> mline;
-                        //     linestring_processor proc_line(mline);
-                        //     vtzero::decode_linestring_geometry(feature.geometry(), false, proc_line);
-                        //     query_geometry = std::move(mline);
-                        //     original_geometry_type = GeomType::linestring;
-                        //     break;
-                        // }
-                        // case vtzero::GeomType::POLYGON: {
-                        //     if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::polygon) {
-                        //         continue;
-                        //     }
-                        //     mapbox::geometry::multi_polygon<std::int64_t> mpoly;
-                        //     polygon_processor proc_poly(mpoly);
-                        //     vtzero::decode_polygon_geometry(feature.geometry(), false, proc_poly);
-                        //     query_geometry = std::move(mpoly);
-                        //     original_geometry_type = GeomType::polygon;
-                        //     break;
-                        // }
-                        // default: {
-                        //     continue;
-                        // }
-                        // }
+                        switch (feature.geometry_type()) {
+                        case vtzero::GeomType::POINT: {
+                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::point) {
+                                continue;
+                            }
+                            auto query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
+                            break;
+                        }
+                        case vtzero::GeomType::LINESTRING: {
+                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::linestring) {
+                                continue;
+                            }
+                            auto query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
+                            break;
+                        }
+                        case vtzero::GeomType::POLYGON: {
+                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::polygon) {
+                                continue;
+                            }
+                            auto query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
+                            break;
+                        }
+                        default: {
+                            continue;
+                        }
+                        }
 
                         // implement closest point algorithm on query geometry and the query point
                         auto const cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
@@ -260,32 +261,31 @@ struct Worker : Nan::AsyncWorker {
                         auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
 
                         // if the distance is within the threshold, save it
-                        if (meters <= data.radius + 1) { // TODO(sam) https://github.com/mapbox/vtquery/issues/36
-
-                            // decode properties (will be libvectortile eventually)
-                            auto props = mapbox::vector_tile::extract_properties(feature);
-
-                            // emplace_back allows us to put a new object directly into the vector
-                            // wherease push_back we need to create a new object in memory and move it into the vector
-                            results_.emplace_back(std::move(props),
-                                                  layer_name,
-                                                  std::move(feature_lnglat),
-                                                  meters,
-                                                  original_geometry_type);
+                        if (meters <= data.radius + 1 && meters >= 0.0) {
+                            if (results_sorted_.size() < data.num_results) {
+                                auto props = mapbox::vector_tile::extract_properties(feature);
+                                ResultObject r(std::move(props),
+                                               layer_name,
+                                               std::move(feature_lnglat),
+                                               meters,
+                                               original_geometry_type);
+                                results_.push_back(r);
+                                results_sorted_.emplace(&r);
+                            } else if (meters < results_sorted_.top()->distance) {
+                                results_sorted_.pop();
+                                auto props = mapbox::vector_tile::extract_properties(feature);
+                                ResultObject r(std::move(props),
+                                               layer_name,
+                                               std::move(feature_lnglat),
+                                               meters,
+                                               original_geometry_type);
+                                results_.push_back(r);
+                                results_sorted_.emplace(&r);
+                            }
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
             }         // end tile loop
-
-            // create sort vector
-            sorted_results_.reserve(results_.size());
-            for (auto& r : results_) {
-                sorted_results_.push_back(&r); // save the pointer of r
-            }
-
-            // sort based on distance
-            std::sort(sorted_results_.begin(), sorted_results_.end(), [](ResultObject const* a, ResultObject const* b) { return a->distance < b->distance; });
-
         } catch (const std::exception& e) {
             SetErrorMessage(e.what());
         }
@@ -297,17 +297,14 @@ struct Worker : Nan::AsyncWorker {
         Nan::HandleScope scope;
 
         // number of results to loop through
-        QueryData const& data = *query_data_;
-        std::uint32_t num_results = data.num_results;
-
         v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
-        v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
-        std::uint32_t features_size = 0;
+        v8::Local<v8::Array> features_array = Nan::New<v8::Array>(results_sorted_.size());
 
         results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
 
         // for each result object
-        for (auto feature : sorted_results_) {
+        while (!results_sorted_.empty()) {
+            auto const& feature = results_sorted_.top(); // get reference to top item in results queue
             v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
             feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
 
@@ -324,7 +321,7 @@ struct Worker : Nan::AsyncWorker {
             v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
             v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
             for (auto const& prop : feature->properties) {
-                properties_obj->Set(Nan::New<v8::String>(prop.first).ToLocalChecked(), get_property_value(prop.second));
+                set_property(prop, properties_obj);
             }
 
             // set properties.tilquery
@@ -338,11 +335,8 @@ struct Worker : Nan::AsyncWorker {
             feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
 
             // add feature to features array
-            features_array->Set(features_size, feature_obj);
-            features_size++;
-            if (features_size >= num_results) {
-                break;
-            }
+            features_array->Set(static_cast<uint32_t>(results_.size()-1), feature_obj);
+            results_sorted_.pop(); // remove item from results queue
         }
 
         results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
@@ -354,10 +348,6 @@ struct Worker : Nan::AsyncWorker {
         // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
         callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
-
-    std::unique_ptr<QueryData> query_data_;
-    std::deque<ResultObject> results_;
-    std::vector<ResultObject*> sorted_results_;
 };
 
 NAN_METHOD(vtquery) {
