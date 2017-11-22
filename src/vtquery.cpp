@@ -5,13 +5,13 @@
 #include <algorithm>
 #include <exception>
 #include <iostream>
-#include <queue>
 #include <map>
 #include <mapbox/geometry/algorithms/closest_point.hpp>
 #include <mapbox/geometry/algorithms/closest_point_impl.hpp>
 #include <mapbox/geometry/geometry.hpp>
 #include <mapbox/vector_tile.hpp>
 #include <memory>
+#include <queue>
 #include <stdexcept>
 #include <utility>
 #include <vtzero/types.hpp>
@@ -129,36 +129,35 @@ struct QueryData {
 };
 
 struct property_value_visitor {
-    v8::Local<v8::Object> & properties_obj;
+    v8::Local<v8::Object>& properties_obj;
     std::string const& key;
 
     template <typename T>
-    void operator() (T) {}
+    void operator()(T) {}
 
-    void operator() (bool v) {
+    void operator()(bool v) {
         properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Boolean>(v));
     }
-    void operator() (uint64_t v) {
+    void operator()(uint64_t v) {
         properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
     }
-    void operator() (int64_t v) {
+    void operator()(int64_t v) {
         properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
     }
-    void operator() (double v) {
+    void operator()(double v) {
         properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
     }
-    void operator() (std::string const& v) {
+    void operator()(std::string const& v) {
         properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::String>(v).ToLocalChecked());
     }
 };
 
 void set_property(mapbox::feature::property_map::value_type const& property,
-                  v8::Local<v8::Object> & properties_obj) {
+                  v8::Local<v8::Object>& properties_obj) {
     mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
 }
 
-struct CompareDistance
-{
+struct CompareDistance {
     bool operator()(const ResultObject* r1, const ResultObject* r2) const {
         return r1->distance < r2->distance;
     }
@@ -354,7 +353,7 @@ struct Worker : Nan::AsyncWorker {
             feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
 
             // add feature to features array
-            features_array->Set(static_cast<uint32_t>(results_queue_.size()-1), feature_obj);
+            features_array->Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
             results_queue_.pop(); // remove item from results queue
         }
 
