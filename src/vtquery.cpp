@@ -175,7 +175,8 @@ struct Worker : Nan::AsyncWorker {
            Nan::Callback* cb)
         : Base(cb),
           query_data_(std::move(query_data)),
-          results_() {}
+          results_(),
+          results_queue_() {}
 
     // The Execute() function is getting called when the worker starts to run.
     // - You only have access to member variables stored in this worker.
