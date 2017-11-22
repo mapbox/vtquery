@@ -31,7 +31,7 @@ const char* getGeomTypeString(int enumVal) {
 
 struct ResultObject {
     mapbox::feature::property_map properties;
-    std::string const& layer_name;
+    std::string layer_name;
     mapbox::geometry::point<double> coordinates;
     double distance;
     GeomType original_geometry_type;
@@ -39,7 +39,7 @@ struct ResultObject {
     // custom constructor
     ResultObject(
         mapbox::feature::property_map&& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
-        std::string name,
+        std::string const& name,
         mapbox::geometry::point<double>&& p,
         double distance0,
         GeomType geom_type)
