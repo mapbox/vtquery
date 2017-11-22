@@ -31,7 +31,7 @@ const char* getGeomTypeString(int enumVal) {
 
 struct ResultObject {
     mapbox::feature::property_map properties;
-    std::string layer_name;
+    std::string const& layer_name;
     mapbox::geometry::point<double> coordinates;
     double distance;
     GeomType original_geometry_type;

@@ -424,6 +424,29 @@ test('options - radius: all results within radius', assert => {
   });
 });
 
+test('options - radius=0: only returns "point in polygon" results (on a building)', assert => {
+  const buffer = bufferSF;
+  const ll = [-122.4527, 37.7689]; // direct hit on a building
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { radius: 0, layers: ['building'] }, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 1, 'only one building returned');
+    assert.deepEqual(result.features[0].properties.tilequery, { distance: 0.0, layer: 'building', geometry: 'polygon' }, 'expected tilequery info');
+    assert.end();
+  });
+});
+
+test('options - radius=0: returns only radius 0.0 results', assert => {
+  const buffer = bufferSF;
+  const ll = [-122.4527, 37.7689]; // direct hit on a building
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { radius: 0, numResults: 100 }, function(err, result) {
+    assert.ifError(err);
+    result.features.forEach(function(feature) {
+      assert.ok(feature.properties.tilequery.distance == 0.0, 'radius 0.0');
+    });
+    assert.end();
+  });
+});
+
 test('options - numResults: successfully limits results', assert => {
   const buffer = bufferSF;
   const ll = [-122.4477, 37.7665]; // direct hit
@@ -440,7 +463,6 @@ test('options - layers: successfully returns only requested layers', assert => {
   vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, {radius: 2000, layers: ['poi_label']}, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
-      console.log(feature);
       assert.equal(feature.properties.tilequery.layer, 'poi_label', 'proper layer');
     });
     assert.end();
