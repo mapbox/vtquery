@@ -39,7 +39,7 @@ struct ResultObject {
     // custom constructor
     ResultObject(
         mapbox::feature::property_map&& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
-        std::string const& name,
+        std::string name,
         mapbox::geometry::point<double>&& p,
         double distance0,
         GeomType geom_type)
@@ -57,12 +57,6 @@ struct ResultObject {
 
     // use the default destructor
     ~ResultObject() = default;
-
-    // less than operator between result objects
-    bool operator< (ResultObject const& rhs) const {
-        return this->distance < rhs.distance;
-    }
-
 };
 
 struct TileObject {
@@ -163,15 +157,19 @@ void set_property(mapbox::feature::property_map::value_type const& property,
     mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
 }
 
-// properties_obj->Set(Nan::New<v8::String>(prop.first).ToLocalChecked(), get_property_value(prop.second));
-
+struct CompareDistance
+{
+    bool operator()(const ResultObject* r1, const ResultObject* r2) const {
+        return r1->distance < r2->distance;
+    }
+};
 
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
     std::unique_ptr<QueryData> query_data_;
     std::deque<ResultObject> results_;
-    std::priority_queue<std::unique_ptr<ResultObject>> results_sorted_;
+    std::priority_queue<ResultObject*, std::vector<ResultObject*>, CompareDistance> results_queue_;
 
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* cb)
@@ -235,6 +233,7 @@ struct Worker : Nan::AsyncWorker {
                             if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::point) {
                                 continue;
                             }
+                            original_geometry_type = GeomType::point;
                             query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
                             break;
                         }
@@ -242,6 +241,7 @@ struct Worker : Nan::AsyncWorker {
                             if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::linestring) {
                                 continue;
                             }
+                            original_geometry_type = GeomType::linestring;
                             query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
                             break;
                         }
@@ -249,6 +249,7 @@ struct Worker : Nan::AsyncWorker {
                             if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::polygon) {
                                 continue;
                             }
+                            original_geometry_type = GeomType::polygon;
                             query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
                             break;
                         }
@@ -260,31 +261,49 @@ struct Worker : Nan::AsyncWorker {
                         // implement closest point algorithm on query geometry and the query point
                         auto const cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
 
-                        // convert x/y into lng/lat point
-                        auto feature_lnglat = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info);
-                        auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
+                        // if the distance is exactly 0.0, add it to the list downright
+                        // otherwise check if the radius is greater than 0.0 and less than the radius
+                        if (cp_info.distance == 0.0) {
+                            // we'll only add the first "n" results depending on the num_results - there's no way to sort otherwise
+                            if (results_queue_.size() < data.num_results) {
+                                auto qp = mapbox::geometry::point<double>{data.longitude, data.latitude}; // original query lng/lat
+                                auto props = mapbox::vector_tile::extract_properties(feature);
+                                ResultObject r(std::move(props),
+                                               layer_name,
+                                               std::move(qp),
+                                               0.0,
+                                               original_geometry_type);
+                                results_.emplace_back(std::move(r));
+                                results_queue_.emplace(&r);
+                            }
+                        } else {
+                            // convert x/y into lng/lat point
+                            auto feature_lnglat = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info);
+                            auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
 
-                        // if the distance is within the threshold, save it
-                        if (meters <= data.radius + 1 && meters >= 0.0) {
-                            if (results_sorted_.size() < data.num_results) {
-                                auto props = mapbox::vector_tile::extract_properties(feature);
-                                ResultObject r(std::move(props),
-                                               layer_name,
-                                               std::move(feature_lnglat),
-                                               meters,
-                                               original_geometry_type);
-                                results_.emplace_back(std::move(r));
-                                results_sorted_.emplace(&r);
-                            } else if (meters < results_sorted_.top()->distance) {
-                                results_sorted_.pop();
-                                auto props = mapbox::vector_tile::extract_properties(feature);
-                                ResultObject r(std::move(props),
-                                               layer_name,
-                                               std::move(feature_lnglat),
-                                               meters,
-                                               original_geometry_type);
-                                results_.emplace_back(std::move(r));
-                                results_sorted_.emplace(&r);
+                            // if the distance is within the threshold, save it
+                            if (meters <= data.radius && meters >= 0.0) {
+                                if (results_queue_.size() < data.num_results) {
+                                    std::clog << "hit! layer name: " << layer_name << std::endl;
+                                    auto props = mapbox::vector_tile::extract_properties(feature);
+                                    ResultObject r(std::move(props),
+                                                   layer_name,
+                                                   std::move(feature_lnglat),
+                                                   meters,
+                                                   original_geometry_type);
+                                    results_.emplace_back(std::move(r));
+                                    results_queue_.emplace(&r);
+                                } else if (meters < results_queue_.top()->distance) {
+                                    results_queue_.pop();
+                                    auto props = mapbox::vector_tile::extract_properties(feature);
+                                    ResultObject r(std::move(props),
+                                                   layer_name,
+                                                   std::move(feature_lnglat),
+                                                   meters,
+                                                   original_geometry_type);
+                                    results_.emplace_back(std::move(r));
+                                    results_queue_.emplace(&r);
+                                }
                             }
                         }
                     } // end tile.layer.feature loop
@@ -302,13 +321,12 @@ struct Worker : Nan::AsyncWorker {
 
         // number of results to loop through
         v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
-        v8::Local<v8::Array> features_array = Nan::New<v8::Array>(results_sorted_.size());
-
+        v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
         results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
 
         // for each result object
-        while (!results_sorted_.empty()) {
-            auto const& feature = results_sorted_.top(); // get reference to top item in results queue
+        while (!results_queue_.empty()) {
+            auto const& feature = results_queue_.top(); // get reference to top item in results queue
             v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
             feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
 
@@ -323,12 +341,12 @@ struct Worker : Nan::AsyncWorker {
 
             // create properties object
             v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
-            v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
             for (auto const& prop : feature->properties) {
                 set_property(prop, properties_obj);
             }
 
             // set properties.tilquery
+            v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
             tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature->distance));
             std::string og_geom = getGeomTypeString(feature->original_geometry_type);
             tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
@@ -339,8 +357,8 @@ struct Worker : Nan::AsyncWorker {
             feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
 
             // add feature to features array
-            features_array->Set(static_cast<uint32_t>(results_.size()-1), feature_obj);
-            results_sorted_.pop(); // remove item from results queue
+            features_array->Set(static_cast<uint32_t>(results_queue_.size()-1), feature_obj);
+            results_queue_.pop(); // remove item from results queue
         }
 
         results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
