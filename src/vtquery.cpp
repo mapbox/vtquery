@@ -269,13 +269,12 @@ struct Worker : Nan::AsyncWorker {
                             if (results_queue_.size() < data.num_results) {
                                 auto qp = mapbox::geometry::point<double>{data.longitude, data.latitude}; // original query lng/lat
                                 auto props = mapbox::vector_tile::extract_properties(feature);
-                                ResultObject r(std::move(props),
-                                               layer_name,
-                                               std::move(qp),
-                                               0.0,
-                                               original_geometry_type);
-                                results_.emplace_back(std::move(r));
-                                results_queue_.emplace(&r);
+                                results_.emplace_back(std::move(props),
+                                                      layer_name,
+                                                      std::move(qp),
+                                                      0.0,
+                                                      original_geometry_type);
+                                results_queue_.emplace(&results_.back());
                             }
                         } else {
                             // convert x/y into lng/lat point
@@ -285,25 +284,22 @@ struct Worker : Nan::AsyncWorker {
                             // if the distance is within the threshold, save it
                             if (meters <= data.radius && meters >= 0.0) {
                                 if (results_queue_.size() < data.num_results) {
-                                    std::clog << "hit! layer name: " << layer_name << std::endl;
                                     auto props = mapbox::vector_tile::extract_properties(feature);
-                                    ResultObject r(std::move(props),
-                                                   layer_name,
-                                                   std::move(feature_lnglat),
-                                                   meters,
-                                                   original_geometry_type);
-                                    results_.emplace_back(std::move(r));
-                                    results_queue_.emplace(&r);
+                                    results_.emplace_back(std::move(props),
+                                                          layer_name,
+                                                          std::move(feature_lnglat),
+                                                          meters,
+                                                          original_geometry_type);
+                                    results_queue_.emplace(&results_.back());
                                 } else if (meters < results_queue_.top()->distance) {
                                     results_queue_.pop();
                                     auto props = mapbox::vector_tile::extract_properties(feature);
-                                    ResultObject r(std::move(props),
-                                                   layer_name,
-                                                   std::move(feature_lnglat),
-                                                   meters,
-                                                   original_geometry_type);
-                                    results_.emplace_back(std::move(r));
-                                    results_queue_.emplace(&r);
+                                    results_.emplace_back(std::move(props),
+                                                          layer_name,
+                                                          std::move(feature_lnglat),
+                                                          meters,
+                                                          original_geometry_type);
+                                    results_queue_.emplace(&results_.back());
                                 }
                             }
                         }
