@@ -299,17 +299,21 @@ struct Worker : Nan::AsyncWorker {
                                 }
                             }
                         } else {
-                            // we'll only add the first "n" results depending on the num_results - there's no way to sort otherwise
-                            if (results_queue_.size() < data.num_results) {
-                                auto qp = mapbox::geometry::point<double>{data.longitude, data.latitude}; // original query lng/lat
-                                auto props = mapbox::vector_tile::extract_properties(feature);
-                                results_.emplace_back(std::move(props),
-                                                      layer_name,
-                                                      std::move(qp),
-                                                      0.0,
-                                                      original_geometry_type);
-                                results_queue_.emplace(&results_.back());
+                            auto qp = mapbox::geometry::point<double>{data.longitude, data.latitude}; // original query lng/lat
+                            auto props = mapbox::vector_tile::extract_properties(feature);
+
+                            // if our results list is already full, remove the top() element and add the new one - this way the
+                            // we'll always be removing the largest element by distance and replacing with a 0.0 result
+                            if (results_queue_.size() == data.num_results) {
+                                results_queue_.pop();
                             }
+
+                            results_.emplace_back(std::move(props),
+                                                  layer_name,
+                                                  std::move(qp),
+                                                  0.0,
+                                                  original_geometry_type);
+                            results_queue_.emplace(&results_.back());
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
