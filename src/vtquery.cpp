@@ -263,7 +263,7 @@ struct Worker : Nan::AsyncWorker {
 
                         // check if cp_info.distance isn't less than zero, if so, this is an error and we can move on
                         if (cp_info.distance < 0.0) {
-                          continue;
+                            continue;
                         }
 
                         // if the distance is greater than 0.0, get the distance from the query point
