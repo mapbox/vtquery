@@ -261,27 +261,24 @@ struct Worker : Nan::AsyncWorker {
                         // implement closest point algorithm on query geometry and the query point
                         auto const cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
 
-                        // if the distance is exactly 0.0, add it to the list downright
-                        // otherwise check if the radius is greater than 0.0 and less than the radius
-                        if (cp_info.distance == 0.0) {
-                            // we'll only add the first "n" results depending on the num_results - there's no way to sort otherwise
-                            if (results_queue_.size() < data.num_results) {
-                                auto qp = mapbox::geometry::point<double>{data.longitude, data.latitude}; // original query lng/lat
-                                auto props = mapbox::vector_tile::extract_properties(feature);
-                                results_.emplace_back(std::move(props),
-                                                      layer_name,
-                                                      std::move(qp),
-                                                      0.0,
-                                                      original_geometry_type);
-                                results_queue_.emplace(&results_.back());
-                            }
-                        } else {
+                        // check if cp_info.distance isn't less than zero, if so, this is an error and we can move on
+                        if (cp_info.distance < 0.0) {
+                          continue;
+                        }
+
+                        // if the distance is greater than 0.0, get the distance from the query point
+                        // otherwise if the distance is 0.0, add it to the queue
+                        if (cp_info.distance > 0.0) {
                             // convert x/y into lng/lat point
                             auto feature_lnglat = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info);
                             auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
 
                             // if the distance is within the threshold, save it
-                            if (meters <= data.radius && meters >= 0.0) {
+                            if (meters <= data.radius) {
+
+                                // if the queue size is still smaller than number of results, just add the hit
+                                // if the queue size is at its max, compare the top() result and only add if this new
+                                // hit is smaller than the top result
                                 if (results_queue_.size() < data.num_results) {
                                     auto props = mapbox::vector_tile::extract_properties(feature);
                                     results_.emplace_back(std::move(props),
@@ -300,6 +297,18 @@ struct Worker : Nan::AsyncWorker {
                                                           original_geometry_type);
                                     results_queue_.emplace(&results_.back());
                                 }
+                            }
+                        } else {
+                            // we'll only add the first "n" results depending on the num_results - there's no way to sort otherwise
+                            if (results_queue_.size() < data.num_results) {
+                                auto qp = mapbox::geometry::point<double>{data.longitude, data.latitude}; // original query lng/lat
+                                auto props = mapbox::vector_tile::extract_properties(feature);
+                                results_.emplace_back(std::move(props),
+                                                      layer_name,
+                                                      std::move(qp),
+                                                      0.0,
+                                                      original_geometry_type);
+                                results_queue_.emplace(&results_.back());
                             }
                         }
                     } // end tile.layer.feature loop
