@@ -1,3 +1,5 @@
+'use strict';
+
 const test = require('tape');
 const path = require('path');
 const vtquery = require('../lib/index.js');
@@ -425,11 +427,20 @@ test('options - radius: all results within radius', assert => {
 });
 
 test('options - radius: all results are in expected order', assert => {
+  const expected = JSON.parse(fs.readFileSync(__dirname + '/fixtures/expected-order.json'));
   const buffer = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/chicago/13-2098-3045.mvt'));
   const ll = [-87.7987, 41.8451];
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3045}], ll, { radius: 50 }, function(err, result) {
     assert.ifError(err);
-    assert.deepEqual(result, JSON.parse(fs.readFileSync(__dirname + '/fixtures/expected-order.json')), 'expected results and order');
+    result.features.forEach(function(feature, i) {
+      let e = expected.features[i].properties;
+      assert.equal(e.tilequery.distance, feature.properties.tilequery.distance, 'same distance');
+      assert.equal(e.tilequery.layer, feature.properties.tilequery.layer, 'same layer');
+      assert.equal(e.tilequery.geometry, feature.properties.tilequery.geometry, 'same geometry');
+      if (feature.properties.type) {
+        assert.equal(e.type, feature.properties.type, 'same type');
+      }
+    });
     assert.end();
   });
 });
