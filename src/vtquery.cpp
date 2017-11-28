@@ -24,7 +24,7 @@ enum GeomType { point,
                 polygon,
                 all,
                 unknown };
-static const char* GeomTypeStrings[] = {"point", "linestring", "polygon", "uknown", "unknown"};
+static const char* GeomTypeStrings[] = {"point", "linestring", "polygon", "unknown"};
 const char* getGeomTypeString(int enumVal) {
     return GeomTypeStrings[enumVal];
 }
@@ -330,7 +330,7 @@ struct Worker : Nan::AsyncWorker {
 
         // number of results to loop through
         v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
-        v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
+        v8::Local<v8::Array> features_array = Nan::New<v8::Array>(results_queue_.size());
         results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
 
         // for each result object
@@ -342,7 +342,7 @@ struct Worker : Nan::AsyncWorker {
             // create geometry object
             v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
             geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
-            v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>();
+            v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>(2);
             coordinates_array->Set(0, Nan::New<v8::Number>(feature->coordinates.x)); // latitude
             coordinates_array->Set(1, Nan::New<v8::Number>(feature->coordinates.y)); // longitude
             geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
