@@ -9,6 +9,10 @@ const fs = require('fs');
 
 const bufferSF = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/sanfrancisco/15-5238-12666.mvt'));
 
+function checkClose(a, b, epsilon) {
+  return 1*(a-b) < epsilon;
+}
+
 test('failure: fails without callback function', assert => {
   try {
     vtquery();
@@ -434,6 +438,7 @@ test('options - radius: all results are in expected order', assert => {
     assert.ifError(err);
     result.features.forEach(function(feature, i) {
       let e = expected.features[i].properties;
+      assert.ok(checkClose(e.tilequery.distance, feature.properties.tilequery.distance, 1e-6));
       assert.equal(e.tilequery.distance, feature.properties.tilequery.distance, 'same distance');
       assert.equal(e.tilequery.layer, feature.properties.tilequery.layer, 'same layer');
       assert.equal(e.tilequery.geometry, feature.properties.tilequery.geometry, 'same geometry');
