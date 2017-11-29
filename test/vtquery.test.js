@@ -438,8 +438,7 @@ test('options - radius: all results are in expected order', assert => {
     assert.ifError(err);
     result.features.forEach(function(feature, i) {
       let e = expected.features[i].properties;
-      assert.ok(checkClose(e.tilequery.distance, feature.properties.tilequery.distance, 1e-6));
-      assert.equal(e.tilequery.distance, feature.properties.tilequery.distance, 'same distance');
+      assert.ok(checkClose(e.tilequery.distance, feature.properties.tilequery.distance, 1e-6), 'expected distance');
       assert.equal(e.tilequery.layer, feature.properties.tilequery.layer, 'same layer');
       assert.equal(e.tilequery.geometry, feature.properties.tilequery.geometry, 'same geometry');
       if (feature.properties.type) {
@@ -456,11 +455,11 @@ test('results with same exact distance return in expected order', assert => {
   const ll = [-87.7964, 41.8675];
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3045}], ll, { radius: 10, layers: ['road'] }, function(err, result) {
     assert.equal(result.features[1].properties.type, 'pedestrian', 'is expected type');
-    assert.equal(result.features[1].properties.tilequery.distance, 9.436356889343624, 'is the proper distance');
+    assert.ok(checkClose(result.features[1].properties.tilequery.distance, 9.436356889343624, 1e-6), 'is the proper distance');
     assert.equal(result.features[2].properties.type, 'service:driveway', 'is expected type');
-    assert.equal(result.features[2].properties.tilequery.distance, 9.436356889343624, 'is the proper distance');
+    assert.ok(checkClose(result.features[2].properties.tilequery.distance, 9.436356889343624, 1e-6), 'is the proper distance');
     assert.equal(result.features[3].properties.type, 'turning_circle', 'is expected type');
-    assert.equal(result.features[3].properties.tilequery.distance, 9.436356889343624, 'is the proper distance');
+    assert.ok(checkClose(result.features[3].properties.tilequery.distance, 9.436356889343624, 1e-6), 'is the proper distance');
     assert.end();
   });
 });
