@@ -449,21 +449,6 @@ test('options - radius: all results are in expected order', assert => {
   });
 });
 
-test('results with same exact distance return in expected order', assert => {
-  // this query returns four results, three of which are the exact same distance and different types of features
-  const buffer = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/chicago/13-2098-3045.mvt'));
-  const ll = [-87.7964, 41.8675];
-  vtquery([{buffer: buffer, z: 13, x: 2098, y: 3045}], ll, { radius: 10, layers: ['road'] }, function(err, result) {
-    assert.equal(result.features[1].properties.type, 'pedestrian', 'is expected type');
-    assert.ok(checkClose(result.features[1].properties.tilequery.distance, 9.436356889343624, 1e-6), 'is the proper distance');
-    assert.equal(result.features[2].properties.type, 'service:driveway', 'is expected type');
-    assert.ok(checkClose(result.features[2].properties.tilequery.distance, 9.436356889343624, 1e-6), 'is the proper distance');
-    assert.equal(result.features[3].properties.type, 'turning_circle', 'is expected type');
-    assert.ok(checkClose(result.features[3].properties.tilequery.distance, 9.436356889343624, 1e-6), 'is the proper distance');
-    assert.end();
-  });
-});
-
 test('options - radius=0: only returns "point in polygon" results (on a building)', assert => {
   const buffer = bufferSF;
   const ll = [-122.4527, 37.7689]; // direct hit on a building
