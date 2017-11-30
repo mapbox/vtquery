@@ -115,6 +115,23 @@ npm install -g documentation
 npm run docs
 ```
 
+To install and test on a linux instance, you can use the Dockerfile provided.
+
+```shell
+# build the image
+docker build -t vtquery .
+
+# run it - this will put you inside the image
+docker run -it vtquery
+
+# run tests
+make test
+
+# edit files - helpful for debugging
+vim src/vtquery.cpp
+```
+
+
 # Benchmarks
 
 Benchmarks can be run with the bench/vtquery.bench.js script to test vtquery against common real-world fixtures (provided by mvt-fixtures). When making changes in a pull request, please provide the benchmarks from the master branch and the HEAD of your current branch.  You can control the `concurrency` and `iterations` of the benchmarks with the following command:
