@@ -11,7 +11,7 @@ RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
 
 RUN curl https://nodejs.org/dist/v4.8.4/node-v4.8.4-linux-x64.tar.gz | tar zxC /usr/local --strip-components=1
 
-ENV PATH=/usr/local/src/mason_packages/.link/bin:${PATH} CXX=clang++ CXXFLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all"
+ENV PATH=/usr/local/src/mason_packages/.link/bin:${PATH} CXX=clang++
 WORKDIR /usr/local/src
 COPY ./ ./
 
