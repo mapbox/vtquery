@@ -35,7 +35,7 @@ before_script:
 # For reference, the default travis behavior which we override comes from https://github.com/travis-ci/travis-build/blob/e5a45cbf49e0d9e27398e76e5f25dd7706feb6aa/lib/travis/build/script/node_js.rb#L62-L69.
 script: []
 
-# the matrix allows you to specify different operating systems and environments to 
+# the matrix allows you to specify different operating systems and environments to
 # run your tests and build binaries
 matrix:
   include:
@@ -83,6 +83,7 @@ matrix:
       before_script:
         - export LD_PRELOAD=${MASON_LLVM_RT_PRELOAD}
         - export ASAN_OPTIONS=fast_unwind_on_malloc=0:${ASAN_OPTIONS}
+        - export LSAN_OPTIONS=verbosity=1:log_threads=1
         - npm test
         - unset LD_PRELOAD
         # after successful tests, publish binaries if specified in commit message
