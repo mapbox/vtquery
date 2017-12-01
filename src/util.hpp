@@ -83,7 +83,7 @@ mapbox::geometry::point<double> convert_vt_to_ll(std::uint32_t extent,
                                                  std::uint32_t z,
                                                  std::uint32_t x,
                                                  std::uint32_t y,
-                                                 mapbox::geometry::algorithms::closest_point_info<std::int64_t> cp_info) {
+                                                 mapbox::geometry::algorithms::closest_point_info cp_info) {
     double z2 = static_cast<double>(static_cast<std::int64_t>(1) << z);
     double ex = static_cast<double>(extent);
     double size = ex * z2;
