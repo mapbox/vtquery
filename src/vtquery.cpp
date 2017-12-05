@@ -227,30 +227,17 @@ struct Worker : Nan::AsyncWorker {
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
                     GeomType original_geometry_type = GeomType::unknown; // set to unknown but this will get overwritten
                     while (auto feature = layer.next_feature()) {
-                        mapbox::geometry::geometry<std::int64_t> query_geometry = mapbox::geometry::point<std::int64_t>();
                         switch (feature.geometry_type()) {
                         case vtzero::GeomType::POINT: {
-                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::point) {
-                                continue;
-                            }
                             original_geometry_type = GeomType::point;
-                            query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
                             break;
                         }
                         case vtzero::GeomType::LINESTRING: {
-                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::linestring) {
-                                continue;
-                            }
                             original_geometry_type = GeomType::linestring;
-                            query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
                             break;
                         }
                         case vtzero::GeomType::POLYGON: {
-                            if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != GeomType::polygon) {
-                                continue;
-                            }
                             original_geometry_type = GeomType::polygon;
-                            query_geometry = mapbox::vector_tile::extract_geometry<int64_t>(feature);
                             break;
                         }
                         default: {
@@ -258,8 +245,12 @@ struct Worker : Nan::AsyncWorker {
                         }
                         }
 
+                        if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != original_geometry_type) {
+                            continue;
+                        }
+
                         // implement closest point algorithm on query geometry and the query point
-                        auto const cp_info = mapbox::geometry::algorithms::closest_point(query_geometry, query_point);
+                        auto const cp_info = mapbox::geometry::algorithms::closest_point(mapbox::vector_tile::extract_geometry<int64_t>(feature), query_point);
 
                         // check if cp_info.distance isn't less than zero, if so, this is an error and we can move on
                         if (cp_info.distance < 0.0) {
