@@ -134,7 +134,7 @@ module.exports = [
   }
 ];
 
-function getTile(name, file) {
+
   return fs.readFileSync(path.join(__dirname, '..', 'node_modules', '@mapbox', 'mvt-fixtures', 'real-world', name, file))
 }
 
