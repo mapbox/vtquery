@@ -17,6 +17,22 @@
 #include <vtzero/types.hpp>
 #include <vtzero/vector_tile.hpp>
 
+/* deduping notes
+
+  - start by saving has_id
+  - store the ID (even if it doesn't)
+  - store extracted vector of tag pairs
+
+  - loop over the priority queue
+  - compare geometry
+  - THEN: if both have id, compare IDs
+  - compare vector of tag pairs
+    - if same length check (vector=vector)
+    -
+
+*/
+
+
 namespace VectorTileQuery {
 
 enum GeomType { point,
@@ -168,7 +184,7 @@ struct Worker : Nan::AsyncWorker {
 
     std::unique_ptr<QueryData> query_data_;
     std::deque<ResultObject> results_;
-    std::priority_queue<ResultObject*, std::vector<ResultObject*>, CompareDistance> results_queue_;
+    std::deque<ResultObject*> results_queue_;
 
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* cb)
@@ -272,21 +288,25 @@ struct Worker : Nan::AsyncWorker {
                                 // hit is smaller than the top result
                                 if (results_queue_.size() < data.num_results) {
                                     auto props = mapbox::vector_tile::extract_properties(feature);
+
+                                    // add to results
                                     results_.emplace_back(std::move(props),
                                                           layer_name,
                                                           std::move(feature_lnglat),
                                                           meters,
                                                           original_geometry_type);
-                                    results_queue_.emplace(&results_.back());
-                                } else if (meters < results_queue_.top()->distance) {
-                                    results_queue_.pop();
+                                    results_queue_.emplace_back(&results_.back());
+                                    std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
+                                } else if (meters < results_queue_.back()->distance) {
+                                    results_queue_.pop_back();
                                     auto props = mapbox::vector_tile::extract_properties(feature);
                                     results_.emplace_back(std::move(props),
                                                           layer_name,
                                                           std::move(feature_lnglat),
                                                           meters,
                                                           original_geometry_type);
-                                    results_queue_.emplace(&results_.back());
+                                    results_queue_.emplace_back(&results_.back());
+                                    std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                                 }
                             }
                         } else {
@@ -296,7 +316,7 @@ struct Worker : Nan::AsyncWorker {
                             // if our results list is already full, remove the top() element and add the new one - this way the
                             // we'll always be removing the largest element by distance and replacing with a 0.0 result
                             if (results_queue_.size() == data.num_results) {
-                                results_queue_.pop();
+                                results_queue_.pop_back();
                             }
 
                             results_.emplace_back(std::move(props),
@@ -304,7 +324,8 @@ struct Worker : Nan::AsyncWorker {
                                                   std::move(qp),
                                                   0.0,
                                                   original_geometry_type);
-                            results_queue_.emplace(&results_.back());
+                            results_queue_.emplace_back(&results_.back());
+                            std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
@@ -326,7 +347,7 @@ struct Worker : Nan::AsyncWorker {
 
         // for each result object
         while (!results_queue_.empty()) {
-            auto const& feature = results_queue_.top(); // get reference to top item in results queue
+            auto const& feature = results_queue_.back(); // get reference to top item in results queue
             v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
             feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
 
@@ -358,7 +379,7 @@ struct Worker : Nan::AsyncWorker {
 
             // add feature to features array
             features_array->Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
-            results_queue_.pop(); // remove item from results queue
+            results_queue_.pop_back(); // remove item from results queue
         }
 
         results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
