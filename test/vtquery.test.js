@@ -602,3 +602,33 @@ test('error: throws on invalid tile that is missing geometry type', assert => {
     assert.end();
   });
 });
+
+// two painted tiles one above the other (Y-axis) - confirming deduplication is preventing
+// returning results that are actually tile borders
+test('options - dedupe: returns only one result when dedupe is on', assert => {
+  const buffer = fs.readFileSync(__dirname + '/fixtures/canada-covered-square.mvt');
+  const tiles = [
+    {buffer: buffer, z: 11, x: 449, y: 693},
+    {buffer: buffer, z: 11, x: 449, y: 694}
+  ];
+  const opts = {
+    radius: 10000 // about the width of a z15 tile
+  }
+  vtquery(tiles, [-100.9797421880223, 50.075683473759085], opts, function(err, result) {
+    assert.ifError(err);
+    console.log(JSON.stringify(result, null, 2));
+    assert.end();
+  });
+});
+//
+// test('options - dedupe: returns duplicate results when dedupe is off', assert => {
+//   const tiles = [{buffer: mvtf.get('004').buffer, z: 15, x: 5248, y: 11436}];
+//   const opts = {
+//     radius: 800 // about the width of a z15 tile
+//   }
+//   vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+//     assert.ok(err);
+//     assert.equal(err.message, 'Missing geometry field in feature (spec 4.2)', 'expected error message');
+//     assert.end();
+//   });
+// });
