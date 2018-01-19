@@ -47,23 +47,32 @@ const char* getGeomTypeString(int enumVal) {
 
 struct ResultObject {
     mapbox::feature::property_map properties;
+    std::vector<vtzero::index_value_pair> comparison_tags;
     std::string layer_name;
     mapbox::geometry::point<double> coordinates;
     double distance;
     GeomType original_geometry_type;
+    bool has_id;
+    uint64_t id;
 
     // custom constructor
     ResultObject(
         mapbox::feature::property_map&& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
+        std::vector<vtzero::index_value_pair>&& ctags,
         std::string const& name,
         mapbox::geometry::point<double>&& p,
         double distance0,
-        GeomType geom_type)
+        GeomType geom_type,
+        uint64_t has_id0,
+        bool id0)
         : properties(std::move(props_map)),
+          comparison_tags(std::move(ctags)),
           layer_name(name),
           coordinates(std::move(p)),
           distance(distance0),
-          original_geometry_type(geom_type) {}
+          original_geometry_type(geom_type),
+          has_id(has_id0),
+          id(id0) {}
 
     // default move constructor
     ResultObject(ResultObject&&) = default;
@@ -121,6 +130,7 @@ struct QueryData {
           radius(0.0),
           zoom(0),
           num_results(5),
+          dedupe(true),
           geometry_filter_type(GeomType::all) {
         tiles.reserve(num_tiles);
     }
@@ -141,6 +151,7 @@ struct QueryData {
     double radius;
     std::int32_t zoom;
     std::uint32_t num_results;
+    bool dedupe;
     GeomType geometry_filter_type;
 };
 
@@ -178,6 +189,106 @@ struct CompareDistance {
         return r1->distance < r2->distance;
     }
 };
+
+std::vector<vtzero::index_value_pair> get_comparison_tags(vtzero::feature f) {
+    std::vector<vtzero::index_value_pair> v;
+    while (auto ii = f.next_property_indexes()) {
+        v.push_back(ii);
+    }
+    return v;
+}
+
+// compares a vector of property tags to determine deduplication of features
+bool compare_comparison_tags(std::vector<vtzero::index_value_pair> a, std::vector<vtzero::index_value_pair> b) {
+    std::clog << "result ctags length: " << a.size() << ", candidate ctags length: " << b.size() << std::endl;
+    if (a.size() != b.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < a.size(); ++i) {
+        // get keys
+        uint32_t a_key = a[i].key().value();
+        uint32_t b_key = b[i].key().value();
+
+        // get values
+        uint32_t a_val = a[i].value().value();
+        uint32_t b_val = b[i].value().value();
+
+        if (a_key != b_key || a_val != b_val) {
+          goto stop;
+        }
+    }
+
+    std::clog << "everything matches!" << std::endl;
+    return true;
+
+    stop:
+    std::clog << "some things do not match" << std::endl;
+    return false;
+}
+
+/*
+
+compare a ResultObject against a possibly new feature to prevent duplicate results
+
+comparison order:
+  1. layer
+  2. geometry type
+  3. if they have IDs, compare those
+  4. otherwise compare properties (as tag integers from the mvt - order must be exact)
+
+*/
+bool compare_results(ResultObject* r,
+                     vtzero::feature candidate_feature,
+                     std::string candidate_layer,
+                     GeomType candidate_geom,
+                     std::vector<vtzero::index_value_pair> candidate_ctags) {
+    // hello
+    // compare layer? (if different layers, not duplicates)
+    std::clog << "[comparing layer names]" << std::endl;
+    std::clog << "result: " << r->layer_name << ", candidate: " << candidate_layer << std::endl;
+    if (r->layer_name != candidate_layer) {
+        return false;
+    }
+
+    // compare geometry (if different geometry types, not duplicates)
+    std::clog << "[comparing geometry types]" << std::endl;
+    std::clog << "result: " << r->original_geometry_type << ", candidate: " << candidate_geom << std::endl;
+    if (r->original_geometry_type != candidate_geom) {
+        return false;
+    }
+
+    // compare id
+    std::clog << "[comparing ids]" << std::endl;
+    std::clog << "result has_id: " << r->has_id << ", candidate has_id: " << candidate_feature.has_id() << std::endl;
+    std::clog << "result id: " << r->id << ", candidate id: " << candidate_feature.id() << std::endl;
+    if (r->has_id && candidate_feature.has_id()) {
+        std::clog << "they both have ids" << std::endl;
+        if (r->id != candidate_feature.id()) {
+            std::clog << "the ids do not match, continue" << std::endl;
+            return false;
+        } else {
+            // duplicate, compare distances
+            std::clog << "we have a duplicate" << std::endl;
+            return true;
+        }
+    }
+
+    // compare property tags
+    // if we get here, that means the candidate and the feature have matching,
+    // layer names & geometries, plus neither have IDs. If the ids existed and were a match,
+    // they can be deduped that way but if they didn't have IDs, let's see if their
+    // properties match and we'll dedupe that way
+    std::clog << "[comparing property tags]" << std::endl;
+    // if the sizes are different, quickly assume tags are different
+    if (!compare_comparison_tags(r->comparison_tags, candidate_ctags)) {
+        return false;
+    }
+
+    // we have a duplicate, compare distances
+    std::clog << "we have a duplicate" << std::endl;
+    return true;
+}
 
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
@@ -273,6 +384,9 @@ struct Worker : Nan::AsyncWorker {
                             continue;
                         }
 
+                        // used for checking if we should skip adding this feature because another has already been added
+                        bool duplicate_skip = false;
+
                         // if the distance is greater than 0.0, get the distance from the query point
                         // otherwise if the distance is 0.0, add it to the queue
                         if (cp_info.distance > 0.0) {
@@ -288,23 +402,77 @@ struct Worker : Nan::AsyncWorker {
                                 // hit is smaller than the top result
                                 if (results_queue_.size() < data.num_results) {
                                     auto props = mapbox::vector_tile::extract_properties(feature);
+                                    auto comparison_tags = get_comparison_tags(feature);
+
+                                    // dedeup only when using multiple tiles
+                                    if (data.dedupe && data.tiles.size() > 1 && results_queue_.size() > 0) {
+                                        // now let's loop through each item in the results, and start the comparison
+                                        // unsigned loc = -1;
+                                        for (auto &r : results_queue_) {
+                                            bool is_it_a_dupe = compare_results(r, feature, layer_name, original_geometry_type, comparison_tags);
+                                            if (is_it_a_dupe) {
+                                                // compare distances
+                                                if (meters < r->distance) {
+                                                    // remove the old result and let the new one be added below
+                                                } else {
+                                                    duplicate_skip = true;
+                                                }
+                                            }
+                                        }
+                                    }
 
                                     // add to results
+                                    if (duplicate_skip) {
+                                      std::clog << "feature was marked as a duplicate and does not need to be added" << std::endl;
+                                      continue;
+                                    }
+
                                     results_.emplace_back(std::move(props),
+                                                          std::move(comparison_tags),
                                                           layer_name,
                                                           std::move(feature_lnglat),
                                                           meters,
-                                                          original_geometry_type);
+                                                          original_geometry_type,
+                                                          feature.has_id(),
+                                                          feature.id());
                                     results_queue_.emplace_back(&results_.back());
                                     std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                                 } else if (meters < results_queue_.back()->distance) {
                                     results_queue_.pop_back();
                                     auto props = mapbox::vector_tile::extract_properties(feature);
+                                    auto comparison_tags = get_comparison_tags(feature);
+
+                                    // dedeup only when using multiple tiles
+                                    if (data.dedupe && data.tiles.size() > 1 && results_queue_.size() > 0) {
+                                        // now let's loop through each item in the results, and start the comparison
+                                        // unsigned loc = -1;
+                                        for (auto &r : results_queue_) {
+                                            bool is_it_a_dupe = compare_results(r, feature, layer_name, original_geometry_type, comparison_tags);
+                                            if (is_it_a_dupe) {
+                                                // compare distances
+                                                if (meters < r->distance) {
+                                                    // remove the old result and let the new one be added below
+                                                } else {
+                                                    duplicate_skip = true;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // add to results
+                                    if (duplicate_skip) {
+                                      std::clog << "feature was marked as a duplicate and does not need to be added" << std::endl;
+                                      continue;
+                                    }
+
                                     results_.emplace_back(std::move(props),
+                                                          std::move(comparison_tags),
                                                           layer_name,
                                                           std::move(feature_lnglat),
                                                           meters,
-                                                          original_geometry_type);
+                                                          original_geometry_type,
+                                                          feature.has_id(),
+                                                          feature.id());
                                     results_queue_.emplace_back(&results_.back());
                                     std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                                 }
@@ -319,11 +487,39 @@ struct Worker : Nan::AsyncWorker {
                                 results_queue_.pop_back();
                             }
 
+
+                            auto comparison_tags = get_comparison_tags(feature);
+                            // dedeup only when using multiple tiles
+                            if (data.dedupe && data.tiles.size() > 1 && results_queue_.size() > 0) {
+                                // now let's loop through each item in the results, and start the comparison
+                                // unsigned loc = -1;
+                                for (auto &r : results_queue_) {
+                                    bool is_it_a_dupe = compare_results(r, feature, layer_name, original_geometry_type, comparison_tags);
+                                    if (is_it_a_dupe) {
+                                        // compare distances (if the r->distance is greater than zero, then we should keep this new one because it's a direct hit)
+                                        if (r->distance > 0.0) {
+                                            // remove the old result and let the new one be added below
+                                        } else {
+                                            duplicate_skip = true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // add to results
+                            if (duplicate_skip) {
+                              std::clog << "feature was marked as a duplicate and does not need to be added" << std::endl;
+                              continue;
+                            }
+
                             results_.emplace_back(std::move(props),
+                                                  std::move(comparison_tags),
                                                   layer_name,
                                                   std::move(qp),
                                                   0.0,
-                                                  original_geometry_type);
+                                                  original_geometry_type,
+                                                  feature.has_id(),
+                                                  feature.id());
                             results_queue_.emplace_back(&results_.back());
                             std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                         }
@@ -518,6 +714,16 @@ NAN_METHOD(vtquery) {
         }
 
         v8::Local<v8::Object> options = info[2]->ToObject();
+
+        if (options->Has(Nan::New("dedupe").ToLocalChecked())) {
+            v8::Local<v8::Value> dedupe_val = options->Get(Nan::New("dedupe").ToLocalChecked());
+            if (!dedupe_val->IsBoolean()) {
+                return utils::CallbackError("'dedupe' must be a boolean", callback);
+            }
+
+            bool dedupe = dedupe_val->BooleanValue();
+            query_data->dedupe = dedupe;
+        }
 
         if (options->Has(Nan::New("radius").ToLocalChecked())) {
             v8::Local<v8::Value> radius_val = options->Get(Nan::New("radius").ToLocalChecked());
