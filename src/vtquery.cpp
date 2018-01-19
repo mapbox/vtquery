@@ -200,7 +200,6 @@ std::vector<vtzero::index_value_pair> get_comparison_tags(vtzero::feature f) {
 
 // compares a vector of property tags to determine deduplication of features
 bool compare_comparison_tags(std::vector<vtzero::index_value_pair> a, std::vector<vtzero::index_value_pair> b) {
-    std::clog << "result ctags length: " << a.size() << ", candidate ctags length: " << b.size() << std::endl;
     if (a.size() != b.size()) {
         return false;
     }
@@ -219,11 +218,9 @@ bool compare_comparison_tags(std::vector<vtzero::index_value_pair> a, std::vecto
         }
     }
 
-    std::clog << "everything matches!" << std::endl;
     return true;
 
     stop:
-    std::clog << "some things do not match" << std::endl;
     return false;
 }
 
@@ -243,33 +240,23 @@ bool compare_results(ResultObject* r,
                      std::string candidate_layer,
                      GeomType candidate_geom,
                      std::vector<vtzero::index_value_pair> candidate_ctags) {
-    // hello
-    // compare layer? (if different layers, not duplicates)
-    std::clog << "[comparing layer names]" << std::endl;
-    std::clog << "result: " << r->layer_name << ", candidate: " << candidate_layer << std::endl;
+
+    // compare layer (if different layers, not duplicates)
     if (r->layer_name != candidate_layer) {
         return false;
     }
 
     // compare geometry (if different geometry types, not duplicates)
-    std::clog << "[comparing geometry types]" << std::endl;
-    std::clog << "result: " << r->original_geometry_type << ", candidate: " << candidate_geom << std::endl;
     if (r->original_geometry_type != candidate_geom) {
         return false;
     }
 
     // compare id
-    std::clog << "[comparing ids]" << std::endl;
-    std::clog << "result has_id: " << r->has_id << ", candidate has_id: " << candidate_feature.has_id() << std::endl;
-    std::clog << "result id: " << r->id << ", candidate id: " << candidate_feature.id() << std::endl;
     if (r->has_id && candidate_feature.has_id()) {
-        std::clog << "they both have ids" << std::endl;
         if (r->id != candidate_feature.id()) {
-            std::clog << "the ids do not match, continue" << std::endl;
             return false;
         } else {
             // duplicate, compare distances
-            std::clog << "we have a duplicate" << std::endl;
             return true;
         }
     }
@@ -279,14 +266,12 @@ bool compare_results(ResultObject* r,
     // layer names & geometries, plus neither have IDs. If the ids existed and were a match,
     // they can be deduped that way but if they didn't have IDs, let's see if their
     // properties match and we'll dedupe that way
-    std::clog << "[comparing property tags]" << std::endl;
     // if the sizes are different, quickly assume tags are different
     if (!compare_comparison_tags(r->comparison_tags, candidate_ctags)) {
         return false;
     }
 
     // we have a duplicate, compare distances
-    std::clog << "we have a duplicate" << std::endl;
     return true;
 }
 
@@ -413,7 +398,7 @@ struct Worker : Nan::AsyncWorker {
                                             if (is_it_a_dupe) {
                                                 // compare distances
                                                 if (meters < r->distance) {
-                                                    // remove the old result and let the new one be added below
+                                                    // TODO(sam): remove the old result and let the new one be added below
                                                 } else {
                                                     duplicate_skip = true;
                                                 }
@@ -421,9 +406,8 @@ struct Worker : Nan::AsyncWorker {
                                         }
                                     }
 
-                                    // add to results
+                                    // do not add to results
                                     if (duplicate_skip) {
-                                      std::clog << "feature was marked as a duplicate and does not need to be added" << std::endl;
                                       continue;
                                     }
 
@@ -459,9 +443,8 @@ struct Worker : Nan::AsyncWorker {
                                         }
                                     }
 
-                                    // add to results
+                                    // do not add to results
                                     if (duplicate_skip) {
-                                      std::clog << "feature was marked as a duplicate and does not need to be added" << std::endl;
                                       continue;
                                     }
 
@@ -506,9 +489,8 @@ struct Worker : Nan::AsyncWorker {
                                 }
                             }
 
-                            // add to results
+                            // do not add to results
                             if (duplicate_skip) {
-                              std::clog << "feature was marked as a duplicate and does not need to be added" << std::endl;
                               continue;
                             }
 
