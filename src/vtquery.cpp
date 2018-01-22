@@ -192,14 +192,15 @@ struct CompareDistance {
 
 std::vector<vtzero::index_value_pair> get_comparison_tags(vtzero::feature f) {
     std::vector<vtzero::index_value_pair> v;
+    v.reserve(f.num_properties());
     while (auto ii = f.next_property_indexes()) {
-        v.push_back(ii);
+        v.push_back(std::move(ii));
     }
     return v;
 }
 
 // compares a vector of property tags to determine deduplication of features
-bool compare_comparison_tags(std::vector<vtzero::index_value_pair> a, std::vector<vtzero::index_value_pair> b) {
+bool compare_comparison_tags(std::vector<vtzero::index_value_pair> const& a, std::vector<vtzero::index_value_pair> const& b) {
     if (a.size() != b.size()) {
         return false;
     }
@@ -214,14 +215,11 @@ bool compare_comparison_tags(std::vector<vtzero::index_value_pair> a, std::vecto
         uint32_t b_val = b[i].value().value();
 
         if (a_key != b_key || a_val != b_val) {
-          goto stop;
+          return false;
         }
     }
 
     return true;
-
-    stop:
-    return false;
 }
 
 /*
@@ -239,7 +237,7 @@ bool compare_results(ResultObject* r,
                      vtzero::feature candidate_feature,
                      std::string candidate_layer,
                      GeomType candidate_geom,
-                     std::vector<vtzero::index_value_pair> candidate_ctags) {
+                     std::vector<vtzero::index_value_pair> const& candidate_ctags) {
 
     // compare layer (if different layers, not duplicates)
     if (r->layer_name != candidate_layer) {
