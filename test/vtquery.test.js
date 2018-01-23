@@ -572,8 +572,30 @@ test('options - geometry: successfully returns only polygons', assert => {
 test('options - dedupe: returns only one result when dedupe is on', assert => {
   const buffer = fs.readFileSync(__dirname + '/fixtures/canada-covered-square.mvt');
   const tiles = [
-    {buffer: buffer, z: 11, x: 449, y: 693},
-    {buffer: buffer, z: 11, x: 449, y: 694}
+    {buffer: buffer, z: 11, x: 449, y: 693}, // hit tile
+    {buffer: buffer, z: 11, x: 449, y: 694},
+    {buffer: buffer, z: 11, x: 448, y: 694},
+    {buffer: buffer, z: 11, x: 448, y: 693}
+  ];
+  const opts = {
+    radius: 10000 // about the width of a z15 tile
+  }
+  vtquery(tiles, [-100.9797421880223, 50.075683473759085], opts, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 1, 'only one feature');
+    assert.equal(result.features[0].properties.tilequery.distance, 0, 'expected distance');
+    assert.equal(result.features[0].properties.id, 'CA', 'expected id');
+    assert.end();
+  });
+});
+
+test('options - dedupe: removes results from deque when a closer result is found (reverses order of tiles to increase coverage)', assert => {
+  const buffer = fs.readFileSync(__dirname + '/fixtures/canada-covered-square.mvt');
+  const tiles = [
+    {buffer: buffer, z: 11, x: 449, y: 694},
+    {buffer: buffer, z: 11, x: 448, y: 694},
+    {buffer: buffer, z: 11, x: 448, y: 693},
+    {buffer: buffer, z: 11, x: 449, y: 693} // hit tile
   ];
   const opts = {
     radius: 10000 // about the width of a z15 tile

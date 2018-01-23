@@ -278,7 +278,7 @@ struct Worker : Nan::AsyncWorker {
 
     std::unique_ptr<QueryData> query_data_;
     std::deque<ResultObject> results_;
-    std::deque<ResultObject*> results_queue_;
+    std::vector<ResultObject*> results_queue_;
 
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* cb)
@@ -369,6 +369,7 @@ struct Worker : Nan::AsyncWorker {
 
                         // used for checking if we should skip adding this feature because another has already been added
                         bool duplicate_skip = false;
+                        std::vector<std::vector<ResultObject*>::iterator> references_for_removal{};
 
                         // if the distance is greater than 0.0, get the distance from the query point
                         // otherwise if the distance is 0.0, add it to the queue
@@ -391,12 +392,12 @@ struct Worker : Nan::AsyncWorker {
                                     if (data.dedupe && data.tiles.size() > 1 && results_queue_.size() > 0) {
                                         // now let's loop through each item in the results, and start the comparison
                                         // unsigned loc = -1;
-                                        for (auto &r : results_queue_) {
-                                            bool is_it_a_dupe = compare_results(r, feature, layer_name, original_geometry_type, comparison_tags);
+                                        for (auto r = results_queue_.begin(); r != results_queue_.end(); ++r) {
+                                            bool is_it_a_dupe = compare_results((*r), feature, layer_name, original_geometry_type, comparison_tags);
                                             if (is_it_a_dupe) {
                                                 // compare distances
-                                                if (meters < r->distance) {
-                                                    // TODO(sam): remove the old result and let the new one be added below
+                                                if (meters < (*r)->distance) {
+                                                    references_for_removal.push_back(r);
                                                 } else {
                                                     duplicate_skip = true;
                                                 }
@@ -406,7 +407,15 @@ struct Worker : Nan::AsyncWorker {
 
                                     // do not add to results
                                     if (duplicate_skip) {
-                                      continue;
+                                        continue;
+                                    }
+
+                                    // remove references that were marked as lesser duplicates
+                                    // we have to remove _after_ the for-loop since .erase invalidates iterators
+                                    if (references_for_removal.size() > 0) {
+                                        for (auto i : references_for_removal) {
+                                            results_queue_.erase(i);
+                                        }
                                     }
 
                                     results_.emplace_back(std::move(props),
@@ -428,12 +437,12 @@ struct Worker : Nan::AsyncWorker {
                                     if (data.dedupe && data.tiles.size() > 1 && results_queue_.size() > 0) {
                                         // now let's loop through each item in the results, and start the comparison
                                         // unsigned loc = -1;
-                                        for (auto &r : results_queue_) {
-                                            bool is_it_a_dupe = compare_results(r, feature, layer_name, original_geometry_type, comparison_tags);
+                                        for (auto r = results_queue_.begin(); r != results_queue_.end(); ++r) {
+                                            bool is_it_a_dupe = compare_results((*r), feature, layer_name, original_geometry_type, comparison_tags);
                                             if (is_it_a_dupe) {
                                                 // compare distances
-                                                if (meters < r->distance) {
-                                                    // remove the old result and let the new one be added below
+                                                if (meters < (*r)->distance) {
+                                                    references_for_removal.push_back(r);
                                                 } else {
                                                     duplicate_skip = true;
                                                 }
@@ -444,6 +453,13 @@ struct Worker : Nan::AsyncWorker {
                                     // do not add to results
                                     if (duplicate_skip) {
                                       continue;
+                                    }
+
+                                    // remove references that were marked as lesser duplicates
+                                    if (references_for_removal.size() > 0) {
+                                        for (auto i : references_for_removal) {
+                                            results_queue_.erase(i);
+                                        }
                                     }
 
                                     results_.emplace_back(std::move(props),
@@ -474,12 +490,12 @@ struct Worker : Nan::AsyncWorker {
                             if (data.dedupe && data.tiles.size() > 1 && results_queue_.size() > 0) {
                                 // now let's loop through each item in the results, and start the comparison
                                 // unsigned loc = -1;
-                                for (auto &r : results_queue_) {
-                                    bool is_it_a_dupe = compare_results(r, feature, layer_name, original_geometry_type, comparison_tags);
+                                for (auto r = results_queue_.begin(); r != results_queue_.end(); ++r) {
+                                    bool is_it_a_dupe = compare_results((*r), feature, layer_name, original_geometry_type, comparison_tags);
                                     if (is_it_a_dupe) {
                                         // compare distances (if the r->distance is greater than zero, then we should keep this new one because it's a direct hit)
-                                        if (r->distance > 0.0) {
-                                            // remove the old result and let the new one be added below
+                                        if ((*r)->distance > 0.0) {
+                                            references_for_removal.push_back(r);
                                         } else {
                                             duplicate_skip = true;
                                         }
@@ -490,6 +506,13 @@ struct Worker : Nan::AsyncWorker {
                             // do not add to results
                             if (duplicate_skip) {
                               continue;
+                            }
+
+                            // remove references that were marked as lesser duplicates
+                            if (references_for_removal.size() > 0) {
+                                for (auto i : references_for_removal) {
+                                    results_queue_.erase(i);
+                                }
                             }
 
                             results_.emplace_back(std::move(props),
