@@ -6,6 +6,8 @@
 #include <mapbox/geometry/geometry.hpp>
 #include <mapbox/variant.hpp>
 #include <nan.h>
+#include <vtzero/types.hpp>
+#include <vtzero/vector_tile.hpp>
 
 namespace utils {
 

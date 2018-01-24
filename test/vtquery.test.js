@@ -466,6 +466,7 @@ test('options - radius=0: only returns "point in polygon" results (on a building
   vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { radius: 0, layers: ['building'] }, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 1, 'only one building returned');
+    assert.equal(result.features[0].properties.height, 7, 'expected property value');
     assert.deepEqual(result.features[0].properties.tilequery, { distance: 0.0, layer: 'building', geometry: 'polygon' }, 'expected tilequery info');
     assert.end();
   });
