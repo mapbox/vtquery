@@ -1,5 +1,4 @@
 #include "vtquery.hpp"
-// #include "geometry_processors.hpp"
 #include "util.hpp"
 
 #include <algorithm>
@@ -46,7 +45,6 @@ const char* getGeomTypeString(int enumVal) {
 }
 
 struct ResultObject {
-
     mapbox::feature::property_map properties;
     std::vector<vtzero::index_value_pair> comparison_tags;
     std::string layer_name;
@@ -67,29 +65,8 @@ struct ResultObject {
         has_id(false),
         id(0) {}
 
-    // custom constructor
-    ResultObject(
-        mapbox::feature::property_map&& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
-        std::vector<vtzero::index_value_pair>&& ctags,
-        std::string const& name,
-        mapbox::geometry::point<double>&& p,
-        double distance0,
-        GeomType geom_type,
-        uint64_t has_id0,
-        bool id0)
-        : properties(std::move(props_map)),
-          comparison_tags(std::move(ctags)),
-          layer_name(name),
-          coordinates(std::move(p)),
-          distance(distance0),
-          original_geometry_type(geom_type),
-          has_id(has_id0),
-          id(id0) {}
+    ResultObject(ResultObject&&) = default;
 
-    // default move constructor
-    // ResultObject(ResultObject&&) = default;
-    //
-    // non-copyable object - there is no way the code will ever copy
     // ResultObject(ResultObject const&) = delete;
 
     // use the default destructor
@@ -196,8 +173,31 @@ void set_property(mapbox::feature::property_map::value_type const& property,
     mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
 }
 
+GeomType get_geometry_type(vtzero::feature const& f) {
+    GeomType gt = GeomType::unknown;
+    switch (f.geometry_type()) {
+    case vtzero::GeomType::POINT: {
+        gt = GeomType::point;
+        break;
+    }
+    case vtzero::GeomType::LINESTRING: {
+        gt = GeomType::linestring;
+        break;
+    }
+    case vtzero::GeomType::POLYGON: {
+        gt = GeomType::polygon;
+        break;
+    }
+    default: {
+        break;
+    }
+    }
+
+    return gt;
+}
+
 struct CompareDistance {
-    bool operator()(ResultObject r1, ResultObject r2) {
+    bool operator()(ResultObject const& r1, ResultObject const& r2) {
         return r1.distance < r2.distance;
     }
 };
@@ -371,27 +371,10 @@ struct Worker : Nan::AsyncWorker {
                     */
                     std::uint32_t extent = layer.extent();
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
-                    GeomType original_geometry_type = GeomType::unknown; // set to unknown but this will get overwritten
                     while (auto feature = layer.next_feature()) {
 
-                        switch (feature.geometry_type()) {
-                        case vtzero::GeomType::POINT: {
-                            original_geometry_type = GeomType::point;
-                            break;
-                        }
-                        case vtzero::GeomType::LINESTRING: {
-                            original_geometry_type = GeomType::linestring;
-                            break;
-                        }
-                        case vtzero::GeomType::POLYGON: {
-                            original_geometry_type = GeomType::polygon;
-                            break;
-                        }
-                        default: {
-                            continue;
-                        }
-                        }
-
+                        // get geometry type
+                        auto original_geometry_type = get_geometry_type(feature);
                         if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != original_geometry_type) {
                             continue;
                         }
@@ -482,8 +465,8 @@ struct Worker : Nan::AsyncWorker {
         // for each result object
         while (!results_queue_.empty()) {
             auto const& feature = results_queue_.back(); // get reference to top item in results queue
-            // if this is a default value, don't use it
             if (feature.distance < std::numeric_limits<double>::max()) {
+                // if this is a default value, don't use it
                 v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
                 feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
 
@@ -515,11 +498,9 @@ struct Worker : Nan::AsyncWorker {
 
                 // add feature to features array
                 features_array->Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
-                results_queue_.pop_back(); // remove item from results queue
-            } else {
-                results_queue_.pop_back();
-                continue;
             }
+
+            results_queue_.pop_back();
         }
 
         results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
