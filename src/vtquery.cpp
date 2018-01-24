@@ -16,22 +16,6 @@
 #include <vtzero/types.hpp>
 #include <vtzero/vector_tile.hpp>
 
-/* deduping notes
-
-  - start by saving has_id
-  - store the ID (even if it doesn't)
-  - store extracted vector of tag pairs
-
-  - loop over the priority queue
-  - compare geometry
-  - THEN: if both have id, compare IDs
-  - compare vector of tag pairs
-    - if same length check (vector=vector)
-    -
-
-*/
-
-
 namespace VectorTileQuery {
 
 enum GeomType { point,
@@ -54,7 +38,6 @@ struct ResultObject {
     bool has_id;
     uint64_t id;
 
-    // default constructor
     ResultObject() :
         properties(),
         comparison_tags(),
@@ -66,10 +49,9 @@ struct ResultObject {
         id(0) {}
 
     ResultObject(ResultObject&&) = default;
-
-    // ResultObject(ResultObject const&) = delete;
-
-    // use the default destructor
+    ResultObject& operator=(ResultObject&&) = default;
+    ResultObject(ResultObject const&) = delete;
+    ResultObject& operator=(ResultObject const&) = delete;
     ~ResultObject() = default;
 };
 
