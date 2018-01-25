@@ -38,15 +38,14 @@ struct ResultObject {
     bool has_id;
     uint64_t id;
 
-    ResultObject() :
-        properties(),
-        comparison_tags(),
-        layer_name(),
-        coordinates(0.0, 0.0),
-        distance(std::numeric_limits<double>::max()),
-        original_geometry_type(GeomType::unknown),
-        has_id(false),
-        id(0) {}
+    ResultObject() : properties(),
+                     comparison_tags(),
+                     layer_name(),
+                     coordinates(0.0, 0.0),
+                     distance(std::numeric_limits<double>::max()),
+                     original_geometry_type(GeomType::unknown),
+                     has_id(false),
+                     id(0) {}
 
     ResultObject(ResultObject&&) = default;
     ResultObject& operator=(ResultObject&&) = default;
@@ -185,16 +184,15 @@ struct CompareDistance {
 };
 
 void insert_result(
-    ResultObject & old_result,
-    mapbox::feature::property_map & props_map,
-    std::vector<vtzero::index_value_pair> & ctags,
+    ResultObject& old_result,
+    mapbox::feature::property_map& props_map,
+    std::vector<vtzero::index_value_pair>& ctags,
     std::string const& layer_name,
-    mapbox::geometry::point<double> & pt,
+    mapbox::geometry::point<double>& pt,
     double distance,
     GeomType geom_type,
     uint64_t has_id,
-    bool id)
-{
+    bool id) {
     std::swap(old_result.properties, props_map);
     std::swap(old_result.comparison_tags, ctags);
     old_result.layer_name = layer_name;
@@ -230,7 +228,7 @@ bool compare_comparison_tags(std::vector<vtzero::index_value_pair> const& a, std
         uint32_t b_val = b[i].value().value();
 
         if (a_key != b_key || a_val != b_val) {
-          return false;
+            return false;
         }
     }
 
@@ -248,11 +246,11 @@ comparison order:
   4. otherwise compare properties (as tag integers from the mvt - order must be exact)
 
 */
-bool value_is_duplicate(ResultObject & r,
-                     vtzero::feature candidate_feature,
-                     std::string candidate_layer,
-                     GeomType candidate_geom,
-                     std::vector<vtzero::index_value_pair> const& candidate_ctags) {
+bool value_is_duplicate(ResultObject& r,
+                        vtzero::feature candidate_feature,
+                        std::string candidate_layer,
+                        GeomType candidate_geom,
+                        std::vector<vtzero::index_value_pair> const& candidate_ctags) {
 
     // compare layer (if different layers, not duplicates)
     if (r.layer_name != candidate_layer) {
@@ -394,7 +392,7 @@ struct Worker : Nan::AsyncWorker {
                         bool skip_duplicate = false; // if a duplicate is found, but distance is less than zero
                         auto comparison_tags = get_comparison_tags(feature);
                         if (data.dedupe && data.tiles.size() > 1) {
-                            for (auto & result : results_queue_) {
+                            for (auto& result : results_queue_) {
                                 // if the candidate is smaller in distance and a duplicate, add it
                                 if (value_is_duplicate(result, feature, layer_name, original_geometry_type, comparison_tags)) {
                                     if (meters <= result.distance) {
@@ -402,8 +400,8 @@ struct Worker : Nan::AsyncWorker {
                                         insert_result(result, props, comparison_tags, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
                                         found_duplicate = true;
                                         break;
-                                    // if we have a duplicate but it's lesser than what we already have, just skip and don't add below
-                                    // we need to set skip_duplicate to true because found_duplicate will still be false
+                                        // if we have a duplicate but it's lesser than what we already have, just skip and don't add below
+                                        // we need to set skip_duplicate to true because found_duplicate will still be false
                                     } else {
                                         skip_duplicate = true;
                                         break;
