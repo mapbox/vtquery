@@ -631,8 +631,7 @@ function checkClose(a, b, epsilon) {
 //   });
 // });
 
-test('options - dedupe: multiple real world tiles', assert => {
-  const bufferSF = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/sanfrancisco/15-5238-12666.mvt'));
+test('options - dedupe: compare fields for features that have no id (increases coverage)', assert => {
   const tiles = [
     {buffer: mvtf.get('002').buffer, z: 15, x: 5238, y: 12666},
     {buffer: mvtf.get('002').buffer, z: 15, x: 5237, y: 12666}
