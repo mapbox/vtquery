@@ -640,8 +640,26 @@ test('options - dedupe: compare fields for features that have no id (increases c
     radius: 10000 // should encompass each point in each tile
   };
   vtquery(tiles, [-122.453, 37.767], opts, function(err, result) {
+    console.log(err, result);
     assert.ifError(err);
-    assert.equal(result.length, 1, 'expected number of features');
+    assert.equal(result.features.length, 1, 'expected number of features');
+    assert.end();
+  });
+});
+
+test('options - dedupe: compare fields from real-world tiles (increases coverage)', assert => {
+  const tiles = [
+    {buffer: bufferSF, z: 15, x: 5238, y: 12666},
+    {buffer: fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/sanfrancisco/15-5237-12666.mvt')), z: 15, x: 5237, y: 12666}
+  ];
+  const opts = {
+    limit: 20,
+    radius: 300 // should encompass each point in each tile
+  };
+  vtquery(tiles, [-122.453, 37.767], opts, function(err, result) {
+    console.log(err, result);
+    assert.ifError(err);
+    assert.equal(result.features.length, 20, 'expected number of features');
     assert.end();
   });
 });
