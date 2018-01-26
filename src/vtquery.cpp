@@ -1,5 +1,4 @@
 #include "vtquery.hpp"
-// #include "geometry_processors.hpp"
 #include "util.hpp"
 
 #include <algorithm>
@@ -31,31 +30,27 @@ const char* getGeomTypeString(int enumVal) {
 
 struct ResultObject {
     mapbox::feature::property_map properties;
+    std::vector<vtzero::index_value_pair> comparison_tags;
     std::string layer_name;
     mapbox::geometry::point<double> coordinates;
     double distance;
     GeomType original_geometry_type;
+    bool has_id;
+    uint64_t id;
 
-    // custom constructor
-    ResultObject(
-        mapbox::feature::property_map&& props_map, // specifies an r-value completely, whatever had the memory beforehand, this now controls it
-        std::string const& name,
-        mapbox::geometry::point<double>&& p,
-        double distance0,
-        GeomType geom_type)
-        : properties(std::move(props_map)),
-          layer_name(name),
-          coordinates(std::move(p)),
-          distance(distance0),
-          original_geometry_type(geom_type) {}
+    ResultObject() : properties(),
+                     comparison_tags(),
+                     layer_name(),
+                     coordinates(0.0, 0.0),
+                     distance(std::numeric_limits<double>::max()),
+                     original_geometry_type(GeomType::unknown),
+                     has_id(false),
+                     id(0) {}
 
-    // default move constructor
     ResultObject(ResultObject&&) = default;
-
-    // non-copyable object - there is no way the code will ever copy
+    ResultObject& operator=(ResultObject&&) = default;
     ResultObject(ResultObject const&) = delete;
-
-    // use the default destructor
+    ResultObject& operator=(ResultObject const&) = delete;
     ~ResultObject() = default;
 };
 
@@ -105,6 +100,7 @@ struct QueryData {
           radius(0.0),
           zoom(0),
           num_results(5),
+          dedupe(true),
           geometry_filter_type(GeomType::all) {
         tiles.reserve(num_tiles);
     }
@@ -125,6 +121,7 @@ struct QueryData {
     double radius;
     std::int32_t zoom;
     std::uint32_t num_results;
+    bool dedupe;
     GeomType geometry_filter_type;
 };
 
@@ -157,24 +154,147 @@ void set_property(mapbox::feature::property_map::value_type const& property,
     mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
 }
 
+GeomType get_geometry_type(vtzero::feature const& f) {
+    GeomType gt = GeomType::unknown;
+    switch (f.geometry_type()) {
+    case vtzero::GeomType::POINT: {
+        gt = GeomType::point;
+        break;
+    }
+    case vtzero::GeomType::LINESTRING: {
+        gt = GeomType::linestring;
+        break;
+    }
+    case vtzero::GeomType::POLYGON: {
+        gt = GeomType::polygon;
+        break;
+    }
+    default: {
+        break;
+    }
+    }
+
+    return gt;
+}
+
 struct CompareDistance {
-    bool operator()(const ResultObject* r1, const ResultObject* r2) const {
-        return r1->distance < r2->distance;
+    bool operator()(ResultObject const& r1, ResultObject const& r2) {
+        return r1.distance < r2.distance;
     }
 };
+
+void insert_result(
+    ResultObject& old_result,
+    mapbox::feature::property_map& props_map,
+    std::vector<vtzero::index_value_pair>& ctags,
+    std::string const& layer_name,
+    mapbox::geometry::point<double>& pt,
+    double distance,
+    GeomType geom_type,
+    uint64_t has_id,
+    bool id) {
+    std::swap(old_result.properties, props_map);
+    std::swap(old_result.comparison_tags, ctags);
+    old_result.layer_name = layer_name;
+    old_result.coordinates = pt;
+    old_result.distance = distance;
+    old_result.original_geometry_type = geom_type;
+    old_result.has_id = has_id;
+    old_result.id = id;
+}
+
+std::vector<vtzero::index_value_pair> get_comparison_tags(vtzero::feature f) {
+    std::vector<vtzero::index_value_pair> v;
+    v.reserve(f.num_properties());
+    while (auto ii = f.next_property_indexes()) {
+        v.push_back(std::move(ii));
+    }
+    return v;
+}
+
+// compares a vector of property tags to determine deduplication of features
+bool compare_comparison_tags(std::vector<vtzero::index_value_pair> const& a, std::vector<vtzero::index_value_pair> const& b) {
+    if (a.size() != b.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < a.size(); ++i) {
+        // get keys
+        uint32_t a_key = a[i].key().value();
+        uint32_t b_key = b[i].key().value();
+
+        // get values
+        uint32_t a_val = a[i].value().value();
+        uint32_t b_val = b[i].value().value();
+
+        if (a_key != b_key || a_val != b_val) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/*
+
+compare a ResultObject against a possibly new feature to prevent duplicate results
+
+comparison order:
+  1. layer
+  2. geometry type
+  3. if they have IDs, compare those
+  4. otherwise compare properties (as tag integers from the mvt - order must be exact)
+
+*/
+bool value_is_duplicate(ResultObject& r,
+                        vtzero::feature candidate_feature,
+                        std::string candidate_layer,
+                        GeomType candidate_geom,
+                        std::vector<vtzero::index_value_pair> const& candidate_ctags) {
+
+    // compare layer (if different layers, not duplicates)
+    if (r.layer_name != candidate_layer) {
+        return false;
+    }
+
+    // compare geometry (if different geometry types, not duplicates)
+    if (r.original_geometry_type != candidate_geom) {
+        return false;
+    }
+
+    // compare id
+    if (r.has_id && candidate_feature.has_id()) {
+        if (r.id != candidate_feature.id()) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    // compare property tags
+    // if we get here, that means the candidate and the feature have matching,
+    // layer names & geometries, plus neither have IDs. If the ids existed and were a match,
+    // they can be deduped that way but if they didn't have IDs, let's see if their
+    // properties match and we'll dedupe that way
+    // if the sizes are different, quickly assume tags are different
+    if (!compare_comparison_tags(r.comparison_tags, candidate_ctags)) {
+        return false;
+    }
+
+    // we have a duplicate, compare distances
+    return true;
+}
 
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
     std::unique_ptr<QueryData> query_data_;
-    std::deque<ResultObject> results_;
-    std::priority_queue<ResultObject*, std::vector<ResultObject*>, CompareDistance> results_queue_;
+    std::vector<ResultObject> results_queue_;
 
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* cb)
         : Base(cb),
           query_data_(std::move(query_data)),
-          results_(),
           results_queue_() {}
 
     // The Execute() function is getting called when the worker starts to run.
@@ -184,6 +304,12 @@ struct Worker : Nan::AsyncWorker {
         try {
             // Get the object from the unique_ptr
             QueryData const& data = *query_data_;
+
+            // reserve the query results and fill with empty objects
+            results_queue_.reserve(data.num_results);
+            for (std::size_t i = 0; i < data.num_results; ++i) {
+                results_queue_.emplace_back();
+            }
 
             // query point lng/lat geometry.hpp point (used for distance calculation later on)
             mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
@@ -225,26 +351,10 @@ struct Worker : Nan::AsyncWorker {
                     */
                     std::uint32_t extent = layer.extent();
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
-                    GeomType original_geometry_type = GeomType::unknown; // set to unknown but this will get overwritten
                     while (auto feature = layer.next_feature()) {
-                        switch (feature.geometry_type()) {
-                        case vtzero::GeomType::POINT: {
-                            original_geometry_type = GeomType::point;
-                            break;
-                        }
-                        case vtzero::GeomType::LINESTRING: {
-                            original_geometry_type = GeomType::linestring;
-                            break;
-                        }
-                        case vtzero::GeomType::POLYGON: {
-                            original_geometry_type = GeomType::polygon;
-                            break;
-                        }
-                        default: {
-                            continue;
-                        }
-                        }
 
+                        // get geometry type
+                        auto original_geometry_type = get_geometry_type(feature);
                         if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != original_geometry_type) {
                             continue;
                         }
@@ -257,54 +367,62 @@ struct Worker : Nan::AsyncWorker {
                             continue;
                         }
 
-                        // if the distance is greater than 0.0, get the distance from the query point
-                        // otherwise if the distance is 0.0, add it to the queue
+                        ////////////////////
+
+                        // set default meters and result coordinates to possibly be reassigned
+                        // if distance from the query point is greater than 0.0 (not a direct hit)
+                        double meters = 0.0;
+                        auto ll = mapbox::geometry::point<double>{data.longitude, data.latitude}; // original query lng/lat
                         if (cp_info.distance > 0.0) {
                             // convert x/y into lng/lat point
-                            auto feature_lnglat = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info);
-                            auto meters = utils::distance_in_meters(query_lnglat, feature_lnglat);
+                            ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info);
+                            meters = utils::distance_in_meters(query_lnglat, ll);
+                        }
 
-                            // if the distance is within the threshold, save it
-                            if (meters <= data.radius) {
+                        // if distance from the query point is greater than the radius, don't add it
+                        if (meters > data.radius) {
+                            continue;
+                        }
 
-                                // if the queue size is still smaller than number of results, just add the hit
-                                // if the queue size is at its max, compare the top() result and only add if this new
-                                // hit is smaller than the top result
-                                if (results_queue_.size() < data.num_results) {
-                                    auto props = mapbox::vector_tile::extract_properties(feature);
-                                    results_.emplace_back(std::move(props),
-                                                          layer_name,
-                                                          std::move(feature_lnglat),
-                                                          meters,
-                                                          original_geometry_type);
-                                    results_queue_.emplace(&results_.back());
-                                } else if (meters < results_queue_.top()->distance) {
-                                    results_queue_.pop();
-                                    auto props = mapbox::vector_tile::extract_properties(feature);
-                                    results_.emplace_back(std::move(props),
-                                                          layer_name,
-                                                          std::move(feature_lnglat),
-                                                          meters,
-                                                          original_geometry_type);
-                                    results_queue_.emplace(&results_.back());
+                        // check for duplicates if:
+                        //   a: turned on
+                        //   b: more than 1 tile
+                        //   c: at least one result in the possible queue
+                        bool found_duplicate = false;
+                        bool skip_duplicate = false; // if a duplicate is found, but distance is less than zero
+                        auto comparison_tags = get_comparison_tags(feature);
+                        if (data.dedupe && data.tiles.size() > 1) {
+                            for (auto& result : results_queue_) {
+                                // if the candidate is smaller in distance and a duplicate, add it
+                                if (value_is_duplicate(result, feature, layer_name, original_geometry_type, comparison_tags)) {
+                                    if (meters <= result.distance) {
+                                        auto props = mapbox::vector_tile::extract_properties(feature);
+                                        insert_result(result, props, comparison_tags, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
+                                        found_duplicate = true;
+                                        break;
+                                        // if we have a duplicate but it's lesser than what we already have, just skip and don't add below
+                                        // we need to set skip_duplicate to true because found_duplicate will still be false
+                                    } else {
+                                        skip_duplicate = true;
+                                        break;
+                                    }
                                 }
                             }
-                        } else {
-                            auto qp = mapbox::geometry::point<double>{data.longitude, data.latitude}; // original query lng/lat
+                        }
+
+                        if (skip_duplicate) {
+                            continue;
+                        }
+
+                        if (found_duplicate) {
+                            std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
+                            continue;
+                        }
+
+                        if (meters < results_queue_.back().distance) {
                             auto props = mapbox::vector_tile::extract_properties(feature);
-
-                            // if our results list is already full, remove the top() element and add the new one - this way the
-                            // we'll always be removing the largest element by distance and replacing with a 0.0 result
-                            if (results_queue_.size() == data.num_results) {
-                                results_queue_.pop();
-                            }
-
-                            results_.emplace_back(std::move(props),
-                                                  layer_name,
-                                                  std::move(qp),
-                                                  0.0,
-                                                  original_geometry_type);
-                            results_queue_.emplace(&results_.back());
+                            insert_result(results_queue_.back(), props, comparison_tags, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
+                            std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
@@ -321,44 +439,48 @@ struct Worker : Nan::AsyncWorker {
 
         // number of results to loop through
         v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
-        v8::Local<v8::Array> features_array = Nan::New<v8::Array>(results_queue_.size());
+        v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
         results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
 
         // for each result object
         while (!results_queue_.empty()) {
-            auto const& feature = results_queue_.top(); // get reference to top item in results queue
-            v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
-            feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
+            auto const& feature = results_queue_.back(); // get reference to top item in results queue
+            if (feature.distance < std::numeric_limits<double>::max()) {
+                // if this is a default value, don't use it
+                v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
+                feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
 
-            // create geometry object
-            v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
-            geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
-            v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>(2);
-            coordinates_array->Set(0, Nan::New<v8::Number>(feature->coordinates.x)); // latitude
-            coordinates_array->Set(1, Nan::New<v8::Number>(feature->coordinates.y)); // longitude
-            geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
-            feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
+                // create geometry object
+                v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
+                geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
+                v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>(2);
+                coordinates_array->Set(0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
+                coordinates_array->Set(1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
+                geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
+                feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
 
-            // create properties object
-            v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
-            for (auto const& prop : feature->properties) {
-                set_property(prop, properties_obj);
+                // create properties object
+                v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
+                for (auto const& prop : feature.properties) {
+                    set_property(prop, properties_obj);
+                }
+
+                // set properties.tilquery
+                v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
+                tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
+                std::string og_geom = getGeomTypeString(feature.original_geometry_type);
+                tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
+                tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
+                properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
+
+                // add properties to feature
+                feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
+
+                // add feature to features array
+                features_array->Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
             }
 
-            // set properties.tilquery
-            v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
-            tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature->distance));
-            std::string og_geom = getGeomTypeString(feature->original_geometry_type);
-            tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
-            tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature->layer_name).ToLocalChecked());
-            properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
-
-            // add properties to feature
-            feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
-
-            // add feature to features array
-            features_array->Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
-            results_queue_.pop(); // remove item from results queue
+            results_queue_.pop_back();
         }
 
         results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
@@ -498,6 +620,16 @@ NAN_METHOD(vtquery) {
 
         v8::Local<v8::Object> options = info[2]->ToObject();
 
+        if (options->Has(Nan::New("dedupe").ToLocalChecked())) {
+            v8::Local<v8::Value> dedupe_val = options->Get(Nan::New("dedupe").ToLocalChecked());
+            if (!dedupe_val->IsBoolean()) {
+                return utils::CallbackError("'dedupe' must be a boolean", callback);
+            }
+
+            bool dedupe = dedupe_val->BooleanValue();
+            query_data->dedupe = dedupe;
+        }
+
         if (options->Has(Nan::New("radius").ToLocalChecked())) {
             v8::Local<v8::Value> radius_val = options->Get(Nan::New("radius").ToLocalChecked());
             if (!radius_val->IsNumber()) {
@@ -512,17 +644,17 @@ NAN_METHOD(vtquery) {
             query_data->radius = radius;
         }
 
-        if (options->Has(Nan::New("numResults").ToLocalChecked())) {
-            v8::Local<v8::Value> num_results_val = options->Get(Nan::New("numResults").ToLocalChecked());
+        if (options->Has(Nan::New("limit").ToLocalChecked())) {
+            v8::Local<v8::Value> num_results_val = options->Get(Nan::New("limit").ToLocalChecked());
             if (!num_results_val->IsNumber()) {
-                return utils::CallbackError("'numResults' must be a number", callback);
+                return utils::CallbackError("'limit' must be a number", callback);
             }
 
             // TODO(sam) using std::uint32_t results in a "comparison of unsigned expression" error
             // what's the best way to check that a number isn't negative but also assigning it a proper value?
             std::int32_t num_results = num_results_val->Int32Value();
             if (num_results < 0) {
-                return utils::CallbackError("'numResults' must be a positive number", callback);
+                return utils::CallbackError("'limit' must be a positive number", callback);
             }
 
             // TODO(sam) do we need to cast here? Or can we safely use an Int32Value knowing that it isn't negative

@@ -303,6 +303,17 @@ test('failure: options is not an object', assert => {
   });
 });
 
+test('failure: options.dedupe is not a boolean', assert => {
+  const opts = {
+    dedupe: 'yes please'
+  };
+  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'dedupe\' must be a boolean');
+    assert.end();
+  });
+});
+
 test('failure: options.radius is not a number', assert => {
   const opts = {
     radius: '4'
@@ -327,22 +338,22 @@ test('failure: options.radius is negative', assert => {
 
 test('failure: options.results is not a number', assert => {
   const opts = {
-    numResults: 'hi'
+    limit: 'hi'
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'numResults\' must be a number');
+    assert.equal(err.message, '\'limit\' must be a number');
     assert.end();
   });
 });
 
 test('failure: options.results is negative', assert => {
   const opts = {
-    numResults: -10
+    limit: -10
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'numResults\' must be a positive number');
+    assert.equal(err.message, '\'limit\' must be a positive number');
     assert.end();
   });
 });
@@ -421,7 +432,7 @@ test('options - defaults: success', assert => {
 test('options - radius: all results within radius', assert => {
   const buffer = bufferSF;
   const ll = [-122.4477, 37.7665]; // direct hit
-  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { numResults: 100, radius: 1000 }, function(err, result) {
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { limit: 100, radius: 1000 }, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
       assert.ok(feature.properties.tilequery.distance <= 1000, 'less than radius');
@@ -455,6 +466,7 @@ test('options - radius=0: only returns "point in polygon" results (on a building
   vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { radius: 0, layers: ['building'] }, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 1, 'only one building returned');
+    assert.equal(result.features[0].properties.height, 7, 'expected property value');
     assert.deepEqual(result.features[0].properties.tilequery, { distance: 0.0, layer: 'building', geometry: 'polygon' }, 'expected tilequery info');
     assert.end();
   });
@@ -463,7 +475,7 @@ test('options - radius=0: only returns "point in polygon" results (on a building
 test('options - radius=0: returns only radius 0.0 results', assert => {
   const buffer = bufferSF;
   const ll = [-122.4527, 37.7689]; // direct hit on a building
-  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { radius: 0, numResults: 100 }, function(err, result) {
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { radius: 0, limit: 100 }, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
       assert.ok(feature.properties.tilequery.distance == 0.0, 'radius 0.0');
@@ -472,10 +484,10 @@ test('options - radius=0: returns only radius 0.0 results', assert => {
   });
 });
 
-test('options - numResults: successfully limits results', assert => {
+test('options - limit: successfully limits results', assert => {
   const buffer = bufferSF;
   const ll = [-122.4477, 37.7665]; // direct hit
-  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { numResults: 1, radius: 1000 }, function(err, result) {
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { limit: 1, radius: 1000 }, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 1, 'expected length');
     assert.end();
@@ -507,7 +519,7 @@ test('options - layers: returns zero results for a layer that does not exist - d
 test('options - radius: all results within radius', assert => {
   const buffer = bufferSF;
   const ll = [-122.4477, 37.7665]; // direct hit
-  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { numResults: 100, radius: 1000 }, function(err, result) {
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { limit: 100, radius: 1000 }, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
       assert.ok(feature.properties.tilequery.distance <= 1000, 'less than radius');
@@ -552,6 +564,101 @@ test('options - geometry: successfully returns only polygons', assert => {
     result.features.forEach(function(feature) {
       assert.equal(feature.properties.tilequery.geometry, 'polygon', 'expected original geometry');
     });
+    assert.end();
+  });
+});
+
+// two painted tiles one above the other (Y-axis) - confirming deduplication is preventing
+// returning results that are actually tile borders
+test('options - dedupe: returns only one result when dedupe is on', assert => {
+  const buffer = fs.readFileSync(__dirname + '/fixtures/canada-covered-square.mvt');
+  const tiles = [
+    {buffer: buffer, z: 11, x: 449, y: 693}, // hit tile
+    {buffer: buffer, z: 11, x: 449, y: 694},
+    {buffer: buffer, z: 11, x: 448, y: 694},
+    {buffer: buffer, z: 11, x: 448, y: 693}
+  ];
+  const opts = {
+    radius: 10000 // about the width of a z15 tile
+  }
+  vtquery(tiles, [-100.9797421880223, 50.075683473759085], opts, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 1, 'only one feature');
+    assert.equal(result.features[0].properties.tilequery.distance, 0, 'expected distance');
+    assert.equal(result.features[0].properties.id, 'CA', 'expected id');
+    assert.end();
+  });
+});
+
+test('options - dedupe: removes results from deque when a closer result is found (reverses order of tiles to increase coverage)', assert => {
+  const buffer = fs.readFileSync(__dirname + '/fixtures/canada-covered-square.mvt');
+  const tiles = [
+    {buffer: buffer, z: 11, x: 449, y: 694},
+    {buffer: buffer, z: 11, x: 448, y: 694},
+    {buffer: buffer, z: 11, x: 448, y: 693},
+    {buffer: buffer, z: 11, x: 449, y: 693} // hit tile
+  ];
+  const opts = {
+    radius: 10000 // about the width of a z15 tile
+  }
+  vtquery(tiles, [-100.9797421880223, 50.075683473759085], opts, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 1, 'only one feature');
+    assert.equal(result.features[0].properties.tilequery.distance, 0, 'expected distance');
+    assert.equal(result.features[0].properties.id, 'CA', 'expected id');
+    assert.end();
+  });
+});
+
+test('options - dedupe: returns duplicate results when dedupe is off', assert => {
+  const buffer = fs.readFileSync(__dirname + '/fixtures/canada-covered-square.mvt');
+  const tiles = [
+    {buffer: buffer, z: 11, x: 449, y: 693},
+    {buffer: buffer, z: 11, x: 449, y: 694}
+  ];
+  const opts = {
+    radius: 10000, // about the width of a z15 tile
+    dedupe: false
+  }
+  vtquery(tiles, [-100.9797421880223, 50.075683473759085], opts, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 2, 'two features');
+    assert.equal(result.features[0].properties.tilequery.distance, 0, 'expected distance');
+    assert.equal(result.features[0].properties.id, 'CA', 'expected id');
+    assert.ok(result.features[1].properties.tilequery.distance > 0, 'expected distance greater than zero');
+    assert.equal(result.features[1].properties.id, 'CA', 'expected id');
+    assert.end();
+  });
+});
+
+test('options - dedupe: compare fields for features that have no id (increases coverage)', assert => {
+  const tiles = [
+    {buffer: mvtf.get('002').buffer, z: 15, x: 5238, y: 12666},
+    {buffer: mvtf.get('002').buffer, z: 15, x: 5237, y: 12666}
+  ];
+  const opts = {
+    radius: 10000 // should encompass each point in each tile
+  };
+  vtquery(tiles, [-122.453, 37.767], opts, function(err, result) {
+    console.log(err, result);
+    assert.ifError(err);
+    assert.equal(result.features.length, 1, 'expected number of features');
+    assert.end();
+  });
+});
+
+test('options - dedupe: compare fields from real-world tiles (increases coverage)', assert => {
+  const tiles = [
+    {buffer: bufferSF, z: 15, x: 5238, y: 12666},
+    {buffer: fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/sanfrancisco/15-5237-12666.mvt')), z: 15, x: 5237, y: 12666}
+  ];
+  const opts = {
+    limit: 20,
+    radius: 300 // should encompass each point in each tile
+  };
+  vtquery(tiles, [-122.453, 37.767], opts, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 20, 'expected number of features');
     assert.end();
   });
 });
