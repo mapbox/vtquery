@@ -214,8 +214,6 @@ std::vector<vtzero::index_value_pair> get_comparison_tags(vtzero::feature f) {
 
 // compares a vector of property tags to determine deduplication of features
 bool compare_comparison_tags(std::vector<vtzero::index_value_pair> const& a, std::vector<vtzero::index_value_pair> const& b) {
-    std::clog << "are we comparing tags?" << std::endl;
-
     if (a.size() != b.size()) {
         return false;
     }
