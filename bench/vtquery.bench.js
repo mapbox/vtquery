@@ -17,7 +17,6 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const Queue = require('d3-queue').queue;
-const mvtf = require('@mapbox/mvt-fixtures');
 const vtquery = require('../lib/index.js');
 const rules = require('./rules');
 let ruleCount = 1;
