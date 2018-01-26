@@ -1,6 +1,7 @@
 # vtquery
 
 [![Build Status](https://travis-ci.org/mapbox/vtquery.svg?branch=master)](https://travis-ci.org/mapbox/vtquery)
+[![codecov](https://codecov.io/gh/mapbox/vtquery/branch/master/graph/badge.svg)](https://codecov.io/gh/mapbox/vtquery)
 [![node-cpp-skel](https://mapbox.s3.amazonaws.com/cpp-assets/node-cpp-skel-badge_blue.svg)](https://github.com/mapbox/node-cpp-skel)
 
     npm install @mapbox/vtquery
@@ -26,7 +27,7 @@ The two major use cases for this library are:
 
 -   `tiles` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)>** an array of tile objects with `buffer`, `z`, `x`, and `y` values
 -   `LngLat` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)>** a query point of longitude and latitude to query, `[lng, lat]`
--   `options` **[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)?** 
+-   `options` **[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)?**
     -   `options.radius` **[Number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)** the radius to query for features. If your radius is larger than
         the extent of an individual tile, include multiple nearby buffers to collect a realstic list of features (optional, default `0`)
     -   `options.limit` **[Number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)** limit the number of results/features returned from the query. (optional, default `5`)
