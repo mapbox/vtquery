@@ -24,7 +24,7 @@
     "node-pre-gyp"
   ],
   "devDependencies": {
-    "@mapbox/mvt-fixtures": "mapbox/mvt-fixtures#6d632d1e0169c08a8c28537f75403df3964a0057",
+    "@mapbox/mvt-fixtures": "^3.2.0",
     "aws-sdk": "^2.163.0",
     "d3-queue": "^3.0.7",
     "minimist": "^1.2.0",

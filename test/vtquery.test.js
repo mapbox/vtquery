@@ -657,7 +657,6 @@ test('options - dedupe: compare fields from real-world tiles (increases coverage
     radius: 300 // should encompass each point in each tile
   };
   vtquery(tiles, [-122.453, 37.767], opts, function(err, result) {
-    console.log(err, result);
     assert.ifError(err);
     assert.equal(result.features.length, 20, 'expected number of features');
     assert.end();
