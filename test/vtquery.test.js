@@ -338,22 +338,22 @@ test('failure: options.radius is negative', assert => {
 
 test('failure: options.results is not a number', assert => {
   const opts = {
-    numResults: 'hi'
+    limit: 'hi'
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'numResults\' must be a number');
+    assert.equal(err.message, '\'limit\' must be a number');
     assert.end();
   });
 });
 
 test('failure: options.results is negative', assert => {
   const opts = {
-    numResults: -10
+    limit: -10
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'numResults\' must be a positive number');
+    assert.equal(err.message, '\'limit\' must be a positive number');
     assert.end();
   });
 });
@@ -432,7 +432,7 @@ test('options - defaults: success', assert => {
 test('options - radius: all results within radius', assert => {
   const buffer = bufferSF;
   const ll = [-122.4477, 37.7665]; // direct hit
-  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { numResults: 100, radius: 1000 }, function(err, result) {
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { limit: 100, radius: 1000 }, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
       assert.ok(feature.properties.tilequery.distance <= 1000, 'less than radius');
@@ -475,7 +475,7 @@ test('options - radius=0: only returns "point in polygon" results (on a building
 test('options - radius=0: returns only radius 0.0 results', assert => {
   const buffer = bufferSF;
   const ll = [-122.4527, 37.7689]; // direct hit on a building
-  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { radius: 0, numResults: 100 }, function(err, result) {
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { radius: 0, limit: 100 }, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
       assert.ok(feature.properties.tilequery.distance == 0.0, 'radius 0.0');
@@ -484,10 +484,10 @@ test('options - radius=0: returns only radius 0.0 results', assert => {
   });
 });
 
-test('options - numResults: successfully limits results', assert => {
+test('options - limit: successfully limits results', assert => {
   const buffer = bufferSF;
   const ll = [-122.4477, 37.7665]; // direct hit
-  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { numResults: 1, radius: 1000 }, function(err, result) {
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { limit: 1, radius: 1000 }, function(err, result) {
     assert.ifError(err);
     assert.equal(result.features.length, 1, 'expected length');
     assert.end();
@@ -519,7 +519,7 @@ test('options - layers: returns zero results for a layer that does not exist - d
 test('options - radius: all results within radius', assert => {
   const buffer = bufferSF;
   const ll = [-122.4477, 37.7665]; // direct hit
-  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { numResults: 100, radius: 1000 }, function(err, result) {
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { limit: 100, radius: 1000 }, function(err, result) {
     assert.ifError(err);
     result.features.forEach(function(feature) {
       assert.ok(feature.properties.tilequery.distance <= 1000, 'less than radius');

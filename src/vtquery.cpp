@@ -644,17 +644,17 @@ NAN_METHOD(vtquery) {
             query_data->radius = radius;
         }
 
-        if (options->Has(Nan::New("numResults").ToLocalChecked())) {
-            v8::Local<v8::Value> num_results_val = options->Get(Nan::New("numResults").ToLocalChecked());
+        if (options->Has(Nan::New("limit").ToLocalChecked())) {
+            v8::Local<v8::Value> num_results_val = options->Get(Nan::New("limit").ToLocalChecked());
             if (!num_results_val->IsNumber()) {
-                return utils::CallbackError("'numResults' must be a number", callback);
+                return utils::CallbackError("'limit' must be a number", callback);
             }
 
             // TODO(sam) using std::uint32_t results in a "comparison of unsigned expression" error
             // what's the best way to check that a number isn't negative but also assigning it a proper value?
             std::int32_t num_results = num_results_val->Int32Value();
             if (num_results < 0) {
-                return utils::CallbackError("'numResults' must be a positive number", callback);
+                return utils::CallbackError("'limit' must be a positive number", callback);
             }
 
             // TODO(sam) do we need to cast here? Or can we safely use an Int32Value knowing that it isn't negative
