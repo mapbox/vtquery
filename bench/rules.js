@@ -2,7 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const mvtf = require('@mapbox/mvt-fixtures');
 
 module.exports = [
 
