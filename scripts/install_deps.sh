@@ -19,4 +19,4 @@ install protozero 1.6.0
 install spatial-algorithms 0.1.0
 install boost 1.65.1
 install cheap-ruler 2.5.3
-install vector-tile 0390175
+install vector-tile f4728da
