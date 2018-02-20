@@ -17,10 +17,10 @@
 #include <vtzero/vector_tile.hpp>
 
 namespace vtzero {
-    inline constexpr bool operator==(property const & lhs, property const & rhs) noexcept {
-        return lhs.key() == rhs.key() && lhs.value() == rhs.value();
-    }
+inline constexpr bool operator==(property const& lhs, property const& rhs) noexcept {
+    return lhs.key() == rhs.key() && lhs.value() == rhs.value();
 }
+} // namespace vtzero
 
 namespace VectorTileQuery {
 
@@ -208,7 +208,7 @@ void insert_result(ResultObject& old_result,
     old_result.id = id;
 }
 
-std::vector<vtzero::property> get_properties_vector(vtzero::feature & f) {
+std::vector<vtzero::property> get_properties_vector(vtzero::feature& f) {
     std::vector<vtzero::property> v;
     v.reserve(f.num_properties());
     while (auto ii = f.next_property()) {
@@ -227,11 +227,11 @@ comparison order:
   3. if they have IDs, compare them
   4. compare properties (compare data_views from vtzero - order must be exact)
 */
-bool value_is_duplicate(ResultObject const & r,
-                        vtzero::feature const & candidate_feature,
-                        std::string const & candidate_layer,
+bool value_is_duplicate(ResultObject const& r,
+                        vtzero::feature const& candidate_feature,
+                        std::string const& candidate_layer,
                         GeomType const candidate_geom,
-                        std::vector<vtzero::property> const & candidate_props_vec) {
+                        std::vector<vtzero::property> const& candidate_props_vec) {
 
     // compare layer (if different layers, not duplicates)
     if (r.layer_name != candidate_layer) {

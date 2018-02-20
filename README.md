@@ -34,8 +34,8 @@ The two major use cases for this library are:
     -   `options.layers` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)>?** an array of layer string names to query from. Default is all layers.
     -   `options.geometry` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)?** only return features of a particular geometry type. Can be `point`, `linestring`, or `polygon`.
         Defaults to all geometry types.
-    -   `options.dedup` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)** perform deduplication of features based on shared layers, geometry, IDs, and matching
-        properties. This is only enacted when querying more than a single tile at a time. (optional, default `true`)
+    -   `options.dedup` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)** perform deduplication of features based on shared layers, geometry, IDs and matching
+        properties. (optional, default `true`)
 
 **Examples**
 
@@ -112,6 +112,15 @@ GOTCHA 1: Be aware of the number of results you are returning - there may be ove
 
 GOTCHA 2: Any query point that exists _directly_ along an edge of a polygon will _not_ return.
 
+## Deduplicating results
+
+When querying across multiple tiles (or even within a single tile) it's likely source geometries have been split by the tile boundaries into multiple, seemingly unique geometries. This can result in duplicate results in a response for edges of tile boundaries, rather than actual edges of source data. Vtquery assumes features are duplicates if the following all of the following are true:
+
+-   The features are from the same layer
+-   The features are the same geometry type
+-   The features have the same id AND same properties
+-   The features' properties are the same (if no ids are present)
+
 # Develop
 
 ```bash
@@ -162,14 +171,20 @@ Benchmarks can be run with the bench/vtquery.bench.js script to test vtquery aga
 
 And the output will show how many times the library was able to execute per second, per fixture:
 
-    1: 9 tiles, chicago, radius 1000 ... 191 runs/s (5240ms)
-    2: 9 tiles, chicago, only points ... 3257 runs/s (307ms)
-    3: mbx streets no radius ... 4049 runs/s (247ms)
-    4: mbx streets 2000 radius ... 240 runs/s (4159ms)
-    5: mbx streets only points ... 4673 runs/s (214ms)
-    6: mbx streets only linestrings ... 286 runs/s (3499ms)
-    7: mbx streets only polys ... 2801 runs/s (357ms)
-    8: complex multipolygon ... 1253 runs/s (798ms)
+    1: pip: many building polygons ... 954 runs/s (1048ms)
+    2: pip: many building polygons, single layer ... 1012 runs/s (988ms)
+    3: query: many building polygons, single layer ... 773 runs/s (1294ms)
+    4: query: linestrings, mapbox streets roads ... 1664 runs/s (601ms)
+    5: query: polygons, mapbox streets buildings ... 745 runs/s (1343ms)
+    6: query: all things - dense single tile ... 400 runs/s (2497ms)
+    7: query: all things - dense nine tiles ... 51 runs/s (19544ms)
+    8: elevation: terrain tile nepal ... 801 runs/s (1249ms)
+    9: geometry: 2000 points in a single tile, no properties ... 2083 runs/s (480ms)
+    10: geometry: 2000 points in a single tile, with properties ... 1047 runs/s (955ms)
+    11: geometry: 2000 linestrings in a single tile, no properties ... 978 runs/s (1022ms)
+    12: geometry: 2000 linestrings in a single tile, with properties ... 689 runs/s (1452ms)
+    13: geometry: 2000 polygons in a single tile, no properties ... 661 runs/s (1513ms)
+    14: geometry: 2000 polygons in a single tile, with properties ... 485 runs/s (2062ms)
 
 # Viz
 
