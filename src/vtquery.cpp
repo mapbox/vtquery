@@ -334,8 +334,6 @@ struct Worker : Nan::AsyncWorker {
                             continue;
                         }
 
-                        ////////////////////
-
                         // set default meters and result coordinates to possibly be reassigned
                         // if distance from the query point is greater than 0.0 (not a direct hit)
                         double meters = 0.0;
@@ -358,7 +356,7 @@ struct Worker : Nan::AsyncWorker {
                         bool found_duplicate = false;
                         bool skip_duplicate = false; // if a duplicate is found, but distance is less than zero
                         auto properties_vec = get_properties_vector(feature);
-                        if (data.dedupe && data.tiles.size() > 1) {
+                        if (data.dedupe) {
                             for (auto& result : results_queue_) {
                                 // if the candidate is smaller in distance and a duplicate, add it
                                 if (value_is_duplicate(result, feature, layer_name, original_geometry_type, properties_vec)) {
