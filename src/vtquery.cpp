@@ -16,6 +16,12 @@
 #include <vtzero/types.hpp>
 #include <vtzero/vector_tile.hpp>
 
+namespace vtzero {
+    inline constexpr bool operator==(property const & lhs, property const & rhs) noexcept {
+        return lhs.key() == rhs.key() && lhs.value() == rhs.value();
+    }
+}
+
 namespace VectorTileQuery {
 
 enum GeomType { point,
@@ -29,8 +35,8 @@ const char* getGeomTypeString(int enumVal) {
 }
 
 struct ResultObject {
-    mapbox::feature::property_map properties;
-    std::vector<vtzero::index_value_pair> comparison_tags;
+    // mapbox::feature::property_map properties;
+    std::vector<vtzero::property> properties_vector;
     std::string layer_name;
     mapbox::geometry::point<double> coordinates;
     double distance;
@@ -38,8 +44,7 @@ struct ResultObject {
     bool has_id;
     uint64_t id;
 
-    ResultObject() : properties(),
-                     comparison_tags(),
+    ResultObject() : properties_vector(),
                      layer_name(),
                      coordinates(0.0, 0.0),
                      distance(std::numeric_limits<double>::max()),
@@ -149,9 +154,11 @@ struct property_value_visitor {
     }
 };
 
-void set_property(mapbox::feature::property_map::value_type const& property,
+void set_property(vtzero::property const& property,
                   v8::Local<v8::Object>& properties_obj) {
-    mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
+
+    auto val = vtzero::convert_property_value<mapbox::feature::value, mapbox::vector_tile::detail::property_value_mapping>(property.value());
+    mapbox::util::apply_visitor(property_value_visitor{properties_obj, std::string(property.key())}, val);
 }
 
 GeomType get_geometry_type(vtzero::feature const& f) {
@@ -183,18 +190,16 @@ struct CompareDistance {
     }
 };
 
-void insert_result(
-    ResultObject& old_result,
-    mapbox::feature::property_map& props_map,
-    std::vector<vtzero::index_value_pair>& ctags,
-    std::string const& layer_name,
-    mapbox::geometry::point<double>& pt,
-    double distance,
-    GeomType geom_type,
-    uint64_t has_id,
-    bool id) {
-    std::swap(old_result.properties, props_map);
-    std::swap(old_result.comparison_tags, ctags);
+void insert_result(ResultObject& old_result,
+                   std::vector<vtzero::property>& props_vec,
+                   std::string const& layer_name,
+                   mapbox::geometry::point<double>& pt,
+                   double distance,
+                   GeomType geom_type,
+                   bool has_id,
+                   uint64_t id) {
+
+    std::swap(old_result.properties_vector, props_vec);
     old_result.layer_name = layer_name;
     old_result.coordinates = pt;
     old_result.distance = distance;
@@ -203,36 +208,13 @@ void insert_result(
     old_result.id = id;
 }
 
-std::vector<vtzero::index_value_pair> get_comparison_tags(vtzero::feature f) {
-    std::vector<vtzero::index_value_pair> v;
+std::vector<vtzero::property> get_properties_vector(vtzero::feature & f) {
+    std::vector<vtzero::property> v;
     v.reserve(f.num_properties());
-    while (auto ii = f.next_property_indexes()) {
+    while (auto ii = f.next_property()) {
         v.push_back(std::move(ii));
     }
     return v;
-}
-
-// compares a vector of property tags to determine deduplication of features
-bool compare_comparison_tags(std::vector<vtzero::index_value_pair> const& a, std::vector<vtzero::index_value_pair> const& b) {
-    if (a.size() != b.size()) {
-        return false;
-    }
-
-    for (size_t i = 0; i < a.size(); ++i) {
-        // get keys
-        uint32_t a_key = a[i].key().value();
-        uint32_t b_key = b[i].key().value();
-
-        // get values
-        uint32_t a_val = a[i].value().value();
-        uint32_t b_val = b[i].value().value();
-
-        if (a_key != b_key || a_val != b_val) {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 /*
@@ -242,15 +224,14 @@ compare a ResultObject against a possibly new feature to prevent duplicate resul
 comparison order:
   1. layer
   2. geometry type
-  3. if they have IDs, compare those
-  4. otherwise compare properties (as tag integers from the mvt - order must be exact)
-
+  3. if they have IDs, compare them
+  4. compare properties (compare data_views from vtzero - order must be exact)
 */
-bool value_is_duplicate(ResultObject& r,
-                        vtzero::feature candidate_feature,
-                        std::string candidate_layer,
-                        GeomType candidate_geom,
-                        std::vector<vtzero::index_value_pair> const& candidate_ctags) {
+bool value_is_duplicate(ResultObject const & r,
+                        vtzero::feature const & candidate_feature,
+                        std::string const & candidate_layer,
+                        GeomType const candidate_geom,
+                        std::vector<vtzero::property> const & candidate_props_vec) {
 
     // compare layer (if different layers, not duplicates)
     if (r.layer_name != candidate_layer) {
@@ -262,27 +243,13 @@ bool value_is_duplicate(ResultObject& r,
         return false;
     }
 
-    // compare id
-    if (r.has_id && candidate_feature.has_id()) {
-        if (r.id != candidate_feature.id()) {
-            return false;
-        } else {
-            return true;
-        }
-    }
-
-    // compare property tags
-    // if we get here, that means the candidate and the feature have matching,
-    // layer names & geometries, plus neither have IDs. If the ids existed and were a match,
-    // they can be deduped that way but if they didn't have IDs, let's see if their
-    // properties match and we'll dedupe that way
-    // if the sizes are different, quickly assume tags are different
-    if (!compare_comparison_tags(r.comparison_tags, candidate_ctags)) {
+    // compare ids
+    if (r.has_id && candidate_feature.has_id() && r.id != candidate_feature.id()) {
         return false;
     }
 
-    // we have a duplicate, compare distances
-    return true;
+    // compare property tags
+    return r.properties_vector == candidate_props_vec;
 }
 
 struct Worker : Nan::AsyncWorker {
@@ -390,14 +357,13 @@ struct Worker : Nan::AsyncWorker {
                         //   c: at least one result in the possible queue
                         bool found_duplicate = false;
                         bool skip_duplicate = false; // if a duplicate is found, but distance is less than zero
-                        auto comparison_tags = get_comparison_tags(feature);
+                        auto properties_vec = get_properties_vector(feature);
                         if (data.dedupe && data.tiles.size() > 1) {
                             for (auto& result : results_queue_) {
                                 // if the candidate is smaller in distance and a duplicate, add it
-                                if (value_is_duplicate(result, feature, layer_name, original_geometry_type, comparison_tags)) {
+                                if (value_is_duplicate(result, feature, layer_name, original_geometry_type, properties_vec)) {
                                     if (meters <= result.distance) {
-                                        auto props = mapbox::vector_tile::extract_properties(feature);
-                                        insert_result(result, props, comparison_tags, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
+                                        insert_result(result, properties_vec, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
                                         found_duplicate = true;
                                         break;
                                         // if we have a duplicate but it's lesser than what we already have, just skip and don't add below
@@ -420,8 +386,7 @@ struct Worker : Nan::AsyncWorker {
                         }
 
                         if (meters < results_queue_.back().distance) {
-                            auto props = mapbox::vector_tile::extract_properties(feature);
-                            insert_result(results_queue_.back(), props, comparison_tags, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
+                            insert_result(results_queue_.back(), properties_vec, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
                             std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                         }
                     } // end tile.layer.feature loop
@@ -461,7 +426,7 @@ struct Worker : Nan::AsyncWorker {
 
                 // create properties object
                 v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
-                for (auto const& prop : feature.properties) {
+                for (auto const& prop : feature.properties_vector) {
                     set_property(prop, properties_obj);
                 }
 
