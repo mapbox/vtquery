@@ -14,7 +14,7 @@ source local.env
 
 install geometry 96d3505
 install variant 1.1.4
-install vtzero 7adde32
+install vtzero 533b811
 install protozero 1.6.0
 install spatial-algorithms 0.1.0
 install boost 1.65.1
