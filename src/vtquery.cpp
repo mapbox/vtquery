@@ -28,6 +28,7 @@ const char* getGeomTypeString(int enumVal) {
     return GeomTypeStrings[enumVal];
 }
 
+/// main storage item for returning to the user
 struct ResultObject {
     std::vector<vtzero::property> properties_vector;
     std::string layer_name;
@@ -52,6 +53,7 @@ struct ResultObject {
     ~ResultObject() = default;
 };
 
+/// an intermediate representation of a tile buffer and its necessary components
 struct TileObject {
     TileObject(std::uint32_t z0,
                std::uint32_t x0,
@@ -89,6 +91,7 @@ struct TileObject {
     Nan::Persistent<v8::Object> buffer_ref;
 };
 
+/// the baton of data to be passed from the v8 thread into the cpp threadpool
 struct QueryData {
     explicit QueryData(std::uint32_t num_tiles)
         : tiles(),
@@ -123,6 +126,7 @@ struct QueryData {
     GeomType geometry_filter_type;
 };
 
+/// convert properties to v8 types
 struct property_value_visitor {
     v8::Local<v8::Object>& properties_obj;
     std::string const& key;
@@ -147,6 +151,7 @@ struct property_value_visitor {
     }
 };
 
+/// used to create the final v8 (JSON) object to return to the user
 void set_property(vtzero::property const& property,
                   v8::Local<v8::Object>& properties_obj) {
 
@@ -183,6 +188,7 @@ struct CompareDistance {
     }
 };
 
+/// replace already existing results with a better, duplicate result
 void insert_result(ResultObject& old_result,
                    std::vector<vtzero::property>& props_vec,
                    std::string const& layer_name,
@@ -201,6 +207,7 @@ void insert_result(ResultObject& old_result,
     old_result.id = id;
 }
 
+/// generate a vector of vtzero::property objects
 std::vector<vtzero::property> get_properties_vector(vtzero::feature& f) {
     std::vector<vtzero::property> v;
     v.reserve(f.num_properties());
@@ -210,16 +217,7 @@ std::vector<vtzero::property> get_properties_vector(vtzero::feature& f) {
     return v;
 }
 
-/*
-
-compare a ResultObject against a possibly new feature to prevent duplicate results
-
-comparison order:
-  1. layer
-  2. geometry type
-  3. if they have IDs, compare them
-  4. compare properties (compare data_views from vtzero - order must be exact)
-*/
+/// compare two features to determine if they are duplicates
 bool value_is_duplicate(ResultObject const& r,
                         vtzero::feature const& candidate_feature,
                         std::string const& candidate_layer,
@@ -245,9 +243,11 @@ bool value_is_duplicate(ResultObject const& r,
     return r.properties_vector == candidate_props_vec;
 }
 
+/// main worker used by NAN
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
+    /// set up major containers
     std::unique_ptr<QueryData> query_data_;
     std::vector<ResultObject> results_queue_;
 
@@ -257,12 +257,8 @@ struct Worker : Nan::AsyncWorker {
           query_data_(std::move(query_data)),
           results_queue_() {}
 
-    // The Execute() function is getting called when the worker starts to run.
-    // - You only have access to member variables stored in this worker.
-    // - You do not have access to Javascript v8 objects here.
     void Execute() override {
         try {
-            // Get the object from the unique_ptr
             QueryData const& data = *query_data_;
 
             // reserve the query results and fill with empty objects
@@ -274,47 +270,27 @@ struct Worker : Nan::AsyncWorker {
             // query point lng/lat geometry.hpp point (used for distance calculation later on)
             mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
 
-            /* EACH TILE OBJECT
-
-               At this point we've verified all tiles are of the same zoom level, so we work with that
-               since it has been stored in the QueryData struct
-            */
+            // for each tile
             for (auto const& tile_ptr : data.tiles) {
-
-                // tile object
                 TileObject const& tile_obj = *tile_ptr;
-
-                // use vtzero to get geometry info
                 vtzero::vector_tile tile{tile_obj.data};
 
                 while (auto layer = tile.next_layer()) {
 
-                    // should we query this layer? based on user "layer" option
-                    // if there are items in the data.layers vector AND
-                    // the current layer name is not a part of that list, continue
+                    // check if this is a layer we should query
                     std::string layer_name = std::string(layer.name());
                     if (!data.layers.empty() && std::find(data.layers.begin(), data.layers.end(), layer_name) == data.layers.end()) {
                         continue;
                     }
 
-                    /* QUERY POINT
-
-                       The query point will be in tile coordinates eventually. This means we need to convert
-                       lng/lat values into tile coordinates based on the z value of the current tile.
-
-                       If the xy of the current tile do not intersect the lng/lat, let's determine how far away
-                       the current buffer is in tile coordinates from the query point (now in tile coords). This
-                       means we'll need to store the origin x/y tile values to refer back to when looping through
-                       each tile.
-
-                       We need to calculate this for every layer because the "extent" can be different per layer.
-                    */
                     std::uint32_t extent = layer.extent();
+                    // query point in relation to the current tile the layer extent
                     mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
-                    while (auto feature = layer.next_feature()) {
 
-                        // get geometry type
+                    while (auto feature = layer.next_feature()) {
                         auto original_geometry_type = get_geometry_type(feature);
+
+                        // check if this a geometry type we want to keep
                         if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != original_geometry_type) {
                             continue;
                         }
@@ -322,17 +298,16 @@ struct Worker : Nan::AsyncWorker {
                         // implement closest point algorithm on query geometry and the query point
                         auto const cp_info = mapbox::geometry::algorithms::closest_point(mapbox::vector_tile::extract_geometry<int64_t>(feature), query_point);
 
-                        // check if cp_info.distance isn't less than zero, if so, this is an error and we can move on
+                        // distance should never be less than zero, this is a safety check
                         if (cp_info.distance < 0.0) {
                             continue;
                         }
 
-                        // set default meters and result coordinates to possibly be reassigned
-                        // if distance from the query point is greater than 0.0 (not a direct hit)
-                        double meters = 0.0;
-                        auto ll = mapbox::geometry::point<double>{data.longitude, data.latitude}; // original query lng/lat
+                        double meters = 0.0; // default
+                        auto ll = mapbox::geometry::point<double>{data.longitude, data.latitude}; // default to original query lng/lat
+
+                        // if distance from the query point is greater than 0.0 (not a direct hit) so recalculate the latlng
                         if (cp_info.distance > 0.0) {
-                            // convert x/y into lng/lat point
                             ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info);
                             meters = utils::distance_in_meters(query_lnglat, ll);
                         }
@@ -342,23 +317,19 @@ struct Worker : Nan::AsyncWorker {
                             continue;
                         }
 
-                        // check for duplicates if:
-                        //   a: turned on
-                        //   b: more than 1 tile
-                        //   c: at least one result in the possible queue
+                        // check for duplicates
+                        // if the candidate is a duplicate and smaller in distance, replace it
                         bool found_duplicate = false;
-                        bool skip_duplicate = false; // if a duplicate is found, but distance is less than zero
+                        bool skip_duplicate = false;
                         auto properties_vec = get_properties_vector(feature);
                         if (data.dedupe) {
                             for (auto& result : results_queue_) {
-                                // if the candidate is smaller in distance and a duplicate, add it
                                 if (value_is_duplicate(result, feature, layer_name, original_geometry_type, properties_vec)) {
                                     if (meters <= result.distance) {
                                         insert_result(result, properties_vec, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
                                         found_duplicate = true;
                                         break;
                                         // if we have a duplicate but it's lesser than what we already have, just skip and don't add below
-                                        // we need to set skip_duplicate to true because found_duplicate will still be false
                                     } else {
                                         skip_duplicate = true;
                                         break;
@@ -388,12 +359,9 @@ struct Worker : Nan::AsyncWorker {
         }
     }
 
-    // The HandleOKCallback() is getting called when Execute() successfully
-    // completed.
     void HandleOKCallback() override {
         Nan::HandleScope scope;
 
-        // number of results to loop through
         v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
         v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
         results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
@@ -445,7 +413,6 @@ struct Worker : Nan::AsyncWorker {
         v8::Local<v8::Value> argv[argc] = {
             Nan::Null(), results_object};
 
-        // Static cast done here to avoid 'cppcoreguidelines-pro-bounds-array-to-pointer-decay' warning with clang-tidy
         callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
 };
@@ -471,7 +438,6 @@ NAN_METHOD(vtquery) {
         return utils::CallbackError("'tiles' array must be of length greater than 0", callback);
     }
 
-    // TODO(sam) - create this at the end and include defaults as standalone values here and override before constructing
     std::unique_ptr<QueryData> query_data = std::make_unique<QueryData>(num_tiles);
 
     for (unsigned t = 0; t < num_tiles; ++t) {
@@ -606,15 +572,11 @@ NAN_METHOD(vtquery) {
                 return utils::CallbackError("'limit' must be a number", callback);
             }
 
-            // TODO(sam) using std::uint32_t results in a "comparison of unsigned expression" error
-            // what's the best way to check that a number isn't negative but also assigning it a proper value?
             std::int32_t num_results = num_results_val->Int32Value();
             if (num_results < 0) {
                 return utils::CallbackError("'limit' must be a positive number", callback);
             }
 
-            // TODO(sam) do we need to cast here? Or can we safely use an Int32Value knowing that it isn't negative
-            // thanks to the check above
             query_data->num_results = static_cast<std::uint32_t>(num_results);
         }
 

@@ -640,7 +640,6 @@ test('options - dedupe: compare fields for features that have no id (increases c
     radius: 10000 // should encompass each point in each tile
   };
   vtquery(tiles, [-122.453, 37.767], opts, function(err, result) {
-    console.log(err, result);
     assert.ifError(err);
     assert.equal(result.features.length, 1, 'expected number of features');
     assert.end();
