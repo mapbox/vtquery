@@ -16,12 +16,6 @@
 #include <vtzero/types.hpp>
 #include <vtzero/vector_tile.hpp>
 
-namespace vtzero {
-inline constexpr bool operator==(property const& lhs, property const& rhs) noexcept {
-    return lhs.key() == rhs.key() && lhs.value() == rhs.value();
-}
-} // namespace vtzero
-
 namespace VectorTileQuery {
 
 enum GeomType { point,
@@ -35,7 +29,6 @@ const char* getGeomTypeString(int enumVal) {
 }
 
 struct ResultObject {
-    // mapbox::feature::property_map properties;
     std::vector<vtzero::property> properties_vector;
     std::string layer_name;
     mapbox::geometry::point<double> coordinates;
