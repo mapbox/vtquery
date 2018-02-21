@@ -68,6 +68,7 @@ matrix:
     # Sanitizer build node v4/Debug
     - os: linux
       env: BUILDTYPE=debug TOOLSET=asan
+      sudo: required # workaround https://github.com/mapbox/node-cpp-skel/issues/93
       node_js: 4
       # Overrides `install` to set up custom asan flags
       install:
