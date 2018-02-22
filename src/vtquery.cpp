@@ -303,7 +303,7 @@ struct Worker : Nan::AsyncWorker {
                             continue;
                         }
 
-                        double meters = 0.0; // default
+                        double meters = 0.0;
                         auto ll = mapbox::geometry::point<double>{data.longitude, data.latitude}; // default to original query lng/lat
 
                         // if distance from the query point is greater than 0.0 (not a direct hit) so recalculate the latlng
