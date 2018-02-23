@@ -37,11 +37,15 @@
         'defines': [
           'NDEBUG'
         ],
+        'cflags': ['-flto'],
+        'ldflags': ['-flto'],
         'xcode_settings': {
           'OTHER_CPLUSPLUSFLAGS!': [
             '-Os',
             '-O2'
           ],
+          'OTHER_LDFLAGS':[ '-flto' ],
+          'OTHER_CPLUSPLUSFLAGS!': [ '-flto' ],
           'GCC_OPTIMIZATION_LEVEL': '3',
           'GCC_GENERATE_DEBUGGING_SYMBOLS': 'NO',
           'DEAD_CODE_STRIPPING': 'YES',
