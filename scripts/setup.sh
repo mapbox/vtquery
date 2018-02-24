@@ -69,6 +69,8 @@ function run() {
     if [[ $(uname -s) == 'Linux' ]]; then
       $(pwd)/.mason/mason install binutils ${BINUTILS_VERSION}
       $(pwd)/.mason/mason link binutils ${BINUTILS_VERSION}
+      $(pwd)/.mason/mason install llvm ${MASON_LLVM_RELEASE}
+      $(pwd)/.mason/mason link llvm ${MASON_LLVM_RELEASE}
     fi
 
     #
