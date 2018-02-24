@@ -38,7 +38,7 @@
           'NDEBUG'
         ],
         'cflags': ['-flto'],
-        'ldflags': ['-flto'],
+        'ldflags': ['-flto', '-fuse-ld=lld' ],
         'xcode_settings': {
           'OTHER_CPLUSPLUSFLAGS!': [
             '-Os',
