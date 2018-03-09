@@ -34,9 +34,9 @@ PATH_TO_CLANG_TIDY_SCRIPT="$(pwd)/mason_packages/.link/share/run-clang-tidy.py"
 # to speed up re-runs, only install clang-tidy if needed
 if [[ ! -f PATH_TO_CLANG_TIDY_SCRIPT ]]; then
     # The MASON_LLVM_RELEASE variable comes from `local.env`
-    mason install clang-tidy ${MASON_LLVM_RELEASE}
+    mason-js install clang-tidy=${MASON_LLVM_RELEASE} --type=compiled
+    mason-js link clang-tidy=${MASON_LLVM_RELEASE} --type=compiled
     # We link the tools to make it easy to know ${PATH_TO_CLANG_TIDY_SCRIPT}
-    mason link clang-tidy ${MASON_LLVM_RELEASE}
 fi
 
 # build the compile_commands.json file if it does not exist
