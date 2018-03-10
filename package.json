@@ -11,7 +11,8 @@
   "scripts": {
     "test": "UV_THREADPOOL_SIZE=1 tape test/*.test.js",
     "prepublishOnly": "npm ls",
-    "install": "mason-js install && node-pre-gyp install --fallback-to-build",
+    "mason": "mason-js install && mason-js link",
+    "install": "npm run mason && node-pre-gyp install --fallback-to-build",
     "docs": "documentation readme lib/index.js --section=API"
   },
   "author": "Mapbox",

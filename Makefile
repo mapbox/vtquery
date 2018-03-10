@@ -1,3 +1,20 @@
+# This Makefile serves a few purposes:
+#
+# 1. It provides an interface to iterate quickly while developing the C++ code in src/
+# by typing `make` or `make debug`. To make iteration as fast as possible it calls out
+# directly to underlying build tools and skips running steps that appear to have already
+# been run (determined by the presence of a known file or directory). What `make` does is
+# the same as running `npm install --build-from-source` except that it is faster when
+# run a second time and may break if your build deps failed to install but their directories
+# do exist. If you hit a build error do to this, you should be able to fix it by running
+# `make distclean` and then `make` again.
+#
+# 2. It provides a few commands that call out to external scripts like `make coverage` or
+# `make tidy`. These scripts can be called directly but this Makefile provides a more uniform
+# interface to call them.
+#
+# To learn more about the build system see https://github.com/mapbox/node-cpp-skel/blob/master/docs/extended-tour.md#builds
+
 MODULE_NAME := $(shell node -e "console.log(require('./package.json').binary.module_name)")
 
 # Whether to turn compiler warnings into errors
@@ -10,17 +27,25 @@ node_modules:
 	# so that we can run it directly in either debug or release
 	npm install --ignore-scripts
 
-mason_packages:
-	mason-js install 
+node_modules/.bin/mason-js:
+	npm install mason-js-sdk
 
-mason_packages/.link: mason_packages
-	mason-js link
+node_modules/.bin/node-pre-gyp:
+	npm install node-pre-gyp
 
-release: node_modules mason_packages/.link
+mason_packages/headers: node_modules/.bin/mason-js
+	node_modules/.bin/mason-js install
+
+mason_packages/.link/include: mason_packages/headers
+	node_modules/.bin/mason-js link
+
+build-deps: mason_packages/.link/include node_modules/.bin/node-pre-gyp node_modules
+
+release: build-deps
 	V=1 ./node_modules/.bin/node-pre-gyp configure build --error_on_warnings=$(WERROR) --loglevel=error
 	@echo "run 'make clean' for full rebuild"
 
-debug: node_modules mason_packages/.link
+debug: mason_packages/.link/include
 	V=1 ./node_modules/.bin/node-pre-gyp configure build --error_on_warnings=$(WERROR) --loglevel=error --debug
 	@echo "run 'make clean' for full rebuild"
 
