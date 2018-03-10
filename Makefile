@@ -22,24 +22,18 @@ export WERROR ?= true
 
 default: release
 
+# install deps but for now ignore our own install script
+# so that we can run it directly in either debug or release
 node_modules:
-	# install deps but for now ignore our own install script
-	# so that we can run it directly in either debug or release
 	npm install --ignore-scripts
 
-node_modules/.bin/mason-js:
-	npm install mason-js-sdk
-
-node_modules/.bin/node-pre-gyp:
-	npm install node-pre-gyp
-
-mason_packages/headers: node_modules/.bin/mason-js
+mason_packages/headers: node_modules
 	node_modules/.bin/mason-js install
 
 mason_packages/.link/include: mason_packages/headers
 	node_modules/.bin/mason-js link
 
-build-deps: mason_packages/.link/include node_modules/.bin/node-pre-gyp node_modules
+build-deps: mason_packages/.link/include
 
 release: build-deps
 	V=1 ./node_modules/.bin/node-pre-gyp configure build --error_on_warnings=$(WERROR) --loglevel=error
