@@ -24,10 +24,10 @@ default: release
 
 # install deps but for now ignore our own install script
 # so that we can run it directly in either debug or release
-node_modules:
+node_modules/nan:
 	npm install --ignore-scripts
 
-mason_packages/headers: node_modules
+mason_packages/headers: node_modules/nan
 	node_modules/.bin/mason-js install
 
 mason_packages/.link/include: mason_packages/headers
