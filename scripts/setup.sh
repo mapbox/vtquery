@@ -13,6 +13,14 @@ function run() {
       echo 'shell_session_update() { :; }' > ~/.direnvrc
     fi
 
+    # Ensure toolchain is installed via mason-js
+    if [[ ! -f ./node_modules/.bin/mason-js ]]; then
+      npm install mason-js-sdk
+    fi
+
+    node_modules/.bin/mason-js install clang++=${MASON_LLVM_RELEASE} --type=compiled
+    node_modules/.bin/mason-js link clang++=${MASON_LLVM_RELEASE} --type=compiled
+
     #
     # ENV SETTINGS
     #
