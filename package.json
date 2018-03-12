@@ -20,7 +20,7 @@
   "dependencies": {
     "nan": "~2.5.1",
     "node-pre-gyp": "~0.6.32", 
-    "mason-js-sdk": "https://mapbox-npm.s3.amazonaws.com/package/mason-js-sdk-0.1.0-alpha1-1b5129e4b18272f1f1b07ec76f3e1288a7526606.tgz"
+    "mason-js-sdk": "https://mapbox-npm.s3.amazonaws.com/package/mason-js-sdk-0.1.0-alpha2-ecf3d7e2bbb5ce78a3dc09d57ea17a031494e51f.tgz"
   },
   "bundledDependencies": [
     "node-pre-gyp"
