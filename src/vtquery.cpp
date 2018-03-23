@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <exception>
+#include <gzip/decompress.hpp>
+#include <gzip/utils.hpp>
 #include <iostream>
 #include <map>
 #include <mapbox/geometry/algorithms/closest_point.hpp>
@@ -15,8 +17,6 @@
 #include <utility>
 #include <vtzero/types.hpp>
 #include <vtzero/vector_tile.hpp>
-#include <gzip/decompress.hpp>
-#include <gzip/utils.hpp>
 
 namespace VectorTileQuery {
 
@@ -30,7 +30,7 @@ const char* getGeomTypeString(int enumVal) {
     return GeomTypeStrings[enumVal];
 }
 
-using materialized_prop_type = std::pair<std::string,mapbox::feature::value>;
+using materialized_prop_type = std::pair<std::string, mapbox::feature::value>;
 
 /// main storage item for returning to the user
 struct ResultObject {
@@ -276,22 +276,22 @@ struct Worker : Nan::AsyncWorker {
             gzip::Decompressor decompressor;
             std::string uncompressed;
             std::vector<std::string> buffers;
-            std::vector<std::tuple<vtzero::vector_tile,std::uint32_t,std::uint32_t,std::uint32_t>> tiles;
+            std::vector<std::tuple<vtzero::vector_tile, std::uint32_t, std::uint32_t, std::uint32_t>> tiles;
             tiles.reserve(data.tiles.size());
             for (auto const& tile_ptr : data.tiles) {
                 TileObject const& tile_obj = *tile_ptr;
-                if (gzip::is_compressed(tile_obj.data.data(),tile_obj.data.size())) {
-                    decompressor.decompress(uncompressed,tile_obj.data.data(),tile_obj.data.size());
+                if (gzip::is_compressed(tile_obj.data.data(), tile_obj.data.size())) {
+                    decompressor.decompress(uncompressed, tile_obj.data.data(), tile_obj.data.size());
                     buffers.emplace_back(std::move(uncompressed));
-                    tiles.emplace_back(vtzero::vector_tile(buffers.back()),tile_obj.z, tile_obj.x, tile_obj.y);
+                    tiles.emplace_back(vtzero::vector_tile(buffers.back()), tile_obj.z, tile_obj.x, tile_obj.y);
                 } else {
-                    tiles.emplace_back(vtzero::vector_tile(tile_obj.data),tile_obj.z, tile_obj.x, tile_obj.y);
+                    tiles.emplace_back(vtzero::vector_tile(tile_obj.data), tile_obj.z, tile_obj.x, tile_obj.y);
                 }
             }
 
             // for each tile
-            for (auto & tile_obj : tiles) {
-                vtzero::vector_tile & tile = std::get<0>(tile_obj);
+            for (auto& tile_obj : tiles) {
+                vtzero::vector_tile& tile = std::get<0>(tile_obj);
                 while (auto layer = tile.next_layer()) {
 
                     // check if this is a layer we should query
@@ -377,11 +377,11 @@ struct Worker : Nan::AsyncWorker {
             // Here we create "materialized" properties. We do this because, when reading from a compressed
             // buffer, it is unsafe to touch `feature.properties_vector` once we've left this loop.
             // That is because the compressed buffer above is temporary and re-used for optimal performance.
-            for (auto & feature : results_queue_) {
+            for (auto& feature : results_queue_) {
                 feature.properties_vector_materialized.reserve(feature.properties_vector.size());
                 for (auto const& property : feature.properties_vector) {
                     auto val = vtzero::convert_property_value<mapbox::feature::value, mapbox::vector_tile::detail::property_value_mapping>(property.value());
-                    feature.properties_vector_materialized.emplace_back(std::string(property.key()),std::move(val));
+                    feature.properties_vector_materialized.emplace_back(std::string(property.key()), std::move(val));
                 }
                 // we are now done with the feature.properties_vector
                 //feature.properties_vector.clear();
