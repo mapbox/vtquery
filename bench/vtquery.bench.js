@@ -3,7 +3,7 @@
 const argv = require('minimist')(process.argv.slice(2));
 if (!argv.iterations || !argv.concurrency) {
   console.error('Please provide desired iterations, concurrency');
-  console.error('Example: \nnode bench/vtquery.bench.js --iterations 50 --concurrency 10');
+  console.error('Example: \nnode bench/vtquery.bench.js --gzipjs --iterations 50 --concurrency 10');
   process.exit(1);
 }
 
@@ -19,6 +19,7 @@ const assert = require('assert');
 const Queue = require('d3-queue').queue;
 const vtquery = require('../lib/index.js');
 const rules = require('./rules');
+const zlib = require('zlib');
 let ruleCount = 1;
 
 // run each rule synchronously
@@ -32,21 +33,51 @@ ruleQueue.awaitAll(function(err, res) {
   process.stdout.write('\n');
 });
 
+function decompress(tile,cb) {
+   zlib.gunzip(tile.buffer,function(err, buf) {
+     tile.buffer = buf;
+     return cb(err);
+   });
+}
+
+
 function runRule(rule, ruleCallback) {
 
   process.stdout.write(`\n${ruleCount}: ${rule.description} ... `);
 
   let runs = 0;
   let runsQueue = Queue();
+  // compress tiles such that the
+  // benchmark has to decompress on the fly
+  rule.tiles.forEach(function(t) {
+    t.buffer = zlib.gzipSync(t.buffer);
+  });
 
   function run(cb) {
-    vtquery(rule.tiles, rule.queryPoint, rule.options, function(err, result) {
-      if (err) {
-        return cb(err);
-      }
-      ++runs;
-      return cb();
-    });
+    if (argv.gzipjs) {
+      const gzipQueue = Queue();
+      rule.tiles.forEach(function(t) {
+        gzipQueue.defer(decompress,t);
+      });
+      gzipQueue.awaitAll(function(error) {
+        if (error) return cb(error);
+        vtquery(rule.tiles, rule.queryPoint, rule.options, function(err, result) {
+          if (err) {
+            return cb(err);
+          }
+          ++runs;
+          return cb();
+        });
+      });
+    } else {
+      vtquery(rule.tiles, rule.queryPoint, rule.options, function(err, result) {
+        if (err) {
+          return cb(err);
+        }
+        ++runs;
+        return cb();
+      });
+    }
   }
 
   // Start monitoring time before async work begins within the defer iterator below.
