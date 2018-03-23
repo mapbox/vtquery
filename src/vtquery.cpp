@@ -44,6 +44,7 @@ struct ResultObject {
     uint64_t id;
 
     ResultObject() : properties_vector(),
+                     properties_vector_materialized(),
                      layer_name(),
                      coordinates(0.0, 0.0),
                      distance(std::numeric_limits<double>::max()),
