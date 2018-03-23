@@ -377,7 +377,7 @@ struct Worker : Nan::AsyncWorker {
             }         // end tile loop
             // Here we create "materialized" properties. We do this because, when reading from a compressed
             // buffer, it is unsafe to touch `feature.properties_vector` once we've left this loop.
-            // That is because the compressed buffer above is temporary and re-used for optimal performance.
+            // That is because the buffer may represent uncompressed data that is not in scope outside of Execute()
             for (auto& feature : results_queue_) {
                 feature.properties_vector_materialized.reserve(feature.properties_vector.size());
                 for (auto const& property : feature.properties_vector) {
