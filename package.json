@@ -11,7 +11,8 @@
   "scripts": {
     "test": "UV_THREADPOOL_SIZE=1 tape test/*.test.js",
     "prepublishOnly": "npm ls",
-    "install": "mason-js install && node-pre-gyp install --fallback-to-build",
+    "mason": "mason-js install && mason-js link",
+    "install": "npm run mason && node-pre-gyp install --fallback-to-build",
     "docs": "documentation readme lib/index.js --section=API"
   },
   "author": "Mapbox",
@@ -19,7 +20,7 @@
   "dependencies": {
     "nan": "~2.5.1",
     "node-pre-gyp": "~0.6.32", 
-    "mason-js-sdk": "https://mapbox-npm.s3.amazonaws.com/package/mason-js-sdk-0.0.6-alpha-e8d7722417a180e9499b9dd7356f81501322d576.tgz"
+    "mason-js-sdk": "~0.1.0"
   },
   "bundledDependencies": [
     "node-pre-gyp"
