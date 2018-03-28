@@ -5,6 +5,7 @@ set -o pipefail
 
 export MASON_RELEASE="${MASON_RELEASE:-35d812c}"
 export MASON_LLVM_RELEASE="${MASON_LLVM_RELEASE:-5.0.0}"
+export BINUTILS_VERSION="${BINUTILS_VERSION:-2.30}"
 
 PLATFORM=$(uname | tr A-Z a-z)
 if [[ ${PLATFORM} == 'darwin' ]]; then
@@ -63,6 +64,12 @@ function run() {
     }
 
     setup_mason $(pwd)/.mason ${MASON_RELEASE}
+
+    # install binutils for LTO on linux
+    if [[ $(uname -s) == 'Linux' ]]; then
+      $(pwd)/.mason/mason install binutils ${BINUTILS_VERSION}
+      $(pwd)/.mason/mason link binutils ${BINUTILS_VERSION}
+    fi
 
     #
     # ENV SETTINGS
