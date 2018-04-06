@@ -573,8 +573,11 @@ NAN_METHOD(vtquery) {
             }
 
             std::int32_t num_results = num_results_val->Int32Value();
-            if (num_results < 0) {
-                return utils::CallbackError("'limit' must be a positive number", callback);
+            if (num_results < 1) {
+                return utils::CallbackError("'limit' must be 1 or greater", callback);
+            }
+            if (num_results > 100000) {
+                return utils::CallbackError("'limit' must be less than 100,000", callback);
             }
 
             query_data->num_results = static_cast<std::uint32_t>(num_results);
