@@ -702,7 +702,7 @@ test('results with same exact distance return in expected order', assert => {
   });
 });
 
-test.only('success: handles multiple zoom levels', assert => {
+test('success: handles multiple zoom levels', assert => {
   const buffer1 = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/chicago/13-2098-3045.mvt'));
   // spoofing a bangkok tile as somewhere over chicago
   const buffer2 = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/bangkok/12-3188-1888.mvt'));
