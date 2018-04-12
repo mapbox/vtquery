@@ -1,5 +1,6 @@
 ## next
 
+* add Node.js v8.x support, start building binaries for this version [#80](https://github.com/mapbox/vtquery/pull/80)
 * remove .npmignore to reduce package size [#79](https://github.com/mapbox/vtquery/pull/79)
 * update vtzero to 1.0.0 [#75](https://github.com/mapbox/vtquery/pull/75)
 
