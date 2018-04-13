@@ -417,7 +417,7 @@ struct Worker : Nan::AsyncWorker {
             callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
         } catch (const std::exception& e) {
             auto const argc = 1u;
-            v8::Local<v8::Value> argv[argc] = { Nan::Error(e.what()) };
+            v8::Local<v8::Value> argv[argc] = {Nan::Error(e.what())};
             callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
         }
     }
