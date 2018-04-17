@@ -51,8 +51,8 @@ struct print_variant {
 */
 mapbox::geometry::point<std::int64_t> create_query_point(double lng,
                                                          double lat,
-                                                         std::int32_t zoom,
                                                          std::uint32_t extent,
+                                                         std::uint32_t active_tile_z,
                                                          std::uint32_t active_tile_x,
                                                          std::uint32_t active_tile_y) {
 
@@ -63,7 +63,7 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
         lat = -89.9;
     }
 
-    double z2 = static_cast<double>(1 << zoom); // number of tiles 'across' a particular zoom level
+    double z2 = static_cast<double>(1 << active_tile_z); // number of tiles 'across' a particular zoom level
     double lat_radian = (lat * M_PI) / 180.0;
     std::int64_t zl_x = static_cast<std::int64_t>(lng / (360.0 / (extent * z2)));
     std::int64_t zl_y = static_cast<std::int64_t>(((extent * z2) / 2.0) * (1.0 - (std::log(std::tan(lat_radian) + 1.0 / std::cos(lat_radian)) / M_PI)));

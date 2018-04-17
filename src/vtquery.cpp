@@ -99,7 +99,6 @@ struct QueryData {
           latitude(0.0),
           longitude(0.0),
           radius(0.0),
-          zoom(0),
           num_results(5),
           dedupe(true),
           geometry_filter_type(GeomType::all) {
@@ -120,7 +119,6 @@ struct QueryData {
     double latitude;
     double longitude;
     double radius;
-    std::int32_t zoom;
     std::uint32_t num_results;
     bool dedupe;
     GeomType geometry_filter_type;
@@ -285,7 +283,7 @@ struct Worker : Nan::AsyncWorker {
 
                     std::uint32_t extent = layer.extent();
                     // query point in relation to the current tile the layer extent
-                    mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
+                    mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, extent, tile_obj.z, tile_obj.x, tile_obj.y);
 
                     while (auto feature = layer.next_feature()) {
                         auto original_geometry_type = get_geometry_type(feature);
@@ -460,7 +458,7 @@ NAN_METHOD(vtquery) {
             return utils::CallbackError("buffer value in 'tiles' array item is not a true buffer", callback);
         }
 
-        // check z,x,y values
+        // z value
         if (!tile_obj->Has(Nan::New("z").ToLocalChecked())) {
             return utils::CallbackError("item in 'tiles' array does not include a 'z' value", callback);
         }
@@ -468,19 +466,12 @@ NAN_METHOD(vtquery) {
         if (!z_val->IsNumber()) {
             return utils::CallbackError("'z' value in 'tiles' array item is not a number", callback);
         }
-        std::int32_t z = z_val->Int32Value();
+        std::int64_t z = z_val->IntegerValue();
         if (z < 0) {
             return utils::CallbackError("'z' value must not be less than zero", callback);
         }
-        // set zoom level in QueryData struct if it's the first iteration, otherwise verify zooms match
-        if (t == 0) {
-            query_data->zoom = z;
-        } else {
-            if (z != query_data->zoom) {
-                return utils::CallbackError("'z' values do not match across all tiles in the 'tiles' array", callback);
-            }
-        }
 
+        // x value
         if (!tile_obj->Has(Nan::New("x").ToLocalChecked())) {
             return utils::CallbackError("item in 'tiles' array does not include a 'x' value", callback);
         }
@@ -493,6 +484,7 @@ NAN_METHOD(vtquery) {
             return utils::CallbackError("'x' value must not be less than zero", callback);
         }
 
+        // y value
         if (!tile_obj->Has(Nan::New("y").ToLocalChecked())) {
             return utils::CallbackError("item in 'tiles' array does not include a 'y' value", callback);
         }
