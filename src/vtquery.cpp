@@ -358,60 +358,71 @@ struct Worker : Nan::AsyncWorker {
     }
 
     void HandleOKCallback() override {
-        Nan::HandleScope scope;
+        try {
+            Nan::HandleScope scope;
 
-        v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
-        v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
-        results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
+            v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
+            v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
+            results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
 
-        // for each result object
-        while (!results_queue_.empty()) {
-            auto const& feature = results_queue_.back(); // get reference to top item in results queue
-            if (feature.distance < std::numeric_limits<double>::max()) {
-                // if this is a default value, don't use it
-                v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
-                feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
+            // for each result object
+            while (!results_queue_.empty()) {
+                auto const& feature = results_queue_.back(); // get reference to top item in results queue
+                if (feature.distance < std::numeric_limits<double>::max()) {
+                    // if this is a default value, don't use it
+                    v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
+                    feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
 
-                // create geometry object
-                v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
-                geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
-                v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>(2);
-                coordinates_array->Set(0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
-                coordinates_array->Set(1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
-                geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
-                feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
+                    // create geometry object
+                    v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
+                    geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
+                    v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>(2);
+                    coordinates_array->Set(0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
+                    coordinates_array->Set(1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
+                    geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
+                    feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
 
-                // create properties object
-                v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
-                for (auto const& prop : feature.properties_vector) {
-                    set_property(prop, properties_obj);
+                    // create properties object
+                    v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
+                    for (auto const& prop : feature.properties_vector) {
+                        set_property(prop, properties_obj);
+                    }
+
+                    // set properties.tilquery
+                    v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
+                    tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
+                    std::string og_geom = getGeomTypeString(feature.original_geometry_type);
+                    tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
+                    tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
+                    properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
+
+                    // add properties to feature
+                    feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
+
+                    // add feature to features array
+                    features_array->Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
                 }
 
-                // set properties.tilquery
-                v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
-                tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
-                std::string og_geom = getGeomTypeString(feature.original_geometry_type);
-                tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
-                tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
-                properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
-
-                // add properties to feature
-                feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
-
-                // add feature to features array
-                features_array->Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
+                results_queue_.pop_back();
             }
 
-            results_queue_.pop_back();
+            results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
+
+            auto const argc = 2u;
+            v8::Local<v8::Value> argv[argc] = {
+                Nan::Null(), results_object};
+
+            callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
+
+        } catch (const std::exception& e) {
+            // unable to create test to throw exception here, the try/catch is simply
+            // for unexpected cases https://github.com/mapbox/vtquery/issues/69
+            // LCOV_EXCL_START
+            auto const argc = 1u;
+            v8::Local<v8::Value> argv[argc] = {Nan::Error(e.what())};
+            callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
+            // LCOV_EXCL_STOP
         }
-
-        results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
-
-        auto const argc = 2u;
-        v8::Local<v8::Value> argv[argc] = {
-            Nan::Null(), results_object};
-
-        callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
 };
 
