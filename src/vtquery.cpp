@@ -416,15 +416,15 @@ struct Worker : Nan::AsyncWorker {
 
             callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
 
-        // LCOV_EXCL_START
-        // unable to create test to throw exception here, the try/catch is simply
-        // for unexpected cases https://github.com/mapbox/vtquery/issues/69
         } catch (const std::exception& e) {
+            // unable to create test to throw exception here, the try/catch is simply
+            // for unexpected cases https://github.com/mapbox/vtquery/issues/69
+            // LCOV_EXCL_START
             auto const argc = 1u;
             v8::Local<v8::Value> argv[argc] = {Nan::Error(e.what())};
             callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
+            // LCOV_EXCL_STOP
         }
-        // LCOV_EXCL_STOP
     }
 };
 
