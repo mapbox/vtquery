@@ -1,9 +1,9 @@
-## next
+## 0.2.0
 
 * allow different zoom levels between tiles [#76](https://github.com/mapbox/vtquery/pull/76)
 * add Node.js v8.x support, start building binaries for this version [#80](https://github.com/mapbox/vtquery/pull/80)
 * remove .npmignore to reduce package size [#79](https://github.com/mapbox/vtquery/pull/79)
-* update vtzero to 1.0.0 [#75](https://github.com/mapbox/vtquery/pull/75)
+* update vtzero to 1.0.1 [#83](https://github.com/mapbox/vtquery/pull/83)
 * add a try/catch to the HandleOKCallback method to avoid dangerous aborts [#69](https://github.com/mapbox/vtquery/issues/69)
 
 ## 0.1.0
