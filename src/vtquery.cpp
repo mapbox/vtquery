@@ -358,9 +358,8 @@ struct Worker : Nan::AsyncWorker {
     }
 
     void HandleOKCallback() override {
+        Nan::HandleScope scope;
         try {
-            Nan::HandleScope scope;
-
             v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
             v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
             results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
