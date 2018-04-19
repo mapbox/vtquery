@@ -1,3 +1,8 @@
+##
+
+* move `Nan::HandleScope` out of `try` statement, so it's within scope for `catch` statement [#84](https://github.com/mapbox/vtquery/pull/84)
+* update protozero@1.6.2 [#85](https://github.com/mapbox/vtquery/pull/85)
+
 ## 0.2.0
 
 * allow different zoom levels between tiles [#76](https://github.com/mapbox/vtquery/pull/76)

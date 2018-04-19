@@ -1,6 +1,6 @@
 {
   "name": "@mapbox/vtquery",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Get features from Mapbox Vector Tiles from a lng/lat query point",
   "url": "http://github.com/mapbox/vtquery",
   "main": "./lib/index.js",
