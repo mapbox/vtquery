@@ -1,4 +1,4 @@
-##
+## 0.2.1
 
 * move `Nan::HandleScope` out of `try` statement, so it's within scope for `catch` statement [#84](https://github.com/mapbox/vtquery/pull/84)
 * update protozero@1.6.2 [#85](https://github.com/mapbox/vtquery/pull/85)
