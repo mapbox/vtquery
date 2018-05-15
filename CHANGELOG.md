@@ -1,3 +1,7 @@
+## next
+
+* upgrade node-pre-gyp@0.9.1
+
 ## 0.2.1
 
 * move `Nan::HandleScope` out of `try` statement, so it's within scope for `catch` statement [#84](https://github.com/mapbox/vtquery/pull/84)
