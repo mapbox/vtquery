@@ -52,9 +52,9 @@ struct print_variant {
 mapbox::geometry::point<std::int64_t> create_query_point(double lng,
                                                          double lat,
                                                          std::uint32_t extent,
-                                                         std::uint32_t active_tile_z,
-                                                         std::uint32_t active_tile_x,
-                                                         std::uint32_t active_tile_y) {
+                                                         int active_tile_z,
+                                                         int active_tile_x,
+                                                         int active_tile_y) {
 
     lng = std::fmod((lng + 180.0), 360.0);
     if (lat > 89.9) {
@@ -82,9 +82,9 @@ mapbox::geometry::point<std::int64_t> create_query_point(double lng,
   Create a geometry.hpp point from vector tile coordinates
 */
 mapbox::geometry::point<double> convert_vt_to_ll(std::uint32_t extent,
-                                                 std::uint32_t z,
-                                                 std::uint32_t x,
-                                                 std::uint32_t y,
+                                                 int z,
+                                                 int x,
+                                                 int y,
                                                  mapbox::geometry::algorithms::closest_point_info cp_info) {
     double z2 = static_cast<double>(static_cast<std::int64_t>(1) << z);
     double ex = static_cast<double>(extent);

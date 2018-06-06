@@ -55,9 +55,9 @@ struct ResultObject {
 
 /// an intermediate representation of a tile buffer and its necessary components
 struct TileObject {
-    TileObject(std::uint32_t z0,
-               std::uint32_t x0,
-               std::uint32_t y0,
+    TileObject(int z0,
+               int x0,
+               int y0,
                v8::Local<v8::Object> buffer)
         : z(z0),
           x(x0),
@@ -84,9 +84,9 @@ struct TileObject {
     TileObject(TileObject&&) = delete;
     TileObject& operator=(TileObject&&) = delete;
 
-    std::uint32_t z;
-    std::uint32_t x;
-    std::uint32_t y;
+    int z;
+    int x;
+    int y;
     vtzero::data_view data;
     Nan::Persistent<v8::Object> buffer_ref;
 };
@@ -476,7 +476,7 @@ NAN_METHOD(vtquery) {
         if (!z_val->IsNumber()) {
             return utils::CallbackError("'z' value in 'tiles' array item is not a number", callback);
         }
-        std::int64_t z = z_val->IntegerValue();
+        int z = z_val->Int32Value();
         if (z < 0) {
             return utils::CallbackError("'z' value must not be less than zero", callback);
         }
@@ -489,7 +489,7 @@ NAN_METHOD(vtquery) {
         if (!x_val->IsNumber()) {
             return utils::CallbackError("'x' value in 'tiles' array item is not a number", callback);
         }
-        std::int64_t x = x_val->IntegerValue();
+        int x = x_val->Int32Value();
         if (x < 0) {
             return utils::CallbackError("'x' value must not be less than zero", callback);
         }
@@ -502,16 +502,13 @@ NAN_METHOD(vtquery) {
         if (!y_val->IsNumber()) {
             return utils::CallbackError("'y' value in 'tiles' array item is not a number", callback);
         }
-        std::int64_t y = y_val->IntegerValue();
+        int y = y_val->Int32Value();
         if (y < 0) {
             return utils::CallbackError("'y' value must not be less than zero", callback);
         }
 
         // in-place construction
-        std::unique_ptr<TileObject> tile{new TileObject{static_cast<std::uint32_t>(z),
-                                                        static_cast<std::uint32_t>(x),
-                                                        static_cast<std::uint32_t>(y),
-                                                        buffer}};
+        std::unique_ptr<TileObject> tile{new TileObject{z, x, y, buffer}};
         query_data->tiles.push_back(std::move(tile));
     }
 

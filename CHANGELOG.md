@@ -1,6 +1,7 @@
 ## next
 
 * upgrade node-pre-gyp@0.9.1
+* use `int` for z/x/y values instead of `std::uint64_t` and casting [#87](https://github.com/mapbox/vtquery/issues/87)
 
 ## 0.2.1
 
