@@ -55,9 +55,9 @@ struct ResultObject {
 
 /// an intermediate representation of a tile buffer and its necessary components
 struct TileObject {
-    TileObject(std::uint32_t z0,
-               std::uint32_t x0,
-               std::uint32_t y0,
+    TileObject(int z0,
+               int x0,
+               int y0,
                v8::Local<v8::Object> buffer)
         : z(z0),
           x(x0),
@@ -84,9 +84,9 @@ struct TileObject {
     TileObject(TileObject&&) = delete;
     TileObject& operator=(TileObject&&) = delete;
 
-    std::uint32_t z;
-    std::uint32_t x;
-    std::uint32_t y;
+    int z;
+    int x;
+    int y;
     vtzero::data_view data;
     Nan::Persistent<v8::Object> buffer_ref;
 };
@@ -99,7 +99,6 @@ struct QueryData {
           latitude(0.0),
           longitude(0.0),
           radius(0.0),
-          zoom(0),
           num_results(5),
           dedupe(true),
           geometry_filter_type(GeomType::all) {
@@ -120,7 +119,6 @@ struct QueryData {
     double latitude;
     double longitude;
     double radius;
-    std::int32_t zoom;
     std::uint32_t num_results;
     bool dedupe;
     GeomType geometry_filter_type;
@@ -285,7 +283,7 @@ struct Worker : Nan::AsyncWorker {
 
                     std::uint32_t extent = layer.extent();
                     // query point in relation to the current tile the layer extent
-                    mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, data.zoom, extent, tile_obj.x, tile_obj.y);
+                    mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, extent, tile_obj.z, tile_obj.x, tile_obj.y);
 
                     while (auto feature = layer.next_feature()) {
                         auto original_geometry_type = get_geometry_type(feature);
@@ -361,59 +359,69 @@ struct Worker : Nan::AsyncWorker {
 
     void HandleOKCallback() override {
         Nan::HandleScope scope;
+        try {
+            v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
+            v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
+            results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
 
-        v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
-        v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
-        results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
+            // for each result object
+            while (!results_queue_.empty()) {
+                auto const& feature = results_queue_.back(); // get reference to top item in results queue
+                if (feature.distance < std::numeric_limits<double>::max()) {
+                    // if this is a default value, don't use it
+                    v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
+                    feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
 
-        // for each result object
-        while (!results_queue_.empty()) {
-            auto const& feature = results_queue_.back(); // get reference to top item in results queue
-            if (feature.distance < std::numeric_limits<double>::max()) {
-                // if this is a default value, don't use it
-                v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
-                feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
+                    // create geometry object
+                    v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
+                    geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
+                    v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>(2);
+                    coordinates_array->Set(0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
+                    coordinates_array->Set(1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
+                    geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
+                    feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
 
-                // create geometry object
-                v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
-                geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
-                v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>(2);
-                coordinates_array->Set(0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
-                coordinates_array->Set(1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
-                geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
-                feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
+                    // create properties object
+                    v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
+                    for (auto const& prop : feature.properties_vector) {
+                        set_property(prop, properties_obj);
+                    }
 
-                // create properties object
-                v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
-                for (auto const& prop : feature.properties_vector) {
-                    set_property(prop, properties_obj);
+                    // set properties.tilquery
+                    v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
+                    tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
+                    std::string og_geom = getGeomTypeString(feature.original_geometry_type);
+                    tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
+                    tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
+                    properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
+
+                    // add properties to feature
+                    feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
+
+                    // add feature to features array
+                    features_array->Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
                 }
 
-                // set properties.tilquery
-                v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
-                tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
-                std::string og_geom = getGeomTypeString(feature.original_geometry_type);
-                tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
-                tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
-                properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
-
-                // add properties to feature
-                feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
-
-                // add feature to features array
-                features_array->Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
+                results_queue_.pop_back();
             }
 
-            results_queue_.pop_back();
+            results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
+
+            auto const argc = 2u;
+            v8::Local<v8::Value> argv[argc] = {
+                Nan::Null(), results_object};
+
+            callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
+
+        } catch (const std::exception& e) {
+            // unable to create test to throw exception here, the try/catch is simply
+            // for unexpected cases https://github.com/mapbox/vtquery/issues/69
+            // LCOV_EXCL_START
+            auto const argc = 1u;
+            v8::Local<v8::Value> argv[argc] = {Nan::Error(e.what())};
+            callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
+            // LCOV_EXCL_STOP
         }
-
-        results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
-
-        auto const argc = 2u;
-        v8::Local<v8::Value> argv[argc] = {
-            Nan::Null(), results_object};
-
-        callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
     }
 };
 
@@ -460,7 +468,7 @@ NAN_METHOD(vtquery) {
             return utils::CallbackError("buffer value in 'tiles' array item is not a true buffer", callback);
         }
 
-        // check z,x,y values
+        // z value
         if (!tile_obj->Has(Nan::New("z").ToLocalChecked())) {
             return utils::CallbackError("item in 'tiles' array does not include a 'z' value", callback);
         }
@@ -468,19 +476,12 @@ NAN_METHOD(vtquery) {
         if (!z_val->IsNumber()) {
             return utils::CallbackError("'z' value in 'tiles' array item is not a number", callback);
         }
-        std::int32_t z = z_val->Int32Value();
+        int z = z_val->Int32Value();
         if (z < 0) {
             return utils::CallbackError("'z' value must not be less than zero", callback);
         }
-        // set zoom level in QueryData struct if it's the first iteration, otherwise verify zooms match
-        if (t == 0) {
-            query_data->zoom = z;
-        } else {
-            if (z != query_data->zoom) {
-                return utils::CallbackError("'z' values do not match across all tiles in the 'tiles' array", callback);
-            }
-        }
 
+        // x value
         if (!tile_obj->Has(Nan::New("x").ToLocalChecked())) {
             return utils::CallbackError("item in 'tiles' array does not include a 'x' value", callback);
         }
@@ -488,11 +489,12 @@ NAN_METHOD(vtquery) {
         if (!x_val->IsNumber()) {
             return utils::CallbackError("'x' value in 'tiles' array item is not a number", callback);
         }
-        std::int64_t x = x_val->IntegerValue();
+        int x = x_val->Int32Value();
         if (x < 0) {
             return utils::CallbackError("'x' value must not be less than zero", callback);
         }
 
+        // y value
         if (!tile_obj->Has(Nan::New("y").ToLocalChecked())) {
             return utils::CallbackError("item in 'tiles' array does not include a 'y' value", callback);
         }
@@ -500,16 +502,13 @@ NAN_METHOD(vtquery) {
         if (!y_val->IsNumber()) {
             return utils::CallbackError("'y' value in 'tiles' array item is not a number", callback);
         }
-        std::int64_t y = y_val->IntegerValue();
+        int y = y_val->Int32Value();
         if (y < 0) {
             return utils::CallbackError("'y' value must not be less than zero", callback);
         }
 
         // in-place construction
-        std::unique_ptr<TileObject> tile{new TileObject{static_cast<std::uint32_t>(z),
-                                                        static_cast<std::uint32_t>(x),
-                                                        static_cast<std::uint32_t>(y),
-                                                        buffer}};
+        std::unique_ptr<TileObject> tile{new TileObject{z, x, y, buffer}};
         query_data->tiles.push_back(std::move(tile));
     }
 
@@ -573,8 +572,11 @@ NAN_METHOD(vtquery) {
             }
 
             std::int32_t num_results = num_results_val->Int32Value();
-            if (num_results < 0) {
-                return utils::CallbackError("'limit' must be a positive number", callback);
+            if (num_results < 1) {
+                return utils::CallbackError("'limit' must be 1 or greater", callback);
+            }
+            if (num_results > 1000) {
+                return utils::CallbackError("'limit' must be less than 1000", callback);
             }
 
             query_data->num_results = static_cast<std::uint32_t>(num_results);
