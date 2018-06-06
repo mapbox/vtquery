@@ -241,28 +241,6 @@ test('failure: buffer object y value is negative', assert => {
   });
 });
 
-test('failure: buffer object z values don\'t match', assert => {
-  const buffs = [
-    {
-      buffer: new Buffer('hey'),
-      z: 0,
-      x: 0,
-      y: 0
-    },
-    {
-      buffer: new Buffer('hi'),
-      z: 1,
-      x: 1,
-      y: 1
-    }
-  ];
-  vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
-    assert.ok(err);
-    assert.equal(err.message, '\'z\' values do not match across all tiles in the \'tiles\' array');
-    assert.end();
-  });
-});
-
 test('failure: lnglat is not an array', assert => {
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], '[47.6117, -122.3444]', {}, function(err, result) {
     assert.ok(err);
@@ -369,13 +347,13 @@ test('failure: options.limit is 0', assert => {
   });
 });
 
-test('failure: options.limit is greater than 100,000', assert => {
+test('failure: options.limit is greater than 1000', assert => {
   const opts = {
-    limit: 100001
+    limit: 2000
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'limit\' must be less than 100,000');
+    assert.equal(err.message, '\'limit\' must be less than 1000');
     assert.end();
   });
 });
@@ -742,6 +720,27 @@ test('results with same exact distance return in expected order', assert => {
     assert.ok(checkClose(result.features[2].properties.tilequery.distance, 9.436356889343624, 1e-6), 'is the proper distance');
     assert.equal(result.features[3].properties.type, 'pedestrian', 'is expected type');
     assert.ok(checkClose(result.features[3].properties.tilequery.distance, 9.436356889343624, 1e-6), 'is the proper distance');
+    assert.end();
+  });
+});
+
+test('success: handles multiple zoom levels', assert => {
+  const buffer1 = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/chicago/13-2098-3045.mvt'));
+  // spoofing a bangkok tile as somewhere over chicago
+  const buffer2 = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/bangkok/12-3188-1888.mvt'));
+
+  const tiles = [
+    { buffer: buffer1, z: 13, x: 2098, y: 3045 },
+    { buffer: buffer2, z: 12, x: 1049, y: 1522 }
+  ];
+  const opts = {
+    radius: 100,
+    layers: ['road_label']
+  };
+  vtquery(tiles, [-87.7718, 41.8464], opts, function(err, result) {
+    assert.equal(result.features[0].properties.iso_3166_2, 'TH-73', 'expected road iso from bangkok');
+    assert.equal(result.features[1].properties.iso_3166_2, 'US-IL', 'expected road iso from chicago');
+    assert.equal(result.features[2].properties.iso_3166_2, 'US-IL', 'expected road iso from chicago');
     assert.end();
   });
 });
