@@ -82,7 +82,7 @@ matrix:
     - os: linux
       env: BUILDTYPE=debug TOOLSET=asan
       sudo: required # workaround https://github.com/mapbox/node-cpp-skel/issues/93
-      node_js: 4
+      node_js: 6
       # Overrides `install` to set up custom asan flags
       install:
         - ./scripts/setup.sh --config local.env
@@ -104,7 +104,7 @@ matrix:
     # g++ build (default builds all use clang++)
     - os: linux
       env: BUILDTYPE=debug CXX="g++-6" CC="gcc-6" CXXFLAGS="-Weffc++"
-      node_js: 4
+      node_js: 6
       addons:
         apt:
           sources:
@@ -125,8 +125,8 @@ matrix:
       # Overrides `script` to publish coverage data to codecov
       before_script:
         - npm test
-        - mason install llvm-cov ${MASON_LLVM_RELEASE}
-        - mason link llvm-cov ${MASON_LLVM_RELEASE}
+        - ./node_modules/.bin/mason-js install llvm-cov=${MASON_LLVM_RELEASE} --type=compiled
+        - ./node_modules/.bin/mason-js link llvm-cov=${MASON_LLVM_RELEASE} --type=compiled
         - which llvm-cov
         - curl -S -f https://codecov.io/bash -o codecov
         - chmod +x codecov

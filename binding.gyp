@@ -33,18 +33,21 @@
   # - none: a trick to tell gyp not to run the compiler for a given target.
   'targets': [
     {
-      # This target:
-      # - doesnt build any code (why it's type "none", to tell gyp not to run the compiler)
-      # - runs a script to install mason packages
       'target_name': 'action_before_build',
       'type': 'none',
       'hard_dependency': 1,
       'actions': [
         {
           'action_name': 'install_deps',
-          'inputs': ['./scripts/install_deps.sh'],
+          'inputs': ['./node_modules/.bin/mason-js'],
           'outputs': ['./mason_packages'],
-          'action': ['./scripts/install_deps.sh']
+          'action': ['./node_modules/.bin/mason-js', 'install']
+        },
+        {
+          'action_name': 'link_deps',
+          'inputs': ['./node_modules/.bin/mason-js'],
+          'outputs': ['./mason_packages/.link'],
+          'action': ['./node_modules/.bin/mason-js', 'link']
         }
       ]
     },
@@ -53,7 +56,6 @@
       'target_name': '<(module_name)', # sets the name of the binary file
       'product_dir': '<(module_path)', # controls where the node binary file gets copied to (./lib/binding/module.node)
       'type': 'loadable_module',
-      'dependencies': [ 'action_before_build' ],
       # "make" only watches files specified here, and will sometimes cache these files after the first compile.
       # This cache can sometimes cause confusing errors when removing/renaming/adding new files.
       # Running "make clean" helps to prevent this "mysterious error by cache" scenario
