@@ -325,13 +325,35 @@ test('failure: options.results is not a number', assert => {
   });
 });
 
-test('failure: options.results is negative', assert => {
+test('failure: options.limit is negative', assert => {
   const opts = {
     limit: -10
   };
   vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'limit\' must be a positive number');
+    assert.equal(err.message, '\'limit\' must be 1 or greater');
+    assert.end();
+  });
+});
+
+test('failure: options.limit is 0', assert => {
+  const opts = {
+    limit: 0
+  };
+  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'limit\' must be 1 or greater');
+    assert.end();
+  });
+});
+
+test('failure: options.limit is greater than 1000', assert => {
+  const opts = {
+    limit: 2000
+  };
+  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, '\'limit\' must be less than 1000');
     assert.end();
   });
 });
