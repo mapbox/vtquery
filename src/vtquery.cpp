@@ -473,8 +473,8 @@ NAN_METHOD(vtquery) {
             return utils::CallbackError("item in 'tiles' array does not include a 'z' value", callback);
         }
         v8::Local<v8::Value> z_val = tile_obj->Get(Nan::New("z").ToLocalChecked());
-        if (!z_val->IsNumber()) {
-            return utils::CallbackError("'z' value in 'tiles' array item is not a number", callback);
+        if (!z_val->IsInt32()) {
+            return utils::CallbackError("'z' value in 'tiles' array item is not an int32", callback);
         }
         int z = z_val->Int32Value();
         if (z < 0) {
@@ -486,8 +486,8 @@ NAN_METHOD(vtquery) {
             return utils::CallbackError("item in 'tiles' array does not include a 'x' value", callback);
         }
         v8::Local<v8::Value> x_val = tile_obj->Get(Nan::New("x").ToLocalChecked());
-        if (!x_val->IsNumber()) {
-            return utils::CallbackError("'x' value in 'tiles' array item is not a number", callback);
+        if (!x_val->IsInt32()) {
+            return utils::CallbackError("'x' value in 'tiles' array item is not an int32", callback);
         }
         int x = x_val->Int32Value();
         if (x < 0) {
@@ -499,8 +499,8 @@ NAN_METHOD(vtquery) {
             return utils::CallbackError("item in 'tiles' array does not include a 'y' value", callback);
         }
         v8::Local<v8::Value> y_val = tile_obj->Get(Nan::New("y").ToLocalChecked());
-        if (!y_val->IsNumber()) {
-            return utils::CallbackError("'y' value in 'tiles' array item is not a number", callback);
+        if (!y_val->IsInt32()) {
+            return utils::CallbackError("'y' value in 'tiles' array item is not an int32", callback);
         }
         int y = y_val->Int32Value();
         if (y < 0) {
