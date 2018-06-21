@@ -371,6 +371,7 @@ struct Worker : Nan::AsyncWorker {
                     // if this is a default value, don't use it
                     v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
                     feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
+                    feature_obj->Set(Nan::New("id").ToLocalChecked(), Nan::New<v8::Number>(feature.id));
 
                     // create geometry object
                     v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();

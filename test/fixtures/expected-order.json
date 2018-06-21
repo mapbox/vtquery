@@ -3,6 +3,7 @@
   "features": [
     {
       "type": "Feature",
+      "id": 0,
       "geometry": {
         "type": "Point",
         "coordinates": [
@@ -11,8 +12,8 @@
         ]
       },
       "properties": {
-        "type": "school",
         "class": "school",
+        "type": "school",
         "tilequery": {
           "distance": 0,
           "geometry": "polygon",
@@ -22,6 +23,7 @@
     },
     {
       "type": "Feature",
+      "id": 0,
       "geometry": {
         "type": "Point",
         "coordinates": [
@@ -30,8 +32,8 @@
         ]
       },
       "properties": {
-        "type": "recreation_ground",
         "class": "park",
+        "type": "recreation_ground",
         "tilequery": {
           "distance": 0,
           "geometry": "polygon",
@@ -41,6 +43,7 @@
     },
     {
       "type": "Feature",
+      "id": 0,
       "geometry": {
         "type": "Point",
         "coordinates": [
@@ -49,10 +52,10 @@
         ]
       },
       "properties": {
+        "class": "street",
+        "oneway": "false",
         "structure": "none",
         "type": "residential",
-        "oneway": "false",
-        "class": "street",
         "tilequery": {
           "distance": 30.32099616026162,
           "geometry": "linestring",
@@ -62,6 +65,7 @@
     },
     {
       "type": "Feature",
+      "id": 0,
       "geometry": {
         "type": "Point",
         "coordinates": [
@@ -70,20 +74,20 @@
         ]
       },
       "properties": {
-        "name_fr": "Home Ave",
-        "name_zh-Hans": "Home Ave",
-        "name_es": "Home Ave",
-        "name_pt": "Home Ave",
-        "name_ar": "Home Ave",
-        "name": "Home Ave",
-        "name_zh": "Home Ave",
-        "name_de": "Home Ave",
-        "localrank": 9,
-        "name_ru": "Home Ave",
-        "len": 4040,
-        "name_en": "Home Ave",
-        "iso_3166_2": "US-IL",
         "class": "street",
+        "iso_3166_2": "US-IL",
+        "len": 4040,
+        "localrank": 9,
+        "name": "Home Ave",
+        "name_ar": "Home Ave",
+        "name_de": "Home Ave",
+        "name_en": "Home Ave",
+        "name_es": "Home Ave",
+        "name_fr": "Home Ave",
+        "name_pt": "Home Ave",
+        "name_ru": "Home Ave",
+        "name_zh": "Home Ave",
+        "name_zh-Hans": "Home Ave",
         "tilequery": {
           "distance": 30.32099616026162,
           "geometry": "linestring",
@@ -93,6 +97,7 @@
     },
     {
       "type": "Feature",
+      "id": 0,
       "geometry": {
         "type": "Point",
         "coordinates": [
@@ -101,10 +106,10 @@
         ]
       },
       "properties": {
+        "class": "service",
+        "oneway": "false",
         "structure": "none",
         "type": "service:alley",
-        "oneway": "false",
-        "class": "service",
         "tilequery": {
           "distance": 34.27147583628124,
           "geometry": "linestring",
