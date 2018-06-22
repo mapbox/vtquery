@@ -341,13 +341,13 @@ struct Worker : Nan::AsyncWorker {
                         }
 
                         if (found_duplicate) {
-                            std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
+                            std::stable_sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                             continue;
                         }
 
                         if (meters < results_queue_.back().distance) {
                             insert_result(results_queue_.back(), properties_vec, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
-                            std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
+                            std::stable_sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop

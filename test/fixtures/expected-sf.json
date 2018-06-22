@@ -727,6 +727,28 @@
       },
       "properties": {
         "class": "street",
+        "oneway": "true",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 53.09876620012342,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89210281,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44710502822304,
+          37.766576004532936
+        ]
+      },
+      "properties": {
+        "class": "street",
         "iso_3166_2": "US-CA",
         "len": 750,
         "localrank": 3,
@@ -744,28 +766,6 @@
           "distance": 53.09876620012342,
           "geometry": "linestring",
           "layer": "road_label"
-        }
-      }
-    },
-    {
-      "type": "Feature",
-      "id": 89210281,
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -122.44710502822304,
-          37.766576004532936
-        ]
-      },
-      "properties": {
-        "class": "street",
-        "oneway": "true",
-        "structure": "none",
-        "type": "residential",
-        "tilequery": {
-          "distance": 53.09876620012342,
-          "geometry": "linestring",
-          "layer": "road"
         }
       }
     },
@@ -1032,6 +1032,28 @@
     },
     {
       "type": "Feature",
+      "id": 89169631,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44910180568695,
+          37.766872834699186
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 130.26392833978866,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
       "id": 89169641,
       "geometry": {
         "type": "Point",
@@ -1064,12 +1086,12 @@
     },
     {
       "type": "Feature",
-      "id": 89169631,
+      "id": 1202576651,
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -122.44910180568695,
-          37.766872834699186
+          -122.44638741016388,
+          37.76721632428931
         ]
       },
       "properties": {
@@ -1078,7 +1100,7 @@
         "structure": "none",
         "type": "residential",
         "tilequery": {
-          "distance": 130.26392833978866,
+          "distance": 140.3465759207177,
           "geometry": "linestring",
           "layer": "road"
         }
@@ -1113,28 +1135,6 @@
           "distance": 140.3465759207177,
           "geometry": "linestring",
           "layer": "road_label"
-        }
-      }
-    },
-    {
-      "type": "Feature",
-      "id": 1202576651,
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -122.44638741016388,
-          37.76721632428931
-        ]
-      },
-      "properties": {
-        "class": "street",
-        "oneway": "false",
-        "structure": "none",
-        "type": "residential",
-        "tilequery": {
-          "distance": 140.3465759207177,
-          "geometry": "linestring",
-          "layer": "road"
         }
       }
     },
@@ -1247,6 +1247,28 @@
       },
       "properties": {
         "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 200.61613558834077,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 506211151,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4454523828523,
+          37.76678857056602
+        ]
+      },
+      "properties": {
+        "class": "street",
         "iso_3166_2": "US-CA",
         "len": 270,
         "localrank": 7,
@@ -1264,28 +1286,6 @@
           "distance": 200.61613558834077,
           "geometry": "linestring",
           "layer": "road_label"
-        }
-      }
-    },
-    {
-      "type": "Feature",
-      "id": 506211151,
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -122.4454523828523,
-          37.76678857056602
-        ]
-      },
-      "properties": {
-        "class": "street",
-        "oneway": "false",
-        "structure": "none",
-        "type": "residential",
-        "tilequery": {
-          "distance": 200.61613558834077,
-          "geometry": "linestring",
-          "layer": "road"
         }
       }
     },
@@ -1344,6 +1344,28 @@
       },
       "properties": {
         "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 207.15861510799215,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89162471,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44598507881165,
+          37.765223214315355
+        ]
+      },
+      "properties": {
+        "class": "street",
         "iso_3166_2": "US-CA",
         "len": 230,
         "localrank": 10,
@@ -1361,28 +1383,6 @@
           "distance": 207.15861510799215,
           "geometry": "linestring",
           "layer": "road_label"
-        }
-      }
-    },
-    {
-      "type": "Feature",
-      "id": 89162471,
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -122.44598507881165,
-          37.765223214315355
-        ]
-      },
-      "properties": {
-        "class": "street",
-        "oneway": "false",
-        "structure": "none",
-        "type": "residential",
-        "tilequery": {
-          "distance": 207.15861510799215,
-          "geometry": "linestring",
-          "layer": "road"
         }
       }
     },
@@ -1701,6 +1701,28 @@
       },
       "properties": {
         "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 267.52077589061065,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89223751,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4503543972969,
+          37.76767006735149
+        ]
+      },
+      "properties": {
+        "class": "street",
         "iso_3166_2": "US-CA",
         "len": 320,
         "localrank": 2,
@@ -1723,12 +1745,12 @@
     },
     {
       "type": "Feature",
-      "id": 89223751,
+      "id": 89226971,
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -122.4503543972969,
-          37.76767006735149
+          -122.44493901729584,
+          37.765494619683736
         ]
       },
       "properties": {
@@ -1737,7 +1759,7 @@
         "structure": "none",
         "type": "residential",
         "tilequery": {
-          "distance": 267.52077589061065,
+          "distance": 267.6476000137979,
           "geometry": "linestring",
           "layer": "road"
         }
@@ -1777,12 +1799,12 @@
     },
     {
       "type": "Feature",
-      "id": 89226971,
+      "id": 89188831,
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -122.44493901729584,
-          37.765494619683736
+          -122.44818891301126,
+          37.768897825375674
         ]
       },
       "properties": {
@@ -1791,7 +1813,7 @@
         "structure": "none",
         "type": "residential",
         "tilequery": {
-          "distance": 267.6476000137979,
+          "distance": 269.5978438266001,
           "geometry": "linestring",
           "layer": "road"
         }
@@ -1826,28 +1848,6 @@
           "distance": 269.5978438266001,
           "geometry": "linestring",
           "layer": "road_label"
-        }
-      }
-    },
-    {
-      "type": "Feature",
-      "id": 89188831,
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -122.44818891301126,
-          37.768897825375674
-        ]
-      },
-      "properties": {
-        "class": "street",
-        "oneway": "false",
-        "structure": "none",
-        "type": "residential",
-        "tilequery": {
-          "distance": 269.5978438266001,
-          "geometry": "linestring",
-          "layer": "road"
         }
       }
     },
@@ -2003,6 +2003,28 @@
     },
     {
       "type": "Feature",
+      "id": 89165251,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4447512626648,
+          37.7674241135138
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 279.3324454473587,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
       "id": 273981331,
       "geometry": {
         "type": "Point",
@@ -2052,28 +2074,6 @@
           "distance": 279.3324454473587,
           "geometry": "linestring",
           "layer": "road_label"
-        }
-      }
-    },
-    {
-      "type": "Feature",
-      "id": 89165251,
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -122.4447512626648,
-          37.7674241135138
-        ]
-      },
-      "properties": {
-        "class": "street",
-        "oneway": "false",
-        "structure": "none",
-        "type": "residential",
-        "tilequery": {
-          "distance": 279.3324454473587,
-          "geometry": "linestring",
-          "layer": "road"
         }
       }
     },
