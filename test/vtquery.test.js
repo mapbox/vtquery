@@ -156,7 +156,7 @@ test('failure: buffer object z value is not a number', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'z\' value in \'tiles\' array item is not a number');
+    assert.equal(err.message, '\'z\' value in \'tiles\' array item is not an int32');
     assert.end();
   });
 });
@@ -172,7 +172,7 @@ test('failure: buffer object x value is not a number', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'x\' value in \'tiles\' array item is not a number');
+    assert.equal(err.message, '\'x\' value in \'tiles\' array item is not an int32');
     assert.end();
   });
 });
@@ -188,7 +188,7 @@ test('failure: buffer object y value is not a number', assert => {
   ];
   vtquery(buffs, [47.6117, -122.3444], {}, function(err, result) {
     assert.ok(err);
-    assert.equal(err.message, '\'y\' value in \'tiles\' array item is not a number');
+    assert.equal(err.message, '\'y\' value in \'tiles\' array item is not an int32');
     assert.end();
   });
 });
