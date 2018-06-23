@@ -430,30 +430,48 @@ test('options - defaults: success', assert => {
 });
 
 test('options - radius: all results within radius', assert => {
+  const expected_path = __dirname + '/fixtures/expected-sf.json';
+  const expected = JSON.parse(fs.readFileSync(expected_path));
   const buffer = bufferSF;
   const ll = [-122.4477, 37.7665]; // direct hit
   vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { limit: 100, radius: 1000 }, function(err, result) {
     assert.ifError(err);
-    result.features.forEach(function(feature) {
+    if (process.env.UPDATE) {
+      fs.writeFileSync(expected_path,JSON.stringify(result,null,2));
+    }
+    result.features.forEach(function(feature, i) {
+      let e = expected.features[i];
+      assert.equal(e.id, feature.id, 'same id');
       assert.ok(feature.properties.tilequery.distance <= 1000, 'less than radius');
+      assert.ok(checkClose(e.properties.tilequery.distance, feature.properties.tilequery.distance, 1e-6), 'expected distance');
+      assert.equal(e.properties.tilequery.layer, feature.properties.tilequery.layer, 'same layer');
+      assert.equal(e.properties.tilequery.geometry, feature.properties.tilequery.geometry, 'same geometry');
+      if (feature.properties.type) {
+        assert.equal(e.properties.type, feature.properties.type, 'same type');
+      }
     });
     assert.end();
   });
 });
 
 test('options - radius: all results are in expected order', assert => {
-  const expected = JSON.parse(fs.readFileSync(__dirname + '/fixtures/expected-order.json'));
+  const expected_path = __dirname + '/fixtures/expected-order.json';
+  const expected = JSON.parse(fs.readFileSync(expected_path));
   const buffer = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/chicago/13-2098-3045.mvt'));
   const ll = [-87.7987, 41.8451];
   vtquery([{buffer: buffer, z: 13, x: 2098, y: 3045}], ll, { radius: 50 }, function(err, result) {
     assert.ifError(err);
+    if (process.env.UPDATE) {
+      fs.writeFileSync(expected_path,JSON.stringify(result,null,2));
+    }
     result.features.forEach(function(feature, i) {
-      let e = expected.features[i].properties;
-      assert.ok(checkClose(e.tilequery.distance, feature.properties.tilequery.distance, 1e-6), 'expected distance');
-      assert.equal(e.tilequery.layer, feature.properties.tilequery.layer, 'same layer');
-      assert.equal(e.tilequery.geometry, feature.properties.tilequery.geometry, 'same geometry');
+      let e = expected.features[i];
+      assert.equal(e.id, feature.id, 'same id');
+      assert.ok(checkClose(e.properties.tilequery.distance, feature.properties.tilequery.distance, 1e-6), 'expected distance');
+      assert.equal(e.properties.tilequery.layer, feature.properties.tilequery.layer, 'same layer');
+      assert.equal(e.properties.tilequery.geometry, feature.properties.tilequery.geometry, 'same geometry');
       if (feature.properties.type) {
-        assert.equal(e.type, feature.properties.type, 'same type');
+        assert.equal(e.properties.type, feature.properties.type, 'same type');
       }
     });
     assert.end();

@@ -341,13 +341,13 @@ struct Worker : Nan::AsyncWorker {
                         }
 
                         if (found_duplicate) {
-                            std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
+                            std::stable_sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                             continue;
                         }
 
                         if (meters < results_queue_.back().distance) {
                             insert_result(results_queue_.back(), properties_vec, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
-                            std::sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
+                            std::stable_sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
@@ -371,6 +371,7 @@ struct Worker : Nan::AsyncWorker {
                     // if this is a default value, don't use it
                     v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
                     feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
+                    feature_obj->Set(Nan::New("id").ToLocalChecked(), Nan::New<v8::Number>(feature.id));
 
                     // create geometry object
                     v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();

@@ -1,0 +1,2412 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 18,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 11,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 1,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "ele": 10,
+        "index": 1,
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 2,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "ele": 20,
+        "index": 2,
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 3,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "ele": 30,
+        "index": 1,
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 4,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "ele": 40,
+        "index": 2,
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 5,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "ele": 50,
+        "index": 5,
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 6,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "ele": 60,
+        "index": 2,
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 7,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "ele": 70,
+        "index": 1,
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 8,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "ele": 80,
+        "index": 2,
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 9,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "ele": 90,
+        "index": 1,
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 10,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4477,
+          37.7665
+        ]
+      },
+      "properties": {
+        "ele": 100,
+        "index": 10,
+        "tilequery": {
+          "distance": 0,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 19,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44770105402031,
+          37.7664908422022
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 12,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 1.0206547083037316,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 14,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44771322049307,
+          37.766595512649474
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 7,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 10.664723766926803,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 1602788661,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44773440942552,
+          37.76660314171164
+        ]
+      },
+      "properties": {
+        "class": "minor_rail",
+        "layer": -1,
+        "oneway": "false",
+        "structure": "tunnel",
+        "type": "light_rail",
+        "tilequery": {
+          "distance": 11.842353087263078,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 17,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44767218828201,
+          37.766342755040455
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 10,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 17.62376427331177,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 271477361,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44792431592941,
+          37.766478455794925
+        ]
+      },
+      "properties": {
+        "class": "path",
+        "oneway": "false",
+        "structure": "none",
+        "type": "footway",
+        "tilequery": {
+          "distance": 19.90913606150482,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 1338562241,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44792493207083,
+          37.766473688592754
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 1170,
+        "localrank": 1,
+        "name": "Clayton St",
+        "name_ar": "Clayton St",
+        "name_de": "Clayton St",
+        "name_en": "Clayton St",
+        "name_es": "Clayton St",
+        "name_fr": "Clayton St",
+        "name_pt": "Clayton St",
+        "name_ru": "Clayton St",
+        "name_zh": "Clayton St",
+        "name_zh-Hans": "Clayton St",
+        "tilequery": {
+          "distance": 20.033299168510062,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 446710991,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44792505946435,
+          37.76647366077468
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 20.04485434031935,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 11,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44746211023615,
+          37.766573929019955
+        ]
+      },
+      "properties": {
+        "ele": 110,
+        "index": 1,
+        "tilequery": {
+          "distance": 22.509844496905316,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 40,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44745224714279,
+          37.76658659215536
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 9,
+        "min_height": 0,
+        "type": "residential",
+        "underground": "false",
+        "tilequery": {
+          "distance": 23.85207424005432,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 16,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44776338338852,
+          37.76673713466839
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 9,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 26.905504621649303,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 20,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44758367538452,
+          37.76673925498328
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 13,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 28.464253434854104,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 0,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44802558197165,
+          37.76645377203823
+        ]
+      },
+      "properties": {
+        "class": "park",
+        "type": "park",
+        "tilequery": {
+          "distance": 29.14302671628044,
+          "geometry": "polygon",
+          "layer": "landuse"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 25,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44801014661789,
+          37.76635335667086
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 3,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 31.807411291566773,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 377531981,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44807183742523,
+          37.76646149321424
+        ]
+      },
+      "properties": {
+        "class": "path",
+        "oneway": "false",
+        "structure": "none",
+        "type": "steps",
+        "tilequery": {
+          "distance": 33.04107017609779,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 43,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44739323854446,
+          37.766701089305826
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 12,
+        "min_height": 0,
+        "type": "residential",
+        "underground": "false",
+        "tilequery": {
+          "distance": 35.05315266495581,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 41,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44733691215515,
+          37.766346995692814
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 10,
+        "min_height": 0,
+        "type": "residential",
+        "underground": "false",
+        "tilequery": {
+          "distance": 36.220265950026175,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 12,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44741469621658,
+          37.76678378158205
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 5,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 40.298991343611625,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 38,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44728058576584,
+          37.76627914522609
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 7,
+        "min_height": 0,
+        "type": "residential",
+        "underground": "false",
+        "tilequery": {
+          "distance": 44.34617747438591,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 21,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.447310090065,
+          37.76679438314925
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 14,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 47.411858278075755,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 285755421,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44784384965897,
+          37.76607559345247
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 48.780213390008086,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 2553517111,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44784384965897,
+          37.76607559345247
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 690,
+        "localrank": 3,
+        "name": "Carl St",
+        "name_ar": "Carl St",
+        "name_de": "Carl St",
+        "name_en": "Carl St",
+        "name_es": "Carl St",
+        "name_fr": "Carl St",
+        "name_pt": "Carl St",
+        "name_ru": "Carl St",
+        "name_zh": "Carl St",
+        "name_zh-Hans": "Carl St",
+        "tilequery": {
+          "distance": 48.780213390008086,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89210281,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44710502822304,
+          37.766576004532936
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "true",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 53.09876620012342,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89210281,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44710502822304,
+          37.766576004532936
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 750,
+        "localrank": 3,
+        "name": "Downey St",
+        "name_ar": "Downey St",
+        "name_de": "Downey St",
+        "name_en": "Downey St",
+        "name_es": "Downey St",
+        "name_fr": "Downey St",
+        "name_pt": "Downey St",
+        "name_ru": "Downey St",
+        "name_zh": "Downey St",
+        "name_zh-Hans": "Downey St",
+        "tilequery": {
+          "distance": 53.09876620012342,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 42,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44726181030273,
+          37.76614980510149
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 11,
+        "min_height": 0,
+        "type": "residential",
+        "underground": "false",
+        "tilequery": {
+          "distance": 54.78549026544361,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 446710971,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44781021280085,
+          37.76703529044235
+        ]
+      },
+      "properties": {
+        "class": "tertiary",
+        "oneway": "false",
+        "structure": "none",
+        "type": "tertiary",
+        "tilequery": {
+          "distance": 60.200118969798716,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 446710981,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44781021280085,
+          37.76703529044235
+        ]
+      },
+      "properties": {
+        "class": "tertiary",
+        "iso_3166_2": "US-CA",
+        "len": 930,
+        "localrank": 1,
+        "name": "Frederick St",
+        "name_ar": "Frederick St",
+        "name_de": "Frederick St",
+        "name_en": "Frederick St",
+        "name_es": "Frederick St",
+        "name_fr": "Frederick St",
+        "name_pt": "Frederick St",
+        "name_ru": "Frederick St",
+        "name_zh": "Frederick St",
+        "name_zh-Hans": "Frederick St",
+        "tilequery": {
+          "distance": 60.200118969798716,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 13,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44688093662262,
+          37.766779540954744
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 6,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 78.55622440189282,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 22,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44817912578583,
+          37.76716967764844
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 15,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 85.47989627259082,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 1448153121,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44868606328964,
+          37.76639364285258
+        ]
+      },
+      "properties": {
+        "class": "fence",
+        "tilequery": {
+          "distance": 87.68266141039065,
+          "geometry": "linestring",
+          "layer": "barrier_line"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 0,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44689166545868,
+          37.76603318676243
+        ]
+      },
+      "properties": {
+        "class": "parking",
+        "type": "surface",
+        "tilequery": {
+          "distance": 88.07568379117757,
+          "geometry": "polygon",
+          "layer": "landuse"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 285756041,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44869947433472,
+          37.7664084851245
+        ]
+      },
+      "properties": {
+        "class": "minor_rail",
+        "oneway": "false",
+        "structure": "none",
+        "type": "tram",
+        "tilequery": {
+          "distance": 88.64990773057076,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 15,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44788035305837,
+          37.767413371560096
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 8,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 102.6127608758503,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 1202576611,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44627915724033,
+          37.76668181750895
+        ]
+      },
+      "properties": {
+        "class": "tertiary",
+        "oneway": "false",
+        "structure": "none",
+        "type": "tertiary",
+        "tilequery": {
+          "distance": 126.80984084508792,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 1338562131,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44627915724033,
+          37.76668181750895
+        ]
+      },
+      "properties": {
+        "class": "tertiary",
+        "iso_3166_2": "US-CA",
+        "len": 660,
+        "localrank": 4,
+        "name": "Ashbury St",
+        "name_ar": "Ashbury St",
+        "name_de": "Ashbury St",
+        "name_en": "Ashbury St",
+        "name_es": "Ashbury St",
+        "name_fr": "Ashbury St",
+        "name_pt": "Ashbury St",
+        "name_ru": "Ashbury St",
+        "name_zh": "Ashbury St",
+        "name_zh-Hans": "Ashbury St",
+        "tilequery": {
+          "distance": 126.80984084508792,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89169631,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44910180568695,
+          37.766872834699186
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 130.26392833978866,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89169641,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44910180568695,
+          37.766872834699186
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 870,
+        "localrank": 3,
+        "name": "Belvedere St",
+        "name_ar": "Belvedere St",
+        "name_de": "Belvedere St",
+        "name_en": "Belvedere St",
+        "name_es": "Belvedere St",
+        "name_fr": "Belvedere St",
+        "name_pt": "Belvedere St",
+        "name_ru": "Belvedere St",
+        "name_zh": "Belvedere St",
+        "name_zh-Hans": "Belvedere St",
+        "tilequery": {
+          "distance": 130.26392833978866,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 1202576651,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44638741016388,
+          37.76721632428931
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 140.3465759207177,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 2629352861,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44638741016388,
+          37.76721632428931
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 540,
+        "localrank": 4,
+        "name": "Ashbury St",
+        "name_ar": "Ashbury St",
+        "name_de": "Ashbury St",
+        "name_en": "Ashbury St",
+        "name_es": "Ashbury St",
+        "name_fr": "Ashbury St",
+        "name_pt": "Ashbury St",
+        "name_ru": "Ashbury St",
+        "name_zh": "Ashbury St",
+        "name_zh-Hans": "Ashbury St",
+        "tilequery": {
+          "distance": 140.3465759207177,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 49,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44726717472076,
+          37.767761239686976
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 16,
+        "min_height": 0,
+        "type": "school",
+        "underground": "false",
+        "tilequery": {
+          "distance": 145.08659126977776,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 12,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44609504938126,
+          37.76608407478754
+        ]
+      },
+      "properties": {
+        "ele": 120,
+        "index": 2,
+        "tilequery": {
+          "distance": 148.76008884816517,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89201171,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44765609502792,
+          37.76514476101546
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 150.46721005002152,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 2549840711,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44765609502792,
+          37.76514476101546
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 560,
+        "localrank": 5,
+        "name": "Parnassus Ave",
+        "name_ar": "Parnassus Ave",
+        "name_de": "Parnassus Ave",
+        "name_en": "Parnassus Ave",
+        "name_es": "Parnassus Ave",
+        "name_fr": "Parnassus Ave",
+        "name_pt": "Parnassus Ave",
+        "name_ru": "Parnassus Ave",
+        "name_zh": "Parnassus Ave",
+        "name_zh-Hans": "Parnassus Ave",
+        "tilequery": {
+          "distance": 150.46721005002152,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 506211151,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4454523828523,
+          37.76678857056602
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 200.61613558834077,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 506211151,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4454523828523,
+          37.76678857056602
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 270,
+        "localrank": 7,
+        "name": "Delmar St",
+        "name_ar": "Delmar St",
+        "name_de": "Delmar St",
+        "name_en": "Delmar St",
+        "name_es": "Delmar St",
+        "name_fr": "Delmar St",
+        "name_pt": "Delmar St",
+        "name_ru": "Delmar St",
+        "name_zh": "Delmar St",
+        "name_zh-Hans": "Delmar St",
+        "tilequery": {
+          "distance": 200.61613558834077,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 9,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44940221309662,
+          37.76529954717586
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 2,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 200.61940706807317,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 0,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44736105203629,
+          37.76834643618729
+        ]
+      },
+      "properties": {
+        "class": "pitch",
+        "type": "basketball",
+        "tilequery": {
+          "distance": 207.10000588988106,
+          "geometry": "polygon",
+          "layer": "landuse"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89162471,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44598507881165,
+          37.765223214315355
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 207.15861510799215,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89162471,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44598507881165,
+          37.765223214315355
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 230,
+        "localrank": 10,
+        "name": "Piedmont St",
+        "name_ar": "Piedmont St",
+        "name_de": "Piedmont St",
+        "name_en": "Piedmont St",
+        "name_es": "Piedmont St",
+        "name_fr": "Piedmont St",
+        "name_pt": "Piedmont St",
+        "name_ru": "Piedmont St",
+        "name_zh": "Piedmont St",
+        "name_zh-Hans": "Piedmont St",
+        "tilequery": {
+          "distance": 207.15861510799215,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89188401,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44556128978729,
+          37.76732233927271
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "true",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 209.3863915284092,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89188401,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44556128978729,
+          37.76732233927271
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 270,
+        "localrank": 7,
+        "name": "Delmar St",
+        "name_ar": "Delmar St",
+        "name_de": "Delmar St",
+        "name_en": "Delmar St",
+        "name_es": "Delmar St",
+        "name_fr": "Delmar St",
+        "name_pt": "Delmar St",
+        "name_ru": "Delmar St",
+        "name_zh": "Delmar St",
+        "name_zh-Hans": "Delmar St",
+        "tilequery": {
+          "distance": 209.3863915284092,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89196561,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.45005800529617,
+          37.76620442993389
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 210.3434418456671,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 2553517141,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.45005826940337,
+          37.766204506645536
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 1310,
+        "localrank": 1,
+        "name": "Cole St",
+        "name_ar": "Cole St",
+        "name_de": "Cole St",
+        "name_en": "Cole St",
+        "name_es": "Cole St",
+        "name_fr": "Cole St",
+        "name_pt": "Cole St",
+        "name_ru": "Cole St",
+        "name_zh": "Cole St",
+        "name_zh-Hans": "Cole St",
+        "tilequery": {
+          "distance": 210.36510067621165,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 20945471970,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44996279478073,
+          37.76581267158231
+        ]
+      },
+      "properties": {
+        "localrank": 1,
+        "name": "Cole Valley",
+        "name_ar": "Cole Valley",
+        "name_de": "Cole Valley",
+        "name_en": "Cole Valley",
+        "name_es": "Cole Valley",
+        "name_fr": "Cole Valley",
+        "name_pt": "Cole Valley",
+        "name_ru": "Cole Valley",
+        "name_zh": "科尔谷区",
+        "name_zh-Hans": "科尔谷区",
+        "type": "neighbourhood",
+        "tilequery": {
+          "distance": 213.47625618679007,
+          "geometry": "point",
+          "layer": "place_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 47051018990,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44997888803482,
+          37.76581903260636
+        ]
+      },
+      "properties": {
+        "class": "level_crossing",
+        "oneway": "false",
+        "structure": "",
+        "type": "level_crossing",
+        "tilequery": {
+          "distance": 214.55151464857212,
+          "geometry": "point",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 37,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44740664958954,
+          37.76845881034755
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 5,
+        "min_height": 0,
+        "type": "residential",
+        "underground": "false",
+        "tilequery": {
+          "distance": 218.93877606526837,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 13,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44533476323227,
+          37.765647581630816
+        ]
+      },
+      "properties": {
+        "ele": 130,
+        "index": 1,
+        "tilequery": {
+          "distance": 228.87624989275,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 39,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4474173784256,
+          37.76854998171059
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 8,
+        "min_height": 0,
+        "type": "residential",
+        "underground": "false",
+        "tilequery": {
+          "distance": 228.88541989783488,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 26,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44888722896576,
+          37.768448209019
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 10,
+        "min_height": 0,
+        "type": "church",
+        "underground": "false",
+        "tilequery": {
+          "distance": 240.20618930165278,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89175241,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44828909635544,
+          37.764205435313386
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 259.90879527287836,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89175241,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44828909635544,
+          37.764205435313386
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 470,
+        "localrank": 1,
+        "name": "Grattan St",
+        "name_ar": "Grattan St",
+        "name_de": "Grattan St",
+        "name_en": "Grattan St",
+        "name_es": "Grattan St",
+        "name_fr": "Grattan St",
+        "name_pt": "Grattan St",
+        "name_ru": "Grattan St",
+        "name_zh": "Grattan St",
+        "name_zh-Hans": "Grattan St",
+        "tilequery": {
+          "distance": 259.90879527287836,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89223751,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4503543972969,
+          37.76767006735149
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 267.52077589061065,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89223751,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4503543972969,
+          37.76767006735149
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 320,
+        "localrank": 2,
+        "name": "Beulah St",
+        "name_ar": "Beulah St",
+        "name_de": "Beulah St",
+        "name_en": "Beulah St",
+        "name_es": "Beulah St",
+        "name_fr": "Beulah St",
+        "name_pt": "Beulah St",
+        "name_ru": "Beulah St",
+        "name_zh": "Beulah St",
+        "name_zh-Hans": "Beulah St",
+        "tilequery": {
+          "distance": 267.52077589061065,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89226971,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44493901729584,
+          37.765494619683736
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 267.6476000137979,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89226971,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44493901729584,
+          37.765494619683736
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 270,
+        "localrank": 9,
+        "name": "Ashbury Ter",
+        "name_ar": "Ashbury Ter",
+        "name_de": "Ashbury Ter",
+        "name_en": "Ashbury Ter",
+        "name_es": "Ashbury Ter",
+        "name_fr": "Ashbury Ter",
+        "name_pt": "Ashbury Ter",
+        "name_ru": "Ashbury Ter",
+        "name_zh": "Ashbury Ter",
+        "name_zh-Hans": "Ashbury Ter",
+        "tilequery": {
+          "distance": 267.6476000137979,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89188831,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44818891301126,
+          37.768897825375674
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 269.5978438266001,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 2547599641,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44818891301126,
+          37.768897825375674
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 1200,
+        "localrank": 1,
+        "name": "Waller St",
+        "name_ar": "Waller St",
+        "name_de": "Waller St",
+        "name_en": "Waller St",
+        "name_es": "Waller St",
+        "name_fr": "Waller St",
+        "name_pt": "Waller St",
+        "name_ru": "Waller St",
+        "name_zh": "Waller St",
+        "name_zh-Hans": "Waller St",
+        "tilequery": {
+          "distance": 269.5978438266001,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 3804266661,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44908303022385,
+          37.768698399968144
+        ]
+      },
+      "properties": {
+        "class": "fence",
+        "tilequery": {
+          "distance": 272.73830181330044,
+          "geometry": "linestring",
+          "layer": "barrier_line"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89229571,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44464305546182,
+          37.76688644314258
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 272.7483127986495,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 273981321,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44464305546182,
+          37.76688644314258
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 470,
+        "localrank": 5,
+        "name": "Masonic Ave",
+        "name_ar": "Masonic Ave",
+        "name_de": "Masonic Ave",
+        "name_en": "Masonic Ave",
+        "name_es": "Masonic Ave",
+        "name_fr": "Masonic Ave",
+        "name_pt": "Masonic Ave",
+        "name_ru": "Masonic Ave",
+        "name_zh": "Masonic Ave",
+        "name_zh-Hans": "Masonic Ave",
+        "tilequery": {
+          "distance": 272.7483127986495,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89185491,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44455546140671,
+          37.76643392901232
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 277.16991304157233,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89185491,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44455546140671,
+          37.76643392901232
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 120,
+        "localrank": 9,
+        "name": "Java St",
+        "name_ar": "Java St",
+        "name_de": "Java St",
+        "name_en": "Java St",
+        "name_es": "Java St",
+        "name_fr": "Java St",
+        "name_pt": "Java St",
+        "name_ru": "Java St",
+        "name_zh": "Java St",
+        "name_zh-Hans": "Java St",
+        "tilequery": {
+          "distance": 277.16991304157233,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 10,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.45044559240341,
+          37.765263501112656
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 3,
+        "min_height": 0,
+        "type": "building",
+        "underground": "false",
+        "tilequery": {
+          "distance": 278.1368037015417,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89165251,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4447512626648,
+          37.7674241135138
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 279.3324454473587,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 273981331,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4447512626648,
+          37.7674241135138
+        ]
+      },
+      "properties": {
+        "class": "tertiary",
+        "oneway": "false",
+        "structure": "none",
+        "type": "tertiary",
+        "tilequery": {
+          "distance": 279.3324454473587,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 4173136841,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4447512626648,
+          37.7674241135138
+        ]
+      },
+      "properties": {
+        "class": "tertiary",
+        "iso_3166_2": "US-CA",
+        "len": 510,
+        "localrank": 2,
+        "name": "Masonic Ave",
+        "name_ar": "Masonic Ave",
+        "name_de": "Masonic Ave",
+        "name_en": "Masonic Ave",
+        "name_es": "Masonic Ave",
+        "name_fr": "Masonic Ave",
+        "name_pt": "Masonic Ave",
+        "name_ru": "Masonic Ave",
+        "name_zh": "Masonic Ave",
+        "name_zh-Hans": "Masonic Ave",
+        "tilequery": {
+          "distance": 279.3324454473587,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 4,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44447767734528,
+          37.76642756804118
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 12,
+        "min_height": 0,
+        "type": "apartments",
+        "underground": "false",
+        "tilequery": {
+          "distance": 284.04041837332517,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89189631,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44609504938126,
+          37.764190592599334
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 292.74320781343255,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89189631,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44609504938126,
+          37.764190592599334
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 360,
+        "localrank": 8,
+        "name": "Clifford Ter",
+        "name_ar": "Clifford Ter",
+        "name_de": "Clifford Ter",
+        "name_en": "Clifford Ter",
+        "name_es": "Clifford Ter",
+        "name_fr": "Clifford Ter",
+        "name_pt": "Clifford Ter",
+        "name_ru": "Clifford Ter",
+        "name_zh": "Clifford Ter",
+        "name_zh-Hans": "Clifford Ter",
+        "tilequery": {
+          "distance": 292.74320781343255,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 1,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44421482086182,
+          37.76656326864001
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 8,
+        "min_height": 0,
+        "type": "apartments",
+        "underground": "false",
+        "tilequery": {
+          "distance": 307.1678255888215,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 14,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44422018527985,
+          37.765880522477005
+        ]
+      },
+      "properties": {
+        "ele": 140,
+        "index": 2,
+        "tilequery": {
+          "distance": 314.2292351241886,
+          "geometry": "polygon",
+          "layer": "contour"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89189551,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.45131999254227,
+          37.76659083279374
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "oneway": "false",
+        "structure": "none",
+        "type": "residential",
+        "tilequery": {
+          "distance": 319.12556488350293,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 2547599541,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.45131999254227,
+          37.76659083279374
+        ]
+      },
+      "properties": {
+        "class": "street",
+        "iso_3166_2": "US-CA",
+        "len": 1180,
+        "localrank": 2,
+        "name": "Shrader St",
+        "name_ar": "Shrader St",
+        "name_de": "Shrader St",
+        "name_en": "Shrader St",
+        "name_es": "Shrader St",
+        "name_fr": "Shrader St",
+        "name_pt": "Shrader St",
+        "name_ru": "Shrader St",
+        "name_zh": "Shrader St",
+        "name_zh-Hans": "Shrader St",
+        "tilequery": {
+          "distance": 319.12556488350293,
+          "geometry": "linestring",
+          "layer": "road_label"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 51,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44398683309555,
+          37.76663960011744
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 3,
+        "min_height": 0,
+        "type": "terrace",
+        "underground": "false",
+        "tilequery": {
+          "distance": 327.5427759665061,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 6,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44395732879639,
+          37.76672229246239
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 3,
+        "min_height": 0,
+        "type": "apartments",
+        "underground": "false",
+        "tilequery": {
+          "distance": 330.697431019616,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 45,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44393050670624,
+          37.76659719375084
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 3,
+        "min_height": 0,
+        "type": "residential",
+        "underground": "false",
+        "tilequery": {
+          "distance": 332.314291556871,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 2600031111,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44494706392288,
+          37.764425955285716
+        ]
+      },
+      "properties": {
+        "class": "service",
+        "oneway": "false",
+        "structure": "none",
+        "type": "service:driveway",
+        "tilequery": {
+          "distance": 334.40996623062927,
+          "geometry": "linestring",
+          "layer": "road"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 4,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44584560394287,
+          37.763828005373526
+        ]
+      },
+      "properties": {
+        "class": "highlight",
+        "level": 90,
+        "tilequery": {
+          "distance": 338.59717999822897,
+          "geometry": "polygon",
+          "layer": "hillshade"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 44,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.44382858276367,
+          37.76647421515011
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 13,
+        "min_height": 0,
+        "type": "residential",
+        "underground": "false",
+        "tilequery": {
+          "distance": 341.1319242585396,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 34,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4460306763649,
+          37.769294190261164
+        ]
+      },
+      "properties": {
+        "extrude": "true",
+        "height": 8,
+        "min_height": 0,
+        "type": "place_of_worship",
+        "underground": "false",
+        "tilequery": {
+          "distance": 343.2391887298713,
+          "geometry": "polygon",
+          "layer": "building"
+        }
+      }
+    }
+  ]
+}
