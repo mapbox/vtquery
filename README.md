@@ -29,7 +29,7 @@ The two major use cases for this library are:
 -   `LngLat` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)>** a query point of longitude and latitude to query, `[lng, lat]`
 -   `options` **[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)?** 
     -   `options.radius` **[Number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)** the radius to query for features. If your radius is larger than
-        the extent of an individual tile, include multiple nearby buffers to collect a realstic list of features (optional, default `0`)
+        the extent of an individual tile, include multiple nearby buffers to collect a realistic list of features (optional, default `0`)
     -   `options.limit` **[Number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)** limit the number of results/features returned from the query. Minimum is 1, maximum is 1000 (to avoid pre allocating large amounts of memory) (optional, default `5`)
     -   `options.layers` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)>?** an array of layer string names to query from. Default is all layers.
     -   `options.geometry` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)?** only return features of a particular geometry type. Can be `point`, `linestring`, or `polygon`.
@@ -70,7 +70,7 @@ The response object is a GeoJSON FeatureCollection with Point features containin
 -   Extra properties including:
     -   `tilequery.geometry_type` - either "Point", "Linestring", or "Polygon"
     -   `tilequery.distance` in meters - if distance is `0.0`, the query point is _within_ the geometry (point in polygon)
-    -   `tilequery.layer` which layer the feature was a part of in the vecto tile buffer
+    -   `tilequery.layer` which layer the feature was a part of in the vector tile buffer
 -   An `id` if it existed in the vector tile feature
 
 Here's an example response
