@@ -382,7 +382,7 @@ struct Worker : Nan::AsyncWorker {
                     feature.properties_vector_materialized.emplace_back(std::string(property.key()), std::move(val));
                 }
             }
-        } catch (const std::exception& e) {
+        } catch (std::exception const& e) {
             SetErrorMessage(e.what());
         }
     }
