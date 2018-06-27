@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <exception>
+#include <gzip/decompress.hpp>
+#include <gzip/utils.hpp>
 #include <iostream>
 #include <map>
 #include <mapbox/geometry/algorithms/closest_point.hpp>
@@ -28,9 +30,12 @@ const char* getGeomTypeString(int enumVal) {
     return GeomTypeStrings[enumVal];
 }
 
+using materialized_prop_type = std::pair<std::string, mapbox::feature::value>;
+
 /// main storage item for returning to the user
 struct ResultObject {
     std::vector<vtzero::property> properties_vector;
+    std::vector<materialized_prop_type> properties_vector_materialized;
     std::string layer_name;
     mapbox::geometry::point<double> coordinates;
     double distance;
@@ -39,6 +44,7 @@ struct ResultObject {
     uint64_t id;
 
     ResultObject() : properties_vector(),
+                     properties_vector_materialized(),
                      layer_name(),
                      coordinates(0.0, 0.0),
                      distance(std::numeric_limits<double>::max()),
@@ -150,11 +156,9 @@ struct property_value_visitor {
 };
 
 /// used to create the final v8 (JSON) object to return to the user
-void set_property(vtzero::property const& property,
+void set_property(materialized_prop_type const& property,
                   v8::Local<v8::Object>& properties_obj) {
-
-    auto val = vtzero::convert_property_value<mapbox::feature::value, mapbox::vector_tile::detail::property_value_mapping>(property.value());
-    mapbox::util::apply_visitor(property_value_visitor{properties_obj, std::string(property.key())}, val);
+    mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
 }
 
 GeomType get_geometry_type(vtzero::feature const& f) {
@@ -268,11 +272,24 @@ struct Worker : Nan::AsyncWorker {
             // query point lng/lat geometry.hpp point (used for distance calculation later on)
             mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
 
-            // for each tile
+            gzip::Decompressor decompressor;
+            std::string uncompressed;
+            std::vector<std::string> buffers;
+            std::vector<std::tuple<vtzero::vector_tile, std::int32_t, std::int32_t, std::int32_t>> tiles;
+            tiles.reserve(data.tiles.size());
             for (auto const& tile_ptr : data.tiles) {
                 TileObject const& tile_obj = *tile_ptr;
-                vtzero::vector_tile tile{tile_obj.data};
-
+                if (gzip::is_compressed(tile_obj.data.data(), tile_obj.data.size())) {
+                    decompressor.decompress(uncompressed, tile_obj.data.data(), tile_obj.data.size());
+                    buffers.emplace_back(std::move(uncompressed));
+                    tiles.emplace_back(vtzero::vector_tile(buffers.back()), tile_obj.z, tile_obj.x, tile_obj.y);
+                } else {
+                    tiles.emplace_back(vtzero::vector_tile(tile_obj.data), tile_obj.z, tile_obj.x, tile_obj.y);
+                }
+            }
+            // for each tile
+            for (auto& tile_obj : tiles) {
+                vtzero::vector_tile& tile = std::get<0>(tile_obj);
                 while (auto layer = tile.next_layer()) {
 
                     // check if this is a layer we should query
@@ -282,8 +299,11 @@ struct Worker : Nan::AsyncWorker {
                     }
 
                     std::uint32_t extent = layer.extent();
+                    std::int32_t tile_obj_z = std::get<1>(tile_obj);
+                    std::int32_t tile_obj_x = std::get<2>(tile_obj);
+                    std::int32_t tile_obj_y = std::get<3>(tile_obj);
                     // query point in relation to the current tile the layer extent
-                    mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, extent, tile_obj.z, tile_obj.x, tile_obj.y);
+                    mapbox::geometry::point<std::int64_t> query_point = utils::create_query_point(data.longitude, data.latitude, extent, tile_obj_z, tile_obj_x, tile_obj_y);
 
                     while (auto feature = layer.next_feature()) {
                         auto original_geometry_type = get_geometry_type(feature);
@@ -306,7 +326,7 @@ struct Worker : Nan::AsyncWorker {
 
                         // if distance from the query point is greater than 0.0 (not a direct hit) so recalculate the latlng
                         if (cp_info.distance > 0.0) {
-                            ll = utils::convert_vt_to_ll(extent, tile_obj.z, tile_obj.x, tile_obj.y, cp_info);
+                            ll = utils::convert_vt_to_ll(extent, tile_obj_z, tile_obj_x, tile_obj_y, cp_info);
                             meters = utils::distance_in_meters(query_lnglat, ll);
                         }
 
@@ -352,7 +372,17 @@ struct Worker : Nan::AsyncWorker {
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
             }         // end tile loop
-        } catch (const std::exception& e) {
+            // Here we create "materialized" properties. We do this here because, when reading from a compressed
+            // buffer, it is unsafe to touch `feature.properties_vector` once we've left this loop.
+            // That is because the buffer may represent uncompressed data that is not in scope outside of Execute()
+            for (auto& feature : results_queue_) {
+                feature.properties_vector_materialized.reserve(feature.properties_vector.size());
+                for (auto const& property : feature.properties_vector) {
+                    auto val = vtzero::convert_property_value<mapbox::feature::value, mapbox::vector_tile::detail::property_value_mapping>(property.value());
+                    feature.properties_vector_materialized.emplace_back(std::string(property.key()), std::move(val));
+                }
+            }
+        } catch (std::exception const& e) {
             SetErrorMessage(e.what());
         }
     }
@@ -384,7 +414,7 @@ struct Worker : Nan::AsyncWorker {
 
                     // create properties object
                     v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
-                    for (auto const& prop : feature.properties_vector) {
+                    for (auto const& prop : feature.properties_vector_materialized) {
                         set_property(prop, properties_obj);
                     }
 
