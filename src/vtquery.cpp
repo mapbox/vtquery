@@ -255,7 +255,7 @@ struct Worker : Nan::AsyncWorker {
 
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* cb)
-        : Base(cb),
+        : Base(cb, "vtquery:worker"),
           query_data_(std::move(query_data)),
           results_queue_() {}
 
@@ -442,7 +442,7 @@ struct Worker : Nan::AsyncWorker {
             v8::Local<v8::Value> argv[argc] = {
                 Nan::Null(), results_object};
 
-            callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
+            callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv), async_resource);
 
         } catch (const std::exception& e) {
             // unable to create test to throw exception here, the try/catch is simply
@@ -450,7 +450,7 @@ struct Worker : Nan::AsyncWorker {
             // LCOV_EXCL_START
             auto const argc = 1u;
             v8::Local<v8::Value> argv[argc] = {Nan::Error(e.what())};
-            callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv));
+            callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv), async_resource);
             // LCOV_EXCL_STOP
         }
     }

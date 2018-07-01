@@ -28,10 +28,10 @@ namespace utils {
 * when it merges
 *
 */
-inline void CallbackError(std::string message,
-                          v8::Local<v8::Function> callback) {
+inline void CallbackError(std::string message, v8::Local<v8::Function> func) {
+    Nan::Callback cb(func);
     v8::Local<v8::Value> argv[1] = {Nan::Error(message.c_str())};
-    Nan::MakeCallback(Nan::GetCurrentContext()->Global(), callback, 1, argv);
+    Nan::Call(cb, 1, argv);
 }
 
 /*
