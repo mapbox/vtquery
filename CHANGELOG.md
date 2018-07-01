@@ -1,8 +1,13 @@
-## next
+## 0.3.0
 
-* upgrade node-pre-gyp@0.9.1
+* now adding feature.id to response JSON [#90](https://github.com/mapbox/vtquery/pull/90)
+* added node v10 support [#99](https://github.com/mapbox/vtquery/pull/99)
+* now supporting on-the-fly decoding of tiles that are gzip-compressed [#95](https://github.com/mapbox/vtquery/pull/95)
+* now sorting with `std::stable_sort` to ensure results are stable across platforms [#91](https://github.com/mapbox/vtquery/pull/91)
 * set maximum results limit to 1000 to avoid pre-allocating large amounts of memory [#70](https://github.com/mapbox/vtquery/issues/70)
 * use `int` for z/x/y values instead of `std::uint64_t` and casting [#87](https://github.com/mapbox/vtquery/issues/87)
+
+Milestone link: https://github.com/mapbox/vtquery/milestone/3
 
 ## 0.2.1
 

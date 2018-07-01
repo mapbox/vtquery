@@ -1,6 +1,6 @@
 {
   "name": "@mapbox/vtquery",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Get features from Mapbox Vector Tiles from a lng/lat query point",
   "url": "http://github.com/mapbox/vtquery",
   "main": "./lib/index.js",
@@ -10,7 +10,6 @@
   },
   "scripts": {
     "test": "UV_THREADPOOL_SIZE=1 tape test/*.test.js",
-    "prepublishOnly": "npm ls",
     "install": "node-pre-gyp install --fallback-to-build",
     "docs": "documentation readme lib/index.js --section=API"
   },
