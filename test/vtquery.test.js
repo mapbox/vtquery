@@ -6,6 +6,7 @@ const vtquery = require('../lib/index.js');
 const mvtf = require('@mapbox/mvt-fixtures');
 const queue = require('d3-queue').queue;
 const fs = require('fs');
+const zlib = require('zlib')
 
 const bufferSF = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/sanfrancisco/15-5238-12666.mvt'));
 
@@ -750,6 +751,27 @@ test('success: handles multiple zoom levels', assert => {
   const tiles = [
     { buffer: buffer1, z: 13, x: 2098, y: 3045 },
     { buffer: buffer2, z: 12, x: 1049, y: 1522 }
+  ];
+  const opts = {
+    radius: 100,
+    layers: ['road_label']
+  };
+  vtquery(tiles, [-87.7718, 41.8464], opts, function(err, result) {
+    assert.equal(result.features[0].properties.iso_3166_2, 'TH-73', 'expected road iso from bangkok');
+    assert.equal(result.features[1].properties.iso_3166_2, 'US-IL', 'expected road iso from chicago');
+    assert.equal(result.features[2].properties.iso_3166_2, 'US-IL', 'expected road iso from chicago');
+    assert.end();
+  });
+});
+
+test('success: handles multiple zoom levels (with compressed tiles)', assert => {
+  const buffer1 = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/chicago/13-2098-3045.mvt'));
+  // spoofing a bangkok tile as somewhere over chicago
+  const buffer2 = fs.readFileSync(path.resolve(__dirname+'/../node_modules/@mapbox/mvt-fixtures/real-world/bangkok/12-3188-1888.mvt'));
+
+  const tiles = [
+    { buffer: zlib.gzipSync(buffer1), z: 13, x: 2098, y: 3045 },
+    { buffer: zlib.gzipSync(buffer2), z: 12, x: 1049, y: 1522 }
   ];
   const opts = {
     radius: 100,

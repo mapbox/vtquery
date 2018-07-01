@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 module.exports = [
 
@@ -73,6 +74,23 @@ module.exports = [
     ]
   },
 
+  {
+    description: 'query: all things - dense nine tiles (compressed)',
+    queryPoint: [-122.4483, 37.7668],
+    options: { radius: 1500 },
+    tiles: [
+      { z: 15, x: 5237, y: 12665, buffer: getTile('sanfrancisco', '15-5237-12665.mvt', true)},
+      { z: 15, x: 5237, y: 12666, buffer: getTile('sanfrancisco', '15-5237-12666.mvt', true)},
+      { z: 15, x: 5237, y: 12667, buffer: getTile('sanfrancisco', '15-5237-12667.mvt', true)},
+      { z: 15, x: 5238, y: 12665, buffer: getTile('sanfrancisco', '15-5238-12665.mvt', true)},
+      { z: 15, x: 5238, y: 12666, buffer: getTile('sanfrancisco', '15-5238-12666.mvt', true)},
+      { z: 15, x: 5238, y: 12667, buffer: getTile('sanfrancisco', '15-5238-12667.mvt', true)},
+      { z: 15, x: 5239, y: 12665, buffer: getTile('sanfrancisco', '15-5239-12665.mvt', true)},
+      { z: 15, x: 5239, y: 12666, buffer: getTile('sanfrancisco', '15-5239-12666.mvt', true)},
+      { z: 15, x: 5239, y: 12667, buffer: getTile('sanfrancisco', '15-5239-12667.mvt', true)}
+    ]
+  },
+
   // real-world elevation
   {
     description: 'elevation: terrain tile nepal',
@@ -134,20 +152,12 @@ module.exports = [
   }
 ];
 
-function getTile(name, file) {
-  return fs.readFileSync(path.join(__dirname, '..', 'node_modules', '@mapbox', 'mvt-fixtures', 'real-world', name, file))
-}
-
-// get all tiles
-function getTiles(name) {
-  let tiles = [];
-  let dir = `./node_modules/@mapbox/mvt-fixtures/real-world/${name}`;
-  var files = fs.readdirSync(dir);
-  files.forEach(function(file) {
-    let buffer = fs.readFileSync(path.join(dir, '/', file));
-    file = file.replace('.mvt', '');
-    let zxy = file.split('-');
-    tiles.push({ buffer: buffer, z: parseInt(zxy[0]), x: parseInt(zxy[1]), y: parseInt(zxy[2]) });
-  });
-  return tiles;
+function getTile(name, file, compress) {
+  compress = compress || false;
+  var buf = fs.readFileSync(path.join(__dirname, '..', 'node_modules', '@mapbox', 'mvt-fixtures', 'real-world', name, file))
+  if (compress) {
+    return zlib.gzipSync(buf);
+  } else {
+    return buf;
+  }
 }
