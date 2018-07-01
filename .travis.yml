@@ -63,6 +63,14 @@ matrix:
     - os: linux
       env: BUILDTYPE=debug
       node_js: 8
+    # linux publishable node v10
+    - os: linux
+      env: BUILDTYPE=release
+      node_js: 10
+    # linux publishable node v10/debug
+    - os: linux
+      env: BUILDTYPE=debug
+      node_js: 10
     # osx publishable node v4
     - os: osx
       osx_image: xcode8.2
@@ -78,11 +86,16 @@ matrix:
       osx_image: xcode8.2
       env: BUILDTYPE=release
       node_js: 8
+    # osx publishable node v10
+    - os: osx
+      osx_image: xcode8.2
+      env: BUILDTYPE=release
+      node_js: 10
     # Sanitizer build node v4/Debug
     - os: linux
       env: BUILDTYPE=debug TOOLSET=asan
       sudo: required # workaround https://github.com/mapbox/node-cpp-skel/issues/93
-      node_js: 4
+      node_js: 10
       # Overrides `install` to set up custom asan flags
       install:
         - ./scripts/setup.sh --config local.env
@@ -104,7 +117,7 @@ matrix:
     # g++ build (default builds all use clang++)
     - os: linux
       env: BUILDTYPE=debug CXX="g++-6" CC="gcc-6" CXXFLAGS="-Weffc++"
-      node_js: 4
+      node_js: 10
       addons:
         apt:
           sources:
@@ -121,7 +134,7 @@ matrix:
     # Coverage build
     - os: linux
       env: BUILDTYPE=debug CXXFLAGS="--coverage" LDFLAGS="--coverage"
-      node_js: 4
+      node_js: 10
       # Overrides `script` to publish coverage data to codecov
       before_script:
         - npm test
@@ -147,7 +160,7 @@ matrix:
     # Clang tidy build
     - os: linux
       env: CLANG_TIDY
-      node_js: 4
+      node_js: 10
       # Overrides `install` to avoid initializing clang toolchain
       install:
         # First run the clang-tidy target

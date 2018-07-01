@@ -17,12 +17,9 @@
   "author": "Mapbox",
   "license": "ISC",
   "dependencies": {
-    "nan": "~2.5.1",
-    "node-pre-gyp": "~0.9.1"
+    "nan": "~2.10.0",
+    "node-pre-gyp": "~0.10.2"
   },
-  "bundledDependencies": [
-    "node-pre-gyp"
-  ],
   "devDependencies": {
     "@mapbox/mvt-fixtures": "^3.2.0",
     "aws-sdk": "^2.163.0",
