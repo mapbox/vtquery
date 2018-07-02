@@ -63,9 +63,6 @@
         './src/module.cpp',
         './src/vtquery.cpp'
       ],
-      'link_settings': {
-          'libraries': [ '-lz' ]
-      },
       'ldflags': [
         '-Wl,-z,now',
       ],
