@@ -156,7 +156,7 @@ matrix:
         # and get in the habit of running these locally before committing)
         - make format
       # Overrides `script`, no need to run tests
-      before_script:
+      before_script: []
     # Clang tidy build
     - os: linux
       env: CLANG_TIDY
@@ -169,4 +169,4 @@ matrix:
         # and get in the habit of running these locally before committing)
         - make tidy
       # Overrides `script`, no need to run tests
-      before_script:
+      before_script: []
