@@ -65,7 +65,7 @@ vtquery(tiles, [-122.4477, 37.7665], options, function(err, result) {
 
 The response object is a GeoJSON FeatureCollection with Point features containing the following in formation:
 
--   Geometry - always a `Point`. This library does not return full geometries of features. It only returns the closet point (longitude/latitude) of a feature. If the original feature is a point, the result is the actual location of that point. If the original feature is a linestring or polygon, the result is the interpolated closest latitude/longitude point of that feature. This could be _along_ a line of a polygon and not an actual node of a polygon. If the query point is _within_ a polygon, the result will be the query point location.
+-   Geometry - always a `Point`. This library does not return full geometries of features. It only returns the closest point (longitude/latitude) of a feature. If the original feature is a point, the result is the actual location of that point. If the original feature is a linestring or polygon, the result is the interpolated closest latitude/longitude point of that feature. This could be _along_ a line of a polygon and not an actual node of a polygon. If the query point is _within_ a polygon, the result will be the query point location.
 -   Properties of the feature
 -   Extra properties including:
     -   `tilequery.geometry_type` - either "Point", "Linestring", or "Polygon"
