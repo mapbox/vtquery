@@ -30,12 +30,9 @@ const char* getGeomTypeString(int enumVal) {
     return GeomTypeStrings[enumVal];
 }
 
-using materialized_prop_type = std::pair<std::string, mapbox::feature::value>;
-
 /// main storage item for returning to the user
 struct ResultObject {
     std::vector<vtzero::property> properties_vector;
-    std::vector<materialized_prop_type> properties_vector_materialized;
     std::string layer_name;
     mapbox::geometry::point<double> coordinates;
     double distance;
@@ -44,7 +41,6 @@ struct ResultObject {
     uint64_t id;
 
     ResultObject() : properties_vector(),
-                     properties_vector_materialized(),
                      layer_name(),
                      coordinates(0.0, 0.0),
                      distance(std::numeric_limits<double>::max()),
@@ -130,37 +126,6 @@ struct QueryData {
     GeomType geometry_filter_type;
 };
 
-/// convert properties to v8 types
-struct property_value_visitor {
-    v8::Local<v8::Object>& properties_obj;
-    std::string const& key;
-
-    template <typename T>
-    void operator()(T) {}
-
-    void operator()(bool v) {
-        properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Boolean>(v));
-    }
-    void operator()(uint64_t v) {
-        properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
-    }
-    void operator()(int64_t v) {
-        properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
-    }
-    void operator()(double v) {
-        properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
-    }
-    void operator()(std::string const& v) {
-        properties_obj->Set(Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::String>(v).ToLocalChecked());
-    }
-};
-
-/// used to create the final v8 (JSON) object to return to the user
-void set_property(materialized_prop_type const& property,
-                  v8::Local<v8::Object>& properties_obj) {
-    mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
-}
-
 GeomType get_geometry_type(vtzero::feature const& f) {
     GeomType gt = GeomType::unknown;
     switch (f.geometry_type()) {
@@ -245,28 +210,86 @@ bool value_is_duplicate(ResultObject const& r,
     return r.properties_vector == candidate_props_vec;
 }
 
+struct string_conv {
+
+    std::string s;
+
+    template <typename T>
+    explicit string_conv(T value) :
+        s(std::to_string(value)) {
+    }
+
+    explicit operator std::string() {
+        return s;
+    }
+
+};
+
+struct string_quoter {
+
+    std::string s;
+
+    template <typename T>
+    explicit string_quoter(T value) :
+        s("\"" + std::string{value} + "\"") {
+    }
+
+    explicit operator std::string() {
+        return s;
+    }
+};
+
+struct bool_conv {
+
+    std::string s;
+
+    template <typename T>
+    explicit bool_conv(T value) :
+        s() {
+          if (value) {
+            s = "true";
+          } else {
+            s = "false";
+          }
+    }
+
+    explicit operator std::string() {
+        return s;
+    }
+};
+
+struct string_mapping : vtzero::property_value_mapping {
+    using string_type = string_quoter;
+    // TODO: could implement faster, specialized conversions here
+    using float_type  = string_conv;
+    using double_type = string_conv;
+    using int_type    = string_conv;
+    using uint_type   = string_conv;
+    using bool_type   = bool_conv;
+};
+
 /// main worker used by NAN
 struct Worker : Nan::AsyncWorker {
     using Base = Nan::AsyncWorker;
 
     /// set up major containers
     std::unique_ptr<QueryData> query_data_;
-    std::vector<ResultObject> results_queue_;
+    std::string result_data_;
 
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* cb)
         : Base(cb, "vtquery:worker"),
-          query_data_(std::move(query_data)),
-          results_queue_() {}
+          query_data_(std::move(query_data)) {}
 
     void Execute() override {
         try {
             QueryData const& data = *query_data_;
 
             // reserve the query results and fill with empty objects
-            results_queue_.reserve(data.num_results);
+            std::vector<ResultObject> results_queue;
+            results_queue.reserve(data.num_results);
             for (std::size_t i = 0; i < data.num_results; ++i) {
-                results_queue_.emplace_back();
+                results_queue.emplace_back();
             }
 
             // query point lng/lat geometry.hpp point (used for distance calculation later on)
@@ -341,7 +364,7 @@ struct Worker : Nan::AsyncWorker {
                         bool skip_duplicate = false;
                         auto properties_vec = get_properties_vector(feature);
                         if (data.dedupe) {
-                            for (auto& result : results_queue_) {
+                            for (auto& result : results_queue) {
                                 if (value_is_duplicate(result, feature, layer_name, original_geometry_type, properties_vec)) {
                                     if (meters <= result.distance) {
                                         insert_result(result, properties_vec, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
@@ -361,27 +384,56 @@ struct Worker : Nan::AsyncWorker {
                         }
 
                         if (found_duplicate) {
-                            std::stable_sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
+                            std::stable_sort(results_queue.begin(), results_queue.end(), CompareDistance());
                             continue;
                         }
 
-                        if (meters < results_queue_.back().distance) {
-                            insert_result(results_queue_.back(), properties_vec, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
-                            std::stable_sort(results_queue_.begin(), results_queue_.end(), CompareDistance());
+                        if (meters < results_queue.back().distance) {
+                            insert_result(results_queue.back(), properties_vec, layer_name, ll, meters, original_geometry_type, feature.has_id(), feature.id());
+                            std::stable_sort(results_queue.begin(), results_queue.end(), CompareDistance());
                         }
                     } // end tile.layer.feature loop
                 }     // end tile.layer loop
             }         // end tile loop
-            // Here we create "materialized" properties. We do this here because, when reading from a compressed
-            // buffer, it is unsafe to touch `feature.properties_vector` once we've left this loop.
-            // That is because the buffer may represent uncompressed data that is not in scope outside of Execute()
-            for (auto& feature : results_queue_) {
-                feature.properties_vector_materialized.reserve(feature.properties_vector.size());
-                for (auto const& property : feature.properties_vector) {
-                    auto val = vtzero::convert_property_value<mapbox::feature::value, mapbox::vector_tile::detail::property_value_mapping>(property.value());
-                    feature.properties_vector_materialized.emplace_back(std::string(property.key()), std::move(val));
+
+            result_data_ = "{\"type\":\"FeatureCollection\", \"features\": [";
+            bool first_feature = true;
+            for (auto& feature : results_queue) {
+                if (feature.distance < std::numeric_limits<double>::max()) {
+                    if (!first_feature) {
+                        result_data_ += ",";
+                    } else {
+                        first_feature = false;
+                    }
+                    // TODO: overall this might be faster if done with rapidjson
+                    // TODO: or if not using rapidjson could use something like StrCat to speed up https://abseil.io/tips/3
+                    // TODO: the std::to_string could likely be optimized by using a faster itoa: https://github.com/miloyip/itoa-benchmark
+                    result_data_ += "{\"type\":\"Feature\",\"id\":" + std::to_string(feature.id) + ",";
+                    result_data_ += "\"geometry\": { \"type\": \"Point\", \"coordinates\": [";
+                    result_data_ += std::to_string(feature.coordinates.x) + "," + std::to_string(feature.coordinates.y);
+                    result_data_ += "]},";
+                    result_data_ += "\"properties\": {";
+                    bool first = true;
+                    for (auto const& property : feature.properties_vector) {
+                        auto val = vtzero::convert_property_value<std::string, string_mapping>(property.value());
+                        if (!first) {
+                            result_data_ += ",";
+                        } else {
+                            first = false;
+                        }
+                        result_data_ += "\"" + std::string{property.key()} + "\": " + val;
+                    }
+                    result_data_ += ", \"tilequery\": {";
+                    // TODO this could likely be optimized using a method like https://github.com/osmcode/libosmium/blob/f5e9966700a4e48a8060a05f6abb9fbb8f2d3b13/include/osmium/util/double.hpp#L56
+                    result_data_ +=   "\"distance\": " + std::to_string(feature.distance) + ",";
+                    std::string og_geom = getGeomTypeString(feature.original_geometry_type);
+                    result_data_ +=   "\"geometry\": \"" + og_geom + "\",";
+                    result_data_ +=   "\"layer\": \"" + feature.layer_name + "\"";
+                    result_data_ += "}";
+                    result_data_ += "}}";
                 }
             }
+            result_data_ += "]}";
         } catch (std::exception const& e) {
             SetErrorMessage(e.what());
         }
@@ -390,60 +442,11 @@ struct Worker : Nan::AsyncWorker {
     void HandleOKCallback() override {
         Nan::HandleScope scope;
         try {
-            v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
-            v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
-            results_object->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
-
-            // for each result object
-            while (!results_queue_.empty()) {
-                auto const& feature = results_queue_.back(); // get reference to top item in results queue
-                if (feature.distance < std::numeric_limits<double>::max()) {
-                    // if this is a default value, don't use it
-                    v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
-                    feature_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
-                    feature_obj->Set(Nan::New("id").ToLocalChecked(), Nan::New<v8::Number>(feature.id));
-
-                    // create geometry object
-                    v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
-                    geometry_obj->Set(Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
-                    v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>(2);
-                    coordinates_array->Set(0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
-                    coordinates_array->Set(1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
-                    geometry_obj->Set(Nan::New("coordinates").ToLocalChecked(), coordinates_array);
-                    feature_obj->Set(Nan::New("geometry").ToLocalChecked(), geometry_obj);
-
-                    // create properties object
-                    v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
-                    for (auto const& prop : feature.properties_vector_materialized) {
-                        set_property(prop, properties_obj);
-                    }
-
-                    // set properties.tilquery
-                    v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
-                    tilequery_properties_obj->Set(Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
-                    std::string og_geom = getGeomTypeString(feature.original_geometry_type);
-                    tilequery_properties_obj->Set(Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
-                    tilequery_properties_obj->Set(Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
-                    properties_obj->Set(Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
-
-                    // add properties to feature
-                    feature_obj->Set(Nan::New("properties").ToLocalChecked(), properties_obj);
-
-                    // add feature to features array
-                    features_array->Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
-                }
-
-                results_queue_.pop_back();
-            }
-
-            results_object->Set(Nan::New("features").ToLocalChecked(), features_array);
-
             auto const argc = 2u;
+            // TODO: could return a buffer here instead to allow zero copy per https://github.com/mapbox/node-cpp-skel/issues/69
             v8::Local<v8::Value> argv[argc] = {
-                Nan::Null(), results_object};
-
+                Nan::Null(), Nan::New<v8::String>(result_data_).ToLocalChecked()};
             callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv), async_resource);
-
         } catch (const std::exception& e) {
             // unable to create test to throw exception here, the try/catch is simply
             // for unexpected cases https://github.com/mapbox/vtquery/issues/69
