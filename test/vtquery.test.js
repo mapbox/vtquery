@@ -681,11 +681,208 @@ test('options - dedupe: compare fields from real-world tiles (increases coverage
   });
 });
 
+test('options - filter: Empty List', assert => {
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', []]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 1, 'expected one feature');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Invalid Filter Condition', assert => {
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['int_value', '==', 6]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'condition filter value must be =, !=, <, <=, >, or >=');
+    assert.end();
+  });
+});
+
+test('options - filter: Invalid Filter String', assert => {
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['string_value', '=',"Strings_Not_Allowed"]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'value filter value must be a number or boolean');
+    assert.end();
+  });
+});
+
+test('options - filter: Invalid Filter Array', assert => {
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', ['int_value', '=', 6]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.ok(err);
+    assert.equal(err.message, 'filters must be of the form [parameter, condition, value]');
+    assert.end();
+  });
+});
+
+test('options - filter: Test Int Equals', assert => {
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['int_value', '=', 6]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.ifError(err);
+    assert.equal(result.features.length, 1, 'expected one feature');
+    const p = result.features[0].properties;
+    assert.equal(p.int_value, 6, 'expected int value');
+    assert.end();
+  });
+});
+
+test('options - filter: Test Boolean Not Equals', assert => {
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['bool_value', '!=', false]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 1, 'expected one feature');
+    const p = result.features[0].properties;
+    assert.equal(p.bool_value, true, 'expected value type');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Test Float Approximate Equals', assert => {
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['float_value', '=', 3.1]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 1, 'expected one feature');
+    const p = result.features[0].properties;
+    assert.equal(p.float_value, 3.0999999046325684, 'expected value type');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Test No Results Less Than Equals', assert => {
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['uint_value', '<', 0]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 0, 'expected one feature');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Test No Results Greater Than Equals', assert => {
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['sint_value', '>', 0]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 0, 'expected one feature');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Test Double Int Greater Than Equal', assert => {
+  const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['double_value', '>',-2]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 1, 'expected one feature');
+    const p = result.features[0].properties;
+    assert.equal(p.double_value, 1.23, 'expected value type');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Test filter with multiple features', assert => {
+  const tiles = [{buffer: mvtf.get('062').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['population', '>', 10]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 3, 'expected one feature');
+    let cities = [];
+    for (let i = 0; i < 3; i++) {
+      cities.push(result.features[i].properties.name);
+    }
+    assert.assert(cities.includes('RadEstablishment'), 'Missing RadEstablishment for population check');
+    assert.assert(cities.includes('AwesomeCity'),  'Missing AwesomeCity for population check');
+    assert.assert(cities.includes('TubularTown'), 'Missing TubularTown for population check');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Test all filter with multiple features', assert => {
+  const tiles = [{buffer: mvtf.get('062').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['population', '>', 10], ['population', '<', 1000]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 2, 'expected two features');
+    let cities = [];
+    for (let i = 0; i < 2; i++) {
+      cities.push(result.features[i].properties.name);
+    }
+    assert.assert(cities.includes('RadEstablishment'), 'Missing RadEstablishment for population check');
+    assert.assert(cities.includes('AwesomeCity'),  'Missing AwesomeCity for population check');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Test any filter with multiple features', assert => {
+  const tiles = [{buffer: mvtf.get('062').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['any', [['population', '<=', 10], ['population', '>', 1000]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 3, 'expected three features');
+    let cities = [];
+    for (let i = 0; i < 3; i++) {
+      cities.push(result.features[i].properties.name);
+    }
+    assert.assert(cities.includes('Neatville'), 'Missing Neatville for population check');
+    assert.assert(cities.includes('CoolVillage'),  'Missing CoolVillage for population check');
+    assert.assert(cities.includes('TubularTown'),  'Missing TubularTown for population check');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
 test('success: returns all possible data value types', assert => {
   const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
   const opts = {
     radius: 800 // about the width of a z15 tile
-  }
+  };
   vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
     const p = result.features[0].properties;
 
