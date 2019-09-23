@@ -39,22 +39,6 @@ script:
 # run your tests and build binaries
 matrix:
   include:
-    # linux publishable node v4/release
-    - os: linux
-      env: BUILDTYPE=release
-      node_js: 4
-    # linux publishable node v4/debug
-    - os: linux
-      env: BUILDTYPE=debug
-      node_js: 4
-    # linux publishable node v6
-    - os: linux
-      env: BUILDTYPE=release
-      node_js: 6
-    # linux publishable node v6/debug
-    - os: linux
-      env: BUILDTYPE=debug
-      node_js: 6
     # linux publishable node v8
     - os: linux
       env: BUILDTYPE=release
@@ -71,27 +55,17 @@ matrix:
     - os: linux
       env: BUILDTYPE=debug
       node_js: 10
-    # osx publishable node v4
-    - os: osx
-      osx_image: xcode8.2
-      env: BUILDTYPE=release
-      node_js: 4
-    # osx publishable node v6
-    - os: osx
-      osx_image: xcode8.2
-      env: BUILDTYPE=release
-      node_js: 6
     # osx publishable node v8
     - os: osx
-      osx_image: xcode8.2
+      osx_image: xcode8.3
       env: BUILDTYPE=release
       node_js: 8
     # osx publishable node v10
     - os: osx
-      osx_image: xcode8.2
+      osx_image: xcode8.3
       env: BUILDTYPE=release
       node_js: 10
-    # Sanitizer build node v4/Debug
+    # Sanitizer build node v10/Debug
     - os: linux
       env: BUILDTYPE=debug TOOLSET=asan
       sudo: required # workaround https://github.com/mapbox/node-cpp-skel/issues/93
