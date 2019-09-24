@@ -118,7 +118,7 @@ matrix:
         - make coverage
         - curl -S -f https://codecov.io/bash -o codecov
         - chmod +x codecov
-        - ./codecov -x llvm-cov -Z
+        - ./codecov -x "llvm-cov gcov" -Z
     # Clang format build
     - os: linux
       # can be generic since we don't need nodejs to run formatting
