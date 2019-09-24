@@ -20,10 +20,12 @@ The two major use cases for this library are:
 ### Table of Contents
 
 -   [vtquery](#vtquery)
+    -   [Parameters](#parameters)
+    -   [Examples](#examples)
 
 ## vtquery
 
-**Parameters**
+### Parameters
 
 -   `tiles` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)>** an array of tile objects with `buffer`, `z`, `x`, and `y` values
 -   `LngLat` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)>** a query point of longitude and latitude to query, `[lng, lat]`
@@ -36,8 +38,11 @@ The two major use cases for this library are:
         Defaults to all geometry types.
     -   `options.dedup` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)** perform deduplication of features based on shared layers, geometry, IDs and matching
         properties. (optional, default `true`)
+    -   `options.basic-filters` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String), [Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)>?** an expression-like filter to include features with Numeric or Boolean properties
+        that match the filters based on the following conditions: `=, !=, <, <=, >, >=`. The first item must be the value "any" or "all" whether
+        any or all filters must evaluate to true.
 
-**Examples**
+### Examples
 
 ```javascript
 const vtquery = require('@mapbox/vtquery');
@@ -52,7 +57,8 @@ const options = {
   limit: 5,
   geometry: 'polygon',
   layers: ['building', 'parks'],
-  dedupe: true
+  dedupe: true,
+  'basic-filters': ['all', [['population', '>', 10], ['population', '<', 1000]]]
 };
 
 vtquery(tiles, [-122.4477, 37.7665], options, function(err, result) {
