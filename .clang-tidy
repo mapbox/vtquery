@@ -1,5 +1,5 @@
 ---
-Checks:          '*,-cert-err58-cpp'
+Checks:          '*,-cert-err58-cpp,-fuchsia*,-google-runtime-references'
 WarningsAsErrors: '*'
 HeaderFilterRegex: '\/include\/'
 AnalyzeTemporaryDtors: false

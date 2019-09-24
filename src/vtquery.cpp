@@ -27,7 +27,7 @@ enum GeomType { point,
                 unknown };
 static const char* GeomTypeStrings[] = {"point", "linestring", "polygon", "unknown"};
 const char* getGeomTypeString(int enumVal) {
-    return GeomTypeStrings[enumVal];
+    return GeomTypeStrings[enumVal]; // NOLINT to temporarily disable cppcoreguidelines-pro-bounds-constant-array-index, but this really should be fixed
 }
 
 using materialized_prop_type = std::pair<std::string, mapbox::feature::value>;
@@ -118,7 +118,7 @@ enum BasicMetaFilterType {
 };
 
 struct meta_filter_struct {
-    explicit meta_filter_struct() {}
+    explicit meta_filter_struct() = default;
 
     BasicMetaFilterType type{filter_all};
     std::vector<basic_filter_struct> filters;
@@ -136,6 +136,8 @@ struct QueryData {
     {
         tiles.reserve(num_tiles);
     }
+    
+    ~QueryData() = default;
 
     // non-copyable
     QueryData(QueryData const&) = delete;
@@ -184,7 +186,7 @@ struct property_value_visitor {
 
 /// used to create the final v8 (JSON) object to return to the user
 void set_property(materialized_prop_type const& property,
-                  v8::Local<v8::Object>& properties_obj) {
+                  v8::Local<v8::Object> & properties_obj) {
     mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
 }
 
@@ -219,9 +221,9 @@ struct CompareDistance {
 
 /// replace already existing results with a better, duplicate result
 void insert_result(ResultObject& old_result,
-                   std::vector<vtzero::property>& props_vec,
+                   std::vector<vtzero::property> & props_vec,
                    std::string const& layer_name,
-                   mapbox::geometry::point<double>& pt,
+                   mapbox::geometry::point<double> const& pt,
                    double distance,
                    GeomType geom_type,
                    bool has_id,
@@ -237,10 +239,10 @@ void insert_result(ResultObject& old_result,
 }
 
 /// generate a vector of vtzero::property objects
-std::vector<vtzero::property> get_properties_vector(vtzero::feature& f) {
+std::vector<vtzero::property> get_properties_vector(vtzero::feature & feat) {
     std::vector<vtzero::property> v;
-    v.reserve(f.num_properties());
-    while (auto ii = f.next_property()) {
+    v.reserve(feat.num_properties());
+    while (auto ii = feat.next_property()) {
         v.push_back(ii);
     }
     return v;
@@ -277,13 +279,17 @@ bool single_filter_feature(basic_filter_struct filter, value_type feature_value)
         }
         if ((filter.type == ne) && (std::abs(parameter_double - filter_double) >= epsilon)) {
             return true;
-        } else if ((filter.type == gte) && (parameter_double >= filter_double)) {
+        }
+        if ((filter.type == gte) && (parameter_double >= filter_double)) {
             return true;
-        } else if ((filter.type == gt) && (parameter_double > filter_double)) {
+        }
+        if ((filter.type == gt) && (parameter_double > filter_double)) {
             return true;
-        } else if ((filter.type == lte) && (parameter_double <= filter_double)) {
+        }
+        if ((filter.type == lte) && (parameter_double <= filter_double)) {
             return true;
-        } else if ((filter.type == lt) && (parameter_double < filter_double)) {
+        }
+        if ((filter.type == lt) && (parameter_double < filter_double)) {
             return true;
         }
     } else if (feature_value.which() == 4 && filter.value.which() == 4) { // Boolean Types
