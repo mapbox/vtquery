@@ -1,3 +1,8 @@
+## 0.4.0
+
+* Add `basic-filters` option for filtering on Number or Boolean properties. [#110](https://github.com/mapbox/vtquery/pull/110)
+* Remove tests for node v4 + v6
+
 ## 0.3.0
 
 * now adding feature.id to response JSON [#90](https://github.com/mapbox/vtquery/pull/90)

@@ -20,24 +20,29 @@ The two major use cases for this library are:
 ### Table of Contents
 
 -   [vtquery](#vtquery)
+    -   [Parameters](#parameters)
+    -   [Examples](#examples)
 
 ## vtquery
 
-**Parameters**
+### Parameters
 
 -   `tiles` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)>** an array of tile objects with `buffer`, `z`, `x`, and `y` values
 -   `LngLat` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[Number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)>** a query point of longitude and latitude to query, `[lng, lat]`
 -   `options` **[Object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object)?** 
     -   `options.radius` **[Number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)** the radius to query for features. If your radius is larger than
-        the extent of an individual tile, include multiple nearby buffers to collect a realistic list of features (optional, default `0`)
+        the extent of an individual tile, include multiple nearby buffers to collect a realstic list of features (optional, default `0`)
     -   `options.limit` **[Number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)** limit the number of results/features returned from the query. Minimum is 1, maximum is 1000 (to avoid pre allocating large amounts of memory) (optional, default `5`)
     -   `options.layers` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)>?** an array of layer string names to query from. Default is all layers.
     -   `options.geometry` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)?** only return features of a particular geometry type. Can be `point`, `linestring`, or `polygon`.
         Defaults to all geometry types.
     -   `options.dedup` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)** perform deduplication of features based on shared layers, geometry, IDs and matching
         properties. (optional, default `true`)
+    -   `options.basic-filters` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String), [Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)>?** and expression-like filter out Number or Boolean properties based on
+        the following condtions: `=, !=, <, <=, >, >=`. The first item must be the value "any" or "all" whether any or all filters
+        must evaluate to true.
 
-**Examples**
+### Examples
 
 ```javascript
 const vtquery = require('@mapbox/vtquery');
@@ -52,7 +57,8 @@ const options = {
   limit: 5,
   geometry: 'polygon',
   layers: ['building', 'parks'],
-  dedupe: true
+  dedupe: true,
+  'basic-filters': ['all', [['population', '>', 10], ['population', '<', 1000]]]
 };
 
 vtquery(tiles, [-122.4477, 37.7665], options, function(err, result) {
