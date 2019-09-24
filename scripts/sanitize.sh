@@ -48,8 +48,8 @@ if [[ $(uname -s) == 'Darwin' ]]; then
     #
     # See https://github.com/mapbox/node-cpp-skel/issues/122
     DYLD_INSERT_LIBRARIES=${MASON_LLVM_RT_PRELOAD} \
-      node node_modules/.bin/$(node -e "console.log(require('./package.json').scripts.test)") test/*test.js
+      node node_modules/.bin/tape test/*.test.js
 else
     LD_PRELOAD=${MASON_LLVM_RT_PRELOAD} \
-      npm test
+      node node_modules/.bin/tape test/*.test.js
 fi
