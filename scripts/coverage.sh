@@ -26,4 +26,5 @@ llvm-profdata merge -output=code.profdata code-*.profraw
 llvm-cov report ${CXX_MODULE} -instr-profile=code.profdata -use-color
 llvm-cov show ${CXX_MODULE} -instr-profile=code.profdata src/*.cpp -filename-equivalence -use-color
 llvm-cov show ${CXX_MODULE} -instr-profile=code.profdata src/*.cpp -filename-equivalence -use-color --format html > /tmp/coverage.html
+llvm-cov show ${CXX_MODULE} -instr-profile=code.profdata src/*.cpp -filename-equivalence > coverage.txt
 echo "open /tmp/coverage.html for HTML version of this report"

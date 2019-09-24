@@ -97,6 +97,44 @@ struct TileObject {
     Nan::Persistent<v8::Object> buffer_ref;
 };
 
+using value_type = boost::variant<float, double, int64_t, uint64_t, bool, std::string>;
+
+enum BasicFilterType {
+    ne,
+    eq,
+    lt,
+    lte,
+    gt,
+    gte
+};
+
+struct basic_filter_struct {
+    explicit basic_filter_struct()
+        : key(""),
+          type(eq),
+          value(false) {
+    }
+
+    std::string key;
+    BasicFilterType type;
+    value_type value;
+};
+
+enum BasicMetaFilterType {
+    filter_all,
+    filter_any
+};
+
+struct meta_filter_struct {
+    explicit meta_filter_struct()
+        : type(filter_all),
+          filters() {
+    }
+
+    BasicMetaFilterType type;
+    std::vector<basic_filter_struct> filters;
+};
+
 /// the baton of data to be passed from the v8 thread into the cpp threadpool
 struct QueryData {
     explicit QueryData(std::uint32_t num_tiles)
@@ -107,7 +145,8 @@ struct QueryData {
           radius(0.0),
           num_results(5),
           dedupe(true),
-          geometry_filter_type(GeomType::all) {
+          geometry_filter_type(GeomType::all),
+          basic_filter() {
         tiles.reserve(num_tiles);
     }
 
@@ -128,6 +167,7 @@ struct QueryData {
     std::uint32_t num_results;
     bool dedupe;
     GeomType geometry_filter_type;
+    meta_filter_struct basic_filter;
 };
 
 /// convert properties to v8 types
@@ -219,6 +259,100 @@ std::vector<vtzero::property> get_properties_vector(vtzero::feature& f) {
     return v;
 }
 
+double convert_to_double(value_type value) {
+    // float
+    if (value.which() == 0) {
+        return double(boost::get<float>(value));
+    }
+    // double
+    if (value.which() == 1) {
+        return boost::get<double>(value);
+    }
+    // int64_t
+    if (value.which() == 2) {
+        return double(boost::get<int64_t>(value));
+    }
+    // uint64_t
+    if (value.which() == 3) {
+        return double(boost::get<uint64_t>(value));
+    }
+    return 0.0f;
+}
+
+/// Evaluates a single filter on a feature - Returns true if it passes filter
+bool single_filter_feature(basic_filter_struct filter, value_type feature_value) {
+    double epsilon = 0.001;
+    if (feature_value.which() <= 3 && filter.value.which() <= 3) { // Numeric Types
+        double parameter_double = convert_to_double(feature_value);
+        double filter_double = convert_to_double(filter.value);
+        if ((filter.type == eq) && (std::abs(parameter_double - filter_double) < epsilon)) {
+            return true;
+        } else if ((filter.type == ne) && (std::abs(parameter_double - filter_double) >= epsilon)) {
+            return true;
+        } else if ((filter.type == gte) && (parameter_double >= filter_double)) {
+            return true;
+        } else if ((filter.type == gt) && (parameter_double > filter_double)) {
+            return true;
+        } else if ((filter.type == lte) && (parameter_double <= filter_double)) {
+            return true;
+        } else if ((filter.type == lt) && (parameter_double < filter_double)) {
+            return true;
+        }
+    } else if (feature_value.which() == 4 && filter.value.which() == 4) { // Boolean Types
+        bool feature_bool = boost::get<bool>(feature_value);
+        bool filter_bool = boost::get<bool>(filter.value);
+        if ((filter.type == eq) && (feature_bool == filter_bool)) {
+            return true;
+        } else if ((filter.type == ne) && (feature_bool != filter_bool)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/// apply filters to a feature - Returns true if feature matches all features
+bool filter_feature_all(vtzero::feature& feature, std::vector<basic_filter_struct> filters) {
+    using key_type = std::string;
+    using map_type = std::map<key_type, value_type>;
+    auto features_property_map = vtzero::create_properties_map<map_type>(feature);
+    for (auto filter : filters) {
+        auto it = features_property_map.find(filter.key);
+        if (it != features_property_map.end()) {
+            value_type feature_value = it->second;
+            if (!single_filter_feature(filter, feature_value)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/// apply filters to a feature - Returns true if feature matches any features
+bool filter_feature_any(vtzero::feature& feature, std::vector<basic_filter_struct> filters) {
+    using key_type = std::string;
+    using map_type = std::map<key_type, value_type>;
+    auto features_property_map = vtzero::create_properties_map<map_type>(feature);
+    for (auto filter : filters) {
+        auto it = features_property_map.find(filter.key);
+        if (it != features_property_map.end()) {
+            value_type feature_value = it->second;
+            if (single_filter_feature(filter, feature_value)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/// apply filters to a feature - Returns true if a feature matches the filters
+bool filter_feature(vtzero::feature& feature, std::vector<basic_filter_struct> filters, BasicMetaFilterType filter_type) {
+    if (filter_type == filter_all) {
+        return filter_feature_all(feature, filters);
+    } else {
+        return filter_feature_any(feature, filters);
+    }
+}
+
 /// compare two features to determine if they are duplicates
 bool value_is_duplicate(ResultObject const& r,
                         vtzero::feature const& candidate_feature,
@@ -262,6 +396,9 @@ struct Worker : Nan::AsyncWorker {
     void Execute() override {
         try {
             QueryData const& data = *query_data_;
+
+            std::vector<basic_filter_struct> filters = data.basic_filter.filters;
+            bool filter_enabled = filters.size() > 0;
 
             // reserve the query results and fill with empty objects
             results_queue_.reserve(data.num_results);
@@ -307,6 +444,10 @@ struct Worker : Nan::AsyncWorker {
 
                     while (auto feature = layer.next_feature()) {
                         auto original_geometry_type = get_geometry_type(feature);
+
+                        if (filter_enabled && !filter_feature(feature, filters, data.basic_filter.type)) { // If we have filters and the feature doesn't pass the filters, skip this feature
+                            continue;
+                        }
 
                         // check if this a geometry type we want to keep
                         if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != original_geometry_type) {
@@ -662,6 +803,111 @@ NAN_METHOD(vtquery) {
                 query_data->geometry_filter_type = GeomType::polygon;
             } else {
                 return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
+            }
+        }
+
+        if (options->Has(Nan::New("basic-filters").ToLocalChecked())) {
+            v8::Local<v8::Value> basic_filter_val = options->Get(Nan::New("basic-filters").ToLocalChecked());
+            if (!basic_filter_val->IsArray()) {
+                return utils::CallbackError("'basic-filters' must be of the form [type, [filters]]", callback);
+            }
+
+            v8::Local<v8::Array> basic_filter_array = basic_filter_val.As<v8::Array>();
+            unsigned basic_filter_length = basic_filter_array->Length();
+
+            // gather filters from an array
+            if (basic_filter_length == 2) {
+                v8::Local<v8::Value> basic_filter_type = basic_filter_array->Get(0);
+                if (!basic_filter_type->IsString()) {
+                    return utils::CallbackError("'basic-filters' must be of the form [string, [filters]]", callback);
+                }
+                Nan::Utf8String basic_filter_type_utf8_value(basic_filter_type);
+                std::int32_t basic_filter_type_str_len = basic_filter_type_utf8_value.length();
+                std::string basic_filter_type_str(*basic_filter_type_utf8_value, static_cast<std::size_t>(basic_filter_type_str_len));
+                if (basic_filter_type_str == "all") {
+                    query_data->basic_filter.type = filter_all;
+                } else if (basic_filter_type_str == "any") {
+                    query_data->basic_filter.type = filter_any;
+                } else {
+                    return utils::CallbackError("'basic-filters[0] must be 'any' or 'all'", callback);
+                }
+
+                v8::Local<v8::Value> filters_array_val = basic_filter_array->Get(1);
+                if (!filters_array_val->IsArray()) {
+                    return utils::CallbackError("'basic-filters' must be of the form [type, [filters]]", callback);
+                }
+
+                v8::Local<v8::Array> filters_array = filters_array_val.As<v8::Array>();
+                unsigned num_filters = filters_array->Length();
+                for (unsigned j = 0; j < num_filters; ++j) {
+                    basic_filter_struct filter;
+                    v8::Local<v8::Value> filter_val = filters_array->Get(j);
+                    if (!filter_val->IsArray()) {
+                        return utils::CallbackError("filters must be of the form [parameter, condition, value]", callback);
+                    }
+                    v8::Local<v8::Array> filter_array = filter_val.As<v8::Array>();
+                    unsigned filter_length = filter_array->Length();
+
+                    if (filter_length != 3) {
+                        return utils::CallbackError("filters must be of the form [parameter, condition, value]", callback);
+                    }
+
+                    v8::Local<v8::Value> filter_parameter_val = filter_array->Get(0);
+                    if (!filter_parameter_val->IsString()) {
+                        return utils::CallbackError("parameter filter option must be a string", callback);
+                    }
+
+                    Nan::Utf8String filter_parameter_utf8_value(filter_parameter_val);
+                    std::int32_t filter_parameter_len = filter_parameter_utf8_value.length();
+                    if (filter_parameter_len <= 0) {
+                        return utils::CallbackError("parameter filter value must be a non-empty string", callback);
+                    }
+
+                    std::string filter_parameter(*filter_parameter_utf8_value, static_cast<std::size_t>(filter_parameter_len));
+                    filter.key.assign(filter_parameter);
+
+                    v8::Local<v8::Value> filter_condition_val = filter_array->Get(1);
+                    if (!filter_condition_val->IsString()) {
+                        return utils::CallbackError("condition filter option must be a string", callback);
+                    }
+
+                    Nan::Utf8String filter_condition_utf8_value(filter_condition_val);
+                    std::int32_t filter_condition_len = filter_condition_utf8_value.length();
+                    if (filter_condition_len <= 0) {
+                        return utils::CallbackError("condition filter value must be a non-empty string", callback);
+                    }
+
+                    std::string filter_condition(*filter_condition_utf8_value, static_cast<std::size_t>(filter_condition_len));
+
+                    if (filter_condition == "=") {
+                        filter.type = eq;
+                    } else if (filter_condition == "!=") {
+                        filter.type = ne;
+                    } else if (filter_condition == "<") {
+                        filter.type = lt;
+                    } else if (filter_condition == "<=") {
+                        filter.type = lte;
+                    } else if (filter_condition == ">") {
+                        filter.type = gt;
+                    } else if (filter_condition == ">=") {
+                        filter.type = gte;
+                    } else {
+                        return utils::CallbackError("condition filter value must be =, !=, <, <=, >, or >=", callback);
+                    }
+
+                    v8::Local<v8::Value> filter_value_val = filter_array->Get(2);
+                    if (filter_value_val->IsNumber()) {
+                        double filter_value_double = filter_value_val->NumberValue();
+                        filter.value = filter_value_double;
+                    } else if (filter_value_val->IsBoolean()) {
+                        filter.value = filter_value_val->BooleanValue();
+                    } else {
+                        return utils::CallbackError("value filter value must be a number or boolean", callback);
+                    }
+                    query_data->basic_filter.filters.push_back(filter);
+                }
+            } else {
+                return utils::CallbackError("'basic-filters' must be of the form [type, [filters]]", callback);
             }
         }
     }
