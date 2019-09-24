@@ -62,8 +62,7 @@ struct TileObject {
         : z(z0),
           x(x0),
           y(y0),
-          data(node::Buffer::Data(buffer), node::Buffer::Length(buffer))
-    {
+          data(node::Buffer::Data(buffer), node::Buffer::Length(buffer)) {
         buffer_ref.Reset(buffer.As<v8::Object>());
     }
 
@@ -132,11 +131,10 @@ struct QueryData {
           radius(0.0),
           num_results(5),
           dedupe(true),
-          geometry_filter_type(GeomType::all)
-    {
+          geometry_filter_type(GeomType::all) {
         tiles.reserve(num_tiles);
     }
-    
+
     ~QueryData() = default;
 
     // non-copyable
@@ -186,7 +184,7 @@ struct property_value_visitor {
 
 /// used to create the final v8 (JSON) object to return to the user
 void set_property(materialized_prop_type const& property,
-                  v8::Local<v8::Object> & properties_obj) {
+                  v8::Local<v8::Object>& properties_obj) {
     mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
 }
 
@@ -221,7 +219,7 @@ struct CompareDistance {
 
 /// replace already existing results with a better, duplicate result
 void insert_result(ResultObject& old_result,
-                   std::vector<vtzero::property> & props_vec,
+                   std::vector<vtzero::property>& props_vec,
                    std::string const& layer_name,
                    mapbox::geometry::point<double> const& pt,
                    double distance,
@@ -239,7 +237,7 @@ void insert_result(ResultObject& old_result,
 }
 
 /// generate a vector of vtzero::property objects
-std::vector<vtzero::property> get_properties_vector(vtzero::feature & feat) {
+std::vector<vtzero::property> get_properties_vector(vtzero::feature& feat) {
     std::vector<vtzero::property> v;
     v.reserve(feat.num_properties());
     while (auto ii = feat.next_property()) {
