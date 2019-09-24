@@ -39,18 +39,12 @@ struct ResultObject {
     std::string layer_name;
     mapbox::geometry::point<double> coordinates;
     double distance;
-    GeomType original_geometry_type;
-    bool has_id;
-    uint64_t id;
+    GeomType original_geometry_type{GeomType::unknown};
+    bool has_id{false};
+    uint64_t id{0};
 
-    ResultObject() : properties_vector(),
-                     properties_vector_materialized(),
-                     layer_name(),
-                     coordinates(0.0, 0.0),
-                     distance(std::numeric_limits<double>::max()),
-                     original_geometry_type(GeomType::unknown),
-                     has_id(false),
-                     id(0) {}
+    ResultObject() : coordinates(0.0, 0.0),
+                     distance(std::numeric_limits<double>::max()) {}
 
     ResultObject(ResultObject&&) = default;
     ResultObject& operator=(ResultObject&&) = default;
@@ -68,8 +62,8 @@ struct TileObject {
         : z(z0),
           x(x0),
           y(y0),
-          data(node::Buffer::Data(buffer), node::Buffer::Length(buffer)),
-          buffer_ref() {
+          data(node::Buffer::Data(buffer), node::Buffer::Length(buffer))
+    {
         buffer_ref.Reset(buffer.As<v8::Object>());
     }
 
@@ -111,12 +105,10 @@ enum BasicFilterType {
 struct basic_filter_struct {
     explicit basic_filter_struct()
         : key(""),
-          type(eq),
-          value(false) {
-    }
+          value(false) {}
 
     std::string key;
-    BasicFilterType type;
+    BasicFilterType type{eq};
     value_type value;
 };
 
@@ -126,27 +118,22 @@ enum BasicMetaFilterType {
 };
 
 struct meta_filter_struct {
-    explicit meta_filter_struct()
-        : type(filter_all),
-          filters() {
-    }
+    explicit meta_filter_struct() {}
 
-    BasicMetaFilterType type;
+    BasicMetaFilterType type{filter_all};
     std::vector<basic_filter_struct> filters;
 };
 
 /// the baton of data to be passed from the v8 thread into the cpp threadpool
 struct QueryData {
     explicit QueryData(std::uint32_t num_tiles)
-        : tiles(),
-          layers(),
-          latitude(0.0),
+        : latitude(0.0),
           longitude(0.0),
           radius(0.0),
           num_results(5),
           dedupe(true),
-          geometry_filter_type(GeomType::all),
-          basic_filter() {
+          geometry_filter_type(GeomType::all)
+    {
         tiles.reserve(num_tiles);
     }
 
@@ -176,7 +163,7 @@ struct property_value_visitor {
     std::string const& key;
 
     template <typename T>
-    void operator()(T) {}
+    void operator()(T /*unused*/) {}
 
     void operator()(bool v) {
         Nan::Set(properties_obj, Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Boolean>(v));
@@ -254,7 +241,7 @@ std::vector<vtzero::property> get_properties_vector(vtzero::feature& f) {
     std::vector<vtzero::property> v;
     v.reserve(f.num_properties());
     while (auto ii = f.next_property()) {
-        v.push_back(std::move(ii));
+        v.push_back(ii);
     }
     return v;
 }
@@ -287,7 +274,8 @@ bool single_filter_feature(basic_filter_struct filter, value_type feature_value)
         double filter_double = convert_to_double(filter.value);
         if ((filter.type == eq) && (std::abs(parameter_double - filter_double) < epsilon)) {
             return true;
-        } else if ((filter.type == ne) && (std::abs(parameter_double - filter_double) >= epsilon)) {
+        }
+        if ((filter.type == ne) && (std::abs(parameter_double - filter_double) >= epsilon)) {
             return true;
         } else if ((filter.type == gte) && (parameter_double >= filter_double)) {
             return true;
@@ -303,7 +291,8 @@ bool single_filter_feature(basic_filter_struct filter, value_type feature_value)
         bool filter_bool = boost::get<bool>(filter.value);
         if ((filter.type == eq) && (feature_bool == filter_bool)) {
             return true;
-        } else if ((filter.type == ne) && (feature_bool != filter_bool)) {
+        }
+        if ((filter.type == ne) && (feature_bool != filter_bool)) {
             return true;
         }
     }
@@ -315,7 +304,7 @@ bool filter_feature_all(vtzero::feature& feature, std::vector<basic_filter_struc
     using key_type = std::string;
     using map_type = std::map<key_type, value_type>;
     auto features_property_map = vtzero::create_properties_map<map_type>(feature);
-    for (auto filter : filters) {
+    for (const auto& filter : filters) {
         auto it = features_property_map.find(filter.key);
         if (it != features_property_map.end()) {
             value_type feature_value = it->second;
@@ -332,7 +321,7 @@ bool filter_feature_any(vtzero::feature& feature, std::vector<basic_filter_struc
     using key_type = std::string;
     using map_type = std::map<key_type, value_type>;
     auto features_property_map = vtzero::create_properties_map<map_type>(feature);
-    for (auto filter : filters) {
+    for (const auto& filter : filters) {
         auto it = features_property_map.find(filter.key);
         if (it != features_property_map.end()) {
             value_type feature_value = it->second;
@@ -345,12 +334,11 @@ bool filter_feature_any(vtzero::feature& feature, std::vector<basic_filter_struc
 }
 
 /// apply filters to a feature - Returns true if a feature matches the filters
-bool filter_feature(vtzero::feature& feature, std::vector<basic_filter_struct> filters, BasicMetaFilterType filter_type) {
+bool filter_feature(vtzero::feature& feature, const std::vector<basic_filter_struct>& filters, BasicMetaFilterType filter_type) {
     if (filter_type == filter_all) {
         return filter_feature_all(feature, filters);
-    } else {
-        return filter_feature_any(feature, filters);
     }
+    return filter_feature_any(feature, filters);
 }
 
 /// compare two features to determine if they are duplicates
@@ -390,15 +378,14 @@ struct Worker : Nan::AsyncWorker {
     Worker(std::unique_ptr<QueryData> query_data,
            Nan::Callback* cb)
         : Base(cb, "vtquery:worker"),
-          query_data_(std::move(query_data)),
-          results_queue_() {}
+          query_data_(std::move(query_data)) {}
 
     void Execute() override {
         try {
             QueryData const& data = *query_data_;
 
             std::vector<basic_filter_struct> filters = data.basic_filter.filters;
-            bool filter_enabled = filters.size() > 0;
+            bool filter_enabled = !filters.empty();
 
             // reserve the query results and fill with empty objects
             results_queue_.reserve(data.num_results);
@@ -489,10 +476,9 @@ struct Worker : Nan::AsyncWorker {
                                         found_duplicate = true;
                                         break;
                                         // if we have a duplicate but it's lesser than what we already have, just skip and don't add below
-                                    } else {
-                                        skip_duplicate = true;
-                                        break;
                                     }
+                                    skip_duplicate = true;
+                                    break;
                                 }
                             }
                         }
