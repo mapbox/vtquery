@@ -16,6 +16,7 @@
   "author": "Mapbox",
   "license": "ISC",
   "dependencies": {
+    "@mapbox/mason-js": "^0.1.5",
     "nan": "^2.14.0",
     "node-pre-gyp": "^0.13.0"
   },
