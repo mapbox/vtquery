@@ -115,6 +115,7 @@ matrix:
         - mason install llvm-cov ${MASON_LLVM_RELEASE}
         - mason link llvm-cov ${MASON_LLVM_RELEASE}
         - which llvm-cov
+      script:
         - make coverage
         - curl -S -f https://codecov.io/bash -o codecov
         - chmod +x codecov
