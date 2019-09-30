@@ -91,6 +91,8 @@ struct TileObject {
 };
 
 using value_type = boost::variant<float, double, int64_t, uint64_t, bool, std::string>;
+using key_type = std::string;
+using map_type = std::unordered_map<key_type, value_type>;
 
 enum BasicFilterType {
     ne,
@@ -246,7 +248,7 @@ std::vector<vtzero::property> get_properties_vector(vtzero::feature& feat) {
     return v;
 }
 
-double convert_to_double(value_type value) {
+double convert_to_double(const value_type& value) {
     // float
     if (value.which() == 0) {
         return double(boost::get<float>(value));
@@ -267,7 +269,7 @@ double convert_to_double(value_type value) {
 }
 
 /// Evaluates a single filter on a feature - Returns true if it passes filter
-bool single_filter_feature(basic_filter_struct filter, value_type feature_value) {
+bool single_filter_feature(const basic_filter_struct& filter, const value_type& feature_value) {
     double epsilon = 0.001;
     if (feature_value.which() <= 3 && filter.value.which() <= 3) { // Numeric Types
         double parameter_double = convert_to_double(feature_value);
@@ -304,9 +306,7 @@ bool single_filter_feature(basic_filter_struct filter, value_type feature_value)
 }
 
 /// apply filters to a feature - Returns true if feature matches all features
-bool filter_feature_all(vtzero::feature& feature, std::vector<basic_filter_struct> filters) {
-    using key_type = std::string;
-    using map_type = std::map<key_type, value_type>;
+bool filter_feature_all(vtzero::feature& feature, const std::vector<basic_filter_struct>& filters) {
     auto features_property_map = vtzero::create_properties_map<map_type>(feature);
     for (const auto& filter : filters) {
         auto it = features_property_map.find(filter.key);
@@ -321,9 +321,7 @@ bool filter_feature_all(vtzero::feature& feature, std::vector<basic_filter_struc
 }
 
 /// apply filters to a feature - Returns true if feature matches any features
-bool filter_feature_any(vtzero::feature& feature, std::vector<basic_filter_struct> filters) {
-    using key_type = std::string;
-    using map_type = std::unordered_map<key_type, value_type>;
+bool filter_feature_any(vtzero::feature& feature, const std::vector<basic_filter_struct>& filters) {
     auto features_property_map = vtzero::create_properties_map<map_type>(feature);
     for (const auto& filter : filters) {
         auto it = features_property_map.find(filter.key);
@@ -436,12 +434,12 @@ struct Worker : Nan::AsyncWorker {
                     while (auto feature = layer.next_feature()) {
                         auto original_geometry_type = get_geometry_type(feature);
 
-                        if (filter_enabled && !filter_feature(feature, filters, data.basic_filter.type)) { // If we have filters and the feature doesn't pass the filters, skip this feature
+                        // check if this a geometry type we want to keep
+                        if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != original_geometry_type) {
                             continue;
                         }
 
-                        // check if this a geometry type we want to keep
-                        if (data.geometry_filter_type != GeomType::all && data.geometry_filter_type != original_geometry_type) {
+                        if (filter_enabled && !filter_feature(feature, filters, data.basic_filter.type)) { // If we have filters and the feature doesn't pass the filters, skip this feature
                             continue;
                         }
 
