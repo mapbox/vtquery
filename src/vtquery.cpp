@@ -323,7 +323,7 @@ bool filter_feature_all(vtzero::feature& feature, std::vector<basic_filter_struc
 /// apply filters to a feature - Returns true if feature matches any features
 bool filter_feature_any(vtzero::feature& feature, std::vector<basic_filter_struct> filters) {
     using key_type = std::string;
-    using map_type = std::map<key_type, value_type>;
+    using map_type = std::unordered_map<key_type, value_type>;
     auto features_property_map = vtzero::create_properties_map<map_type>(feature);
     for (const auto& filter : filters) {
         auto it = features_property_map.find(filter.key);

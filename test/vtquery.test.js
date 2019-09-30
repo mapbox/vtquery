@@ -878,6 +878,58 @@ test('options - filter: Test any filter with multiple features', assert => {
   });
 });
 
+test('options - filter: Test all with no filters', assert => {
+  const tiles = [{buffer: mvtf.get('062').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', []]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 5, 'expected five features');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Test any with no filters', assert => {
+  const tiles = [{buffer: mvtf.get('062').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['any', []]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 5, 'expected five features');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Test all with bad filters', assert => {
+  const tiles = [{buffer: mvtf.get('062').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['all', [['junk', '=', 12]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 5, 'expected five features');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
+test('options - filter: Test any with bad filters', assert => {
+  const tiles = [{buffer: mvtf.get('062').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+    'basic-filters': ['any', [['junk', '=', 12]]]
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 0, 'expected zero features');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
 test('success: returns all possible data value types', assert => {
   const tiles = [{buffer: mvtf.get('038').buffer, z: 15, x: 5248, y: 11436}];
   const opts = {
