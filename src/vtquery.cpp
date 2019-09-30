@@ -439,10 +439,6 @@ struct Worker : Nan::AsyncWorker {
                             continue;
                         }
 
-                        if (filter_enabled && !filter_feature(feature, filters, data.basic_filter.type)) { // If we have filters and the feature doesn't pass the filters, skip this feature
-                            continue;
-                        }
-
                         // implement closest point algorithm on query geometry and the query point
                         auto const cp_info = mapbox::geometry::algorithms::closest_point(mapbox::vector_tile::extract_geometry<int64_t>(feature), query_point);
 
@@ -462,6 +458,11 @@ struct Worker : Nan::AsyncWorker {
 
                         // if distance from the query point is greater than the radius, don't add it
                         if (meters > data.radius) {
+                            continue;
+                        }
+
+                        // If we have filters and the feature doesn't pass the filters, skip this feature
+                        if (filter_enabled && !filter_feature(feature, filters, data.basic_filter.type)) {
                             continue;
                         }
 
