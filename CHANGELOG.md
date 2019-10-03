@@ -1,3 +1,10 @@
+## 0.4.1
+
+* Improved `basic-filters` performance
+    * Changed map to unordered map
+    * Replaced function parameter copies with const references
+* Added additionaly tests
+
 ## 0.4.0
 
 * Add `basic-filters` option for filtering on Number or Boolean properties. [#110](https://github.com/mapbox/vtquery/pull/110)
