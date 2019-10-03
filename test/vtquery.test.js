@@ -917,6 +917,18 @@ test('options - filter: Test all with bad filters', assert => {
   });
 });
 
+test('options - filter: Test with no filter', assert => {
+  const tiles = [{buffer: mvtf.get('062').buffer, z: 15, x: 5248, y: 11436}];
+  const opts = {
+    radius: 800, // about the width of a z15 tile
+  };
+  vtquery(tiles, [-122.3384, 47.6635], opts, function(err, result) {
+    assert.equal(result.features.length, 5, 'expected five features');
+    assert.ifError(err);
+    assert.end();
+  });
+});
+
 test('options - filter: Test any with bad filters', assert => {
   const tiles = [{buffer: mvtf.get('062').buffer, z: 15, x: 5248, y: 11436}];
   const opts = {

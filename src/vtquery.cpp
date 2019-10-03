@@ -91,8 +91,7 @@ struct TileObject {
 };
 
 using value_type = boost::variant<float, double, int64_t, uint64_t, bool, std::string>;
-using key_type = std::string;
-using map_type = std::unordered_map<key_type, value_type>;
+using map_type = std::unordered_map<std::string, value_type>;
 
 enum BasicFilterType {
     ne,
@@ -248,7 +247,7 @@ std::vector<vtzero::property> get_properties_vector(vtzero::feature& feat) {
     return v;
 }
 
-double convert_to_double(const value_type& value) {
+double convert_to_double(value_type const& value) {
     // float
     if (value.which() == 0) {
         return double(boost::get<float>(value));
@@ -269,7 +268,7 @@ double convert_to_double(const value_type& value) {
 }
 
 /// Evaluates a single filter on a feature - Returns true if it passes filter
-bool single_filter_feature(const basic_filter_struct& filter, const value_type& feature_value) {
+bool single_filter_feature(basic_filter_struct const& filter, value_type const& feature_value) {
     double epsilon = 0.001;
     if (feature_value.which() <= 3 && filter.value.which() <= 3) { // Numeric Types
         double parameter_double = convert_to_double(feature_value);
@@ -306,9 +305,9 @@ bool single_filter_feature(const basic_filter_struct& filter, const value_type& 
 }
 
 /// apply filters to a feature - Returns true if feature matches all features
-bool filter_feature_all(vtzero::feature& feature, const std::vector<basic_filter_struct>& filters) {
+bool filter_feature_all(vtzero::feature& feature, std::vector<basic_filter_struct> const& filters) {
     auto features_property_map = vtzero::create_properties_map<map_type>(feature);
-    for (const auto& filter : filters) {
+    for (auto const& filter : filters) {
         auto it = features_property_map.find(filter.key);
         if (it != features_property_map.end()) {
             value_type feature_value = it->second;
@@ -321,9 +320,9 @@ bool filter_feature_all(vtzero::feature& feature, const std::vector<basic_filter
 }
 
 /// apply filters to a feature - Returns true if feature matches any features
-bool filter_feature_any(vtzero::feature& feature, const std::vector<basic_filter_struct>& filters) {
+bool filter_feature_any(vtzero::feature& feature, std::vector<basic_filter_struct> const& filters) {
     auto features_property_map = vtzero::create_properties_map<map_type>(feature);
-    for (const auto& filter : filters) {
+    for (auto const& filter : filters) {
         auto it = features_property_map.find(filter.key);
         if (it != features_property_map.end()) {
             value_type feature_value = it->second;
@@ -336,7 +335,7 @@ bool filter_feature_any(vtzero::feature& feature, const std::vector<basic_filter
 }
 
 /// apply filters to a feature - Returns true if a feature matches the filters
-bool filter_feature(vtzero::feature& feature, const std::vector<basic_filter_struct>& filters, BasicMetaFilterType filter_type) {
+bool filter_feature(vtzero::feature& feature, std::vector<basic_filter_struct> const& filters, BasicMetaFilterType filter_type) {
     if (filter_type == filter_all) {
         return filter_feature_all(feature, filters);
     }
