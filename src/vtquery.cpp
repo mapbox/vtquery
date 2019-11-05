@@ -132,6 +132,7 @@ struct QueryData {
           radius(0.0),
           num_results(5),
           dedupe(true),
+          direct_hit_polygon(false),
           geometry_filter_type(GeomType::all) {
         tiles.reserve(num_tiles);
     }
@@ -154,6 +155,7 @@ struct QueryData {
     double radius;
     std::uint32_t num_results;
     bool dedupe;
+    bool direct_hit_polygon;
     GeomType geometry_filter_type;
     meta_filter_struct basic_filter;
 };
@@ -460,6 +462,11 @@ struct Worker : Nan::AsyncWorker {
                             continue;
                         }
 
+                        // If direct_hit_polygon is enabled, disallow polygons that do not contain the point
+                        if (meters > 0.0 && original_geometry_type == GeomType::polygon && data.direct_hit_polygon) {
+                            continue;
+                        }
+
                         // If we have filters and the feature doesn't pass the filters, skip this feature
                         if (filter_enabled && !filter_feature(feature, filters, data.basic_filter.type)) {
                             continue;
@@ -709,6 +716,16 @@ NAN_METHOD(vtquery) {
 
             bool dedupe = Nan::To<bool>(dedupe_val).FromJust();
             query_data->dedupe = dedupe;
+        }
+
+        if (Nan::Has(options, Nan::New("direct_hit_polygon").ToLocalChecked()).FromMaybe(false)) {
+            v8::Local<v8::Value> direct_hit_polygon_val = Nan::Get(options, Nan::New("direct_hit_polygon").ToLocalChecked()).ToLocalChecked();
+            if (!direct_hit_polygon_val->IsBoolean()) {
+                return utils::CallbackError("'direct_hit_polygon' must be a boolean", callback);
+            }
+
+            bool direct_hit_polygon = Nan::To<bool>(direct_hit_polygon_val).FromJust();
+            query_data->direct_hit_polygon = direct_hit_polygon;
         }
 
         if (Nan::Has(options, Nan::New("radius").ToLocalChecked()).FromMaybe(false)) {

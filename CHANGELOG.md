@@ -1,3 +1,7 @@
+## 0.5.0
+
+* Add `direct_hit_polygon` option to allow queries only allow polygons that contain the query point but still allow points and line segments that are within `radius` distance.
+
 ## 0.4.1
 
 * Improved `basic-filters` performance
