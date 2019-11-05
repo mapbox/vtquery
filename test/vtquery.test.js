@@ -503,6 +503,28 @@ test('options - radius=0: returns only radius 0.0 results', assert => {
   });
 });
 
+test('options - radius=1000, direct_hit_polygon: returns points/lines within 1000.0 and polygons that are direct hits', assert => {
+  const buffer = bufferSF;
+  const ll = [-122.4527, 37.7689]; // direct hit on a building
+  let polygon_count = 0;
+  let non_polygon_count = 0;
+  vtquery([{buffer: buffer, z: 15, x: 5238, y: 12666}], ll, { radius: 1000, limit: 100 , direct_hit_polygon: true}, function(err, result) {
+    assert.ifError(err);
+    result.features.forEach(function(feature) {
+      if (feature.properties.tilequery.geometry === 'polygon') {
+        assert.ok(feature.properties.tilequery.distance == 0.0, 'radius 0.0');
+        polygon_count += 1
+      } else {
+        assert.ok(feature.properties.tilequery.distance <= 1000.0, 'radius 1000.0');
+        non_polygon_count += 1;
+      }
+    });
+    assert.ok(polygon_count > 0, 'at least one polygon');
+    assert.ok(non_polygon_count > 0, 'at least one non-polygon');
+    assert.end();
+  });
+});
+
 test('options - limit: successfully limits results', assert => {
   const buffer = bufferSF;
   const ll = [-122.4477, 37.7665]; // direct hit
