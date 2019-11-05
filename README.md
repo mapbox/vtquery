@@ -41,7 +41,7 @@ The two major use cases for this library are:
     -   `options.basic-filters` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String), [Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)>?** an expression-like filter to include features with Numeric or Boolean properties
         that match the filters based on the following conditions: `=, !=, <, <=, >, >=`. The first item must be the value "any" or "all" whether
         any or all filters must evaluate to true.
-    -   `options.direct_hit_polygon` **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean)** defaults to false.  Weh true, a polygon is treated with an allowed radius of 0.0 regardless of how `options.radius` was set.
+    -   `options.direct_hit_polygon` **[Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean)** defaults to false.  When true, a polygon is treated with an allowed radius of 0.0 regardless of how `options.radius` was set.
 
 ### Examples
 
