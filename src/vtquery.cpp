@@ -462,7 +462,7 @@ struct Worker : Nan::AsyncWorker {
                             continue;
                         }
 
-                        // Only allow direct hits for polygons
+                        // If direct_hit_polygon is enabled, disallow polygons that do not contain the point
                         if (meters > 0.0 && original_geometry_type == GeomType::polygon && data.direct_hit_polygon) {
                             continue;
                         }
