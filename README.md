@@ -36,7 +36,7 @@ The two major use cases for this library are:
     -   `options.layers` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)>?** an array of layer string names to query from. Default is all layers.
     -   `options.geometry` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)?** only return features of a particular geometry type. Can be `point`, `linestring`, or `polygon`.
         Defaults to all geometry types.
-    -   `options.dedup` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)** perform deduplication of features based on shared layers, geometry, IDs and matching
+    -   `options.dedupe` **[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)** perform deduplication of features based on shared layers, geometry, IDs and matching
         properties. (optional, default `true`)
     -   `options.basic-filters` **[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;[String](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String), [Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)>?** an expression-like filter to include features with Numeric or Boolean properties
         that match the filters based on the following conditions: `=, !=, <, <=, >, >=`. The first item must be the value "any" or "all" whether
