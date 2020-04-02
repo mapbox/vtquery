@@ -81,6 +81,7 @@ matrix:
         - make sanitize
       # Overrides `before_script` (tests are already run in `make sanitize`)
       before_script:
+        - true
 
     ## ** Builds that do not get published **
 
@@ -123,8 +124,10 @@ matrix:
         - make format
       # Overrides `before_script`, no need to run tests
       before_script:
+        - true
       # Overrides `script` to disable publishing
       script:
+        - true
     # Clang tidy build
     - os: linux
       env: CLANG_TIDY
@@ -138,5 +141,7 @@ matrix:
         - make tidy
       # Overrides `before_script`, no need to run tests
       before_script:
+        - true
       # Overrides `script` to disable publishing
       script:
+        - true
