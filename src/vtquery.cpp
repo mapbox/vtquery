@@ -679,7 +679,6 @@ Napi::Value vtquery(Napi::CallbackInfo const& info) {
         if (y < 0) {
             return utils::CallbackError("'y' value must not be less than zero", info);
         }
-
         // in-place construction
         std::unique_ptr<TileObject> tile{new TileObject{z, x, y, buffer}};
         query_data->tiles.push_back(std::move(tile));
@@ -781,14 +780,11 @@ Napi::Value vtquery(Napi::CallbackInfo const& info) {
                     if (!layer_val.IsString()) {
                         return utils::CallbackError("'layers' values must be strings", info);
                     }
-
-                    std::string layer_utf8_value = layer_val.As<Napi::String>();
-                    std::size_t layer_str_len = layer_utf8_value.length();
-                    if (layer_str_len <= 0) {
+                    std::string layer_name = layer_val.As<Napi::String>();
+                    if (layer_name.empty()) {
                         return utils::CallbackError("'layers' values must be non-empty strings", info);
                     }
-
-                    query_data->layers.emplace_back(layer_utf8_value, layer_str_len);
+                    query_data->layers.emplace_back(layer_name);
                 }
             }
         }
@@ -799,13 +795,10 @@ Napi::Value vtquery(Napi::CallbackInfo const& info) {
                 return utils::CallbackError("'geometry' option must be a string", info);
             }
 
-            std::string geometry_utf8_value = geometry_val.As<Napi::String>();
-            std::size_t geometry_str_len = geometry_utf8_value.length();
-            if (geometry_str_len <= 0) {
+            std::string geometry = geometry_val.As<Napi::String>();
+            if (geometry.empty()) {
                 return utils::CallbackError("'geometry' value must be a non-empty string", info);
             }
-
-            std::string geometry(geometry_utf8_value, geometry_str_len);
             if (geometry == "point") {
                 query_data->geometry_filter_type = GeomType::point;
             } else if (geometry == "linestring") {
@@ -819,7 +812,7 @@ Napi::Value vtquery(Napi::CallbackInfo const& info) {
 
         if (options.Has("basic-filters")) {
             Napi::Value basic_filter_val = options.Get("basic-filters");
-            if (basic_filter_val.IsArray()) {
+            if (basic_filter_val.IsArrayBuffer()) {
                 return utils::CallbackError("'basic-filters' must be of the form [type, [filters]]", info);
             }
 
@@ -832,9 +825,7 @@ Napi::Value vtquery(Napi::CallbackInfo const& info) {
                 if (!basic_filter_type.IsString()) {
                     return utils::CallbackError("'basic-filters' must be of the form [string, [filters]]", info);
                 }
-                std::string basic_filter_type_utf8_value = basic_filter_type.As<Napi::String>();
-                std::size_t basic_filter_type_str_len = basic_filter_type_utf8_value.length();
-                std::string basic_filter_type_str(basic_filter_type_utf8_value, basic_filter_type_str_len);
+                std::string basic_filter_type_str = basic_filter_type.As<Napi::String>();
                 if (basic_filter_type_str == "all") {
                     query_data->basic_filter.type = filter_all;
                 } else if (basic_filter_type_str == "any") {
@@ -868,28 +859,21 @@ Napi::Value vtquery(Napi::CallbackInfo const& info) {
                         return utils::CallbackError("parameter filter option must be a string", info);
                     }
 
-                    std::string filter_parameter_utf8_value = filter_parameter_val.As<Napi::String>();
-                    std::size_t filter_parameter_len = filter_parameter_utf8_value.length();
-                    if (filter_parameter_len <= 0) {
+                    std::string filter_parameter = filter_parameter_val.As<Napi::String>();
+                    if (filter_parameter.empty()) {
                         return utils::CallbackError("parameter filter value must be a non-empty string", info);
                     }
-
-                    std::string filter_parameter(filter_parameter_utf8_value, filter_parameter_len);
-                    filter.key.assign(filter_parameter);
+                    filter.key = filter_parameter;
 
                     Napi::Value filter_condition_val = filter_array.Get(1u);
                     if (!filter_condition_val.IsString()) {
                         return utils::CallbackError("condition filter option must be a string", info);
                     }
 
-                    std::string filter_condition_utf8_value = filter_condition_val.As<Napi::String>();
-                    std::size_t filter_condition_len = filter_condition_utf8_value.length();
-                    if (filter_condition_len <= 0) {
+                    std::string filter_condition = filter_condition_val.As<Napi::String>();
+                    if (filter_condition.empty()) {
                         return utils::CallbackError("condition filter value must be a non-empty string", info);
                     }
-
-                    std::string filter_condition(filter_condition_utf8_value, filter_condition_len);
-
                     if (filter_condition == "=") {
                         filter.type = eq;
                     } else if (filter_condition == "!=") {
@@ -911,7 +895,7 @@ Napi::Value vtquery(Napi::CallbackInfo const& info) {
                         double filter_value_double = filter_value_val.As<Napi::Number>().DoubleValue();
                         filter.value = filter_value_double;
                     } else if (filter_value_val.IsBoolean()) {
-                        filter.value = filter_value_val.As<Napi::Boolean>().Value();
+                        filter.value = filter_value_val.As<Napi::Boolean>();
                     } else {
                         return utils::CallbackError("value filter value must be a number or boolean", info);
                     }
