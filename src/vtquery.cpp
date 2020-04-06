@@ -594,6 +594,13 @@ struct Worker : Napi::AsyncWorker {
 
 Napi::Value vtquery(Napi::CallbackInfo const& info) {
     // validate callback function
+     // validate callback function
+    std::size_t length = info.Length();
+    if (length == 0)
+    {
+        Napi::Error::New(info.Env(), "last argument must be a callback function").ThrowAsJavaScriptException();
+        return info.Env().Null();
+    }
     Napi::Value callback_val = info[info.Length() - 1];
     if (!callback_val.IsFunction()) {
         Napi::Error::New(info.Env(), "last argument must be a callback function").ThrowAsJavaScriptException();
