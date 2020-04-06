@@ -679,8 +679,7 @@ Napi::Value vtquery(Napi::CallbackInfo const& info) {
             return utils::CallbackError("'y' value must not be less than zero", info);
         }
         // in-place construction
-        std::unique_ptr<TileObject> tile{new TileObject{z, x, y, buffer}};
-        query_data->tiles.push_back(std::move(tile));
+        query_data->tiles.push_back(std::make_unique<TileObject>(z, x, y, buffer));
     }
 
     // validate lng/lat array
