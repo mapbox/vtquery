@@ -63,8 +63,7 @@ struct TileObject {
           x{x0},
           y{y0},
           data{buffer.Data(), buffer.Length()},
-          buffer_ref{Napi::Persistent(buffer)}
-    {
+          buffer_ref{Napi::Persistent(buffer)} {
     }
 
     ~TileObject() {
@@ -378,7 +377,7 @@ struct Worker : Napi::AsyncWorker {
     std::vector<ResultObject> results_queue_;
 
     Worker(std::unique_ptr<QueryData> query_data,
-           Napi::Function & cb)
+           Napi::Function& cb)
         : Base(cb),
           query_data_(std::move(query_data)) {}
 
