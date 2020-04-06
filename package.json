@@ -18,6 +18,7 @@
   "dependencies": {
     "@mapbox/mason-js": "^0.1.5",
     "nan": "^2.14.0",
+    "node-addon-api": "nodejs/node-addon-api",
     "node-pre-gyp": "^0.13.0"
   },
   "devDependencies": {
