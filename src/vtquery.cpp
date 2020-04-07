@@ -69,7 +69,8 @@ struct TileObject {
     ~TileObject() {
         try {
             buffer_ref.Reset();
-        } catch (...) {}
+        } catch (...) {
+        }
     }
 
     // guarantee that objects are not being copied or moved
@@ -172,10 +173,10 @@ struct property_value_visitor {
         properties_obj.Set(key, Napi::Boolean::New(env, v));
     }
     void operator()(uint64_t v) {
-        properties_obj.Set(key, Napi::Number::New(env, v));
+        properties_obj.Set(key, Napi::Number::New(env, static_cast<double>(v)));
     }
     void operator()(int64_t v) {
-        properties_obj.Set(key, Napi::Number::New(env, v));
+        properties_obj.Set(key, Napi::Number::New(env, static_cast<double>(v)));
     }
     void operator()(double v) {
         properties_obj.Set(key, Napi::Number::New(env, v));
