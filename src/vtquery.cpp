@@ -571,11 +571,7 @@ struct Worker : Napi::AsyncWorker {
             // unable to create test to throw exception here, the try/catch is simply
             // for unexpected cases https://github.com/mapbox/vtquery/issues/69
             // LCOV_EXCL_START
-            //auto const argc = 1u;
-            //Napi::Value argv[argc] = {Napi::Error::New(Env(), e.what())};
-            //callback->Call(argc, static_cast<Napi::Value*>(argv), async_resource);
-
-            Callback().Call({Env().Null(), Env().Null()}); // <------------ FIXME (set Error)
+            Callback().Call({Napi::String::New(Env(), e.what()), Env().Null()});
             // LCOV_EXCL_STOP
         }
     }
@@ -618,10 +614,10 @@ Napi::Value vtquery(Napi::CallbackInfo const& info) {
 
         Napi::Object tile_obj = tile_val.As<Napi::Object>();
         // check buffer value
-        if (!tile_obj.Has(Napi::String::New(info.Env(), "buffer"))) {
+        if (!tile_obj.Has("buffer")) {
             return utils::CallbackError("item in 'tiles' array does not include a buffer value", info);
         }
-        Napi::Value buf_val = tile_obj.Get(Napi::String::New(info.Env(), "buffer"));
+        Napi::Value buf_val = tile_obj.Get("buffer");
         if (buf_val.IsNull() || buf_val.IsUndefined()) {
             return utils::CallbackError("buffer value in 'tiles' array item is null or undefined", info);
         }
