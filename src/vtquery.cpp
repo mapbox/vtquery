@@ -5,7 +5,6 @@
 #include <exception>
 #include <gzip/decompress.hpp>
 #include <gzip/utils.hpp>
-#include <iostream>
 #include <map>
 #include <mapbox/geometry/algorithms/closest_point.hpp>
 #include <mapbox/geometry/algorithms/closest_point_impl.hpp>
