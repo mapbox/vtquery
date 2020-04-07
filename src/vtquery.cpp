@@ -67,7 +67,9 @@ struct TileObject {
     }
 
     ~TileObject() {
-        buffer_ref.Reset();
+        try {
+            buffer_ref.Reset();
+        } catch (...) {}
     }
 
     // guarantee that objects are not being copied or moved
