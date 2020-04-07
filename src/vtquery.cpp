@@ -379,7 +379,9 @@ struct Worker : Napi::AsyncWorker {
     Worker(std::unique_ptr<QueryData> query_data,
            Napi::Function& cb)
         : Base(cb),
-          query_data_(std::move(query_data)) {}
+          query_data_(std::move(query_data)),
+          // reserve the query results and fill with empty objects
+          results_queue_{query_data_->num_results} {}
 
     void Execute() override {
         try {
@@ -387,13 +389,6 @@ struct Worker : Napi::AsyncWorker {
 
             std::vector<basic_filter_struct> filters = data.basic_filter.filters;
             bool filter_enabled = !filters.empty();
-
-            // reserve the query results and fill with empty objects
-            results_queue_.reserve(data.num_results);
-            for (std::size_t i = 0; i < data.num_results; ++i) {
-                results_queue_.emplace_back();
-            }
-
             // query point lng/lat geometry.hpp point (used for distance calculation later on)
             mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
 
