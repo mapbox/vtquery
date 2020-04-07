@@ -526,7 +526,7 @@ struct Worker : Napi::AsyncWorker {
         try {
             Napi::Object results_object = Napi::Object::New(Env());
             Napi::Array features_array = Napi::Array::New(Env());
-            (results_object).Set(Napi::String::New(Env(), "type"), Napi::String::New(Env(), "FeatureCollection"));
+            results_object.Set("type", "FeatureCollection");
 
             // for each result object
             while (!results_queue_.empty()) {
@@ -534,17 +534,17 @@ struct Worker : Napi::AsyncWorker {
                 if (feature.distance < std::numeric_limits<double>::max()) {
                     // if this is a default value, don't use it
                     Napi::Object feature_obj = Napi::Object::New(Env());
-                    (feature_obj).Set(Napi::String::New(Env(), "type"), Napi::String::New(Env(), "Feature"));
-                    (feature_obj).Set(Napi::String::New(Env(), "id"), Napi::Number::New(Env(), feature.id));
+                    feature_obj.Set("type", "Feature");
+                    feature_obj.Set("id", feature.id);
 
                     // create geometry object
                     Napi::Object geometry_obj = Napi::Object::New(Env());
-                    (geometry_obj).Set(Napi::String::New(Env(), "type"), Napi::String::New(Env(), "Point"));
+                    geometry_obj.Set("type", "Point");
                     Napi::Array coordinates_array = Napi::Array::New(Env(), 2);
-                    (coordinates_array).Set(0u, Napi::Number::New(Env(), feature.coordinates.x)); // latitude
-                    (coordinates_array).Set(1u, Napi::Number::New(Env(), feature.coordinates.y)); // longitude
-                    (geometry_obj).Set(Napi::String::New(Env(), "coordinates"), coordinates_array);
-                    (feature_obj).Set(Napi::String::New(Env(), "geometry"), geometry_obj);
+                    coordinates_array.Set(0u, feature.coordinates.x); // latitude
+                    coordinates_array.Set(1u, feature.coordinates.y); // longitude
+                    geometry_obj.Set("coordinates", coordinates_array);
+                    feature_obj.Set("geometry", geometry_obj);
 
                     // create properties object
                     Napi::Object properties_obj = Napi::Object::New(Env());
@@ -554,29 +554,23 @@ struct Worker : Napi::AsyncWorker {
 
                     // set properties.tilquery
                     Napi::Object tilequery_properties_obj = Napi::Object::New(Env());
-                    (tilequery_properties_obj).Set(Napi::String::New(Env(), "distance"), Napi::Number::New(Env(), feature.distance));
+                    tilequery_properties_obj.Set("distance", feature.distance);
                     std::string og_geom = getGeomTypeString(feature.original_geometry_type);
-                    (tilequery_properties_obj).Set(Napi::String::New(Env(), "geometry"), Napi::String::New(Env(), og_geom));
-                    (tilequery_properties_obj).Set(Napi::String::New(Env(), "layer"), Napi::String::New(Env(), feature.layer_name));
-                    (properties_obj).Set(Napi::String::New(Env(), "tilequery"), tilequery_properties_obj);
+                    tilequery_properties_obj.Set("geometry", og_geom);
+                    tilequery_properties_obj.Set("layer", feature.layer_name);
+                    properties_obj.Set("tilequery", tilequery_properties_obj);
 
                     // add properties to feature
-                    (feature_obj).Set(Napi::String::New(Env(), "properties"), properties_obj);
+                    feature_obj.Set("properties", properties_obj);
 
                     // add feature to features array
-                    (features_array).Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
+                    features_array.Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
                 }
 
                 results_queue_.pop_back();
             }
             results_object.Set("features", features_array);
             Callback().Call({Env().Null(), results_object});
-
-            //(results_object).Set(Napi::String::New(Env(), "features"), features_array);
-            //auto const argc = 2u;
-            //Napi::Value argv[argc] = {
-            //    Env().Null(), results_object};
-            //callback->Call(argc, static_cast<Napi::Value*>(argv), async_resource);
 
         } catch (const std::exception& e) {
             // unable to create test to throw exception here, the try/catch is simply
