@@ -6,7 +6,6 @@
 #include <mapbox/geometry/geometry.hpp>
 #include <mapbox/variant.hpp>
 #include <napi.h>
-//#include <uv.h>
 #include <vtzero/types.hpp>
 #include <vtzero/vector_tile.hpp>
 
@@ -91,7 +90,6 @@ mapbox::geometry::point<double> convert_vt_to_ll(std::uint32_t extent,
 double distance_in_meters(mapbox::geometry::point<double> const& origin_lnglat, mapbox::geometry::point<double> const& feature_lnglat) {
     // set up cheap ruler with query latitude
     mapbox::cheap_ruler::CheapRuler ruler(origin_lnglat.y, mapbox::cheap_ruler::CheapRuler::Meters);
-    auto d = ruler.distance(origin_lnglat, feature_lnglat);
-    return d;
+    return ruler.distance(origin_lnglat, feature_lnglat);
 }
 } // namespace utils
