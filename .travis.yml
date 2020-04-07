@@ -39,14 +39,18 @@ matrix:
     - os: linux
       env: BUILDTYPE=release TOOLSET=cfi CXXFLAGS="-fsanitize=cfi -fvisibility=hidden" LDFLAGS="-fsanitize=cfi"
       node_js: 10
-    # linux publishable node v12/release
-    - os: linux
-      env: BUILDTYPE=release
-      node_js: 12
     # linux publishable node v10/release
     - os: linux
       env: BUILDTYPE=release
       node_js: 10
+    # linux publishable node v12/release
+    - os: linux
+      env: BUILDTYPE=release
+      node_js: 12
+    # linux publishable node v13/release
+    - os: linux
+      env: BUILDTYPE=release
+      node_js: 13
     # linux publishable node v10/debug
     - os: linux
       env: BUILDTYPE=debug
