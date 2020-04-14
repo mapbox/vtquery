@@ -65,12 +65,7 @@ struct TileObject {
           buffer_ref{Napi::Persistent(buffer)} {
     }
 
-    ~TileObject() {
-        try {
-            buffer_ref.Reset();
-        } catch (...) {
-        }
-    }
+    ~TileObject() = default;
 
     // guarantee that objects are not being copied or moved
     // by deleting the copy and move definitions
