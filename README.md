@@ -121,7 +121,7 @@ GOTCHA 2: Any query point that exists _directly_ along an edge of a polygon will
 
 ## Deduplicating results
 
-When querying across multiple tiles (or even within a single tile) it's likely source geometries have been split by the tile boundaries into multiple, seemingly unique geometries. This can result in duplicate results in a response for edges of tile boundaries, rather than actual edges of source data. Vtquery assumes features are duplicates if the following all of the following are true:
+When querying across multiple tiles (or even within a single tile) it's likely source geometries have been split by the tile boundaries into multiple, seemingly unique geometries. This can result in duplicate results in a response for edges of tile boundaries, rather than actual edges of source data. Vtquery assumes features are duplicates if all of the following are true:
 
 -   The features are from the same layer
 -   The features are the same geometry type
