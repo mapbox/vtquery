@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/mapbox/vtquery.svg?branch=master)](https://travis-ci.com/mapbox/vtquery)
 [![codecov](https://codecov.io/gh/mapbox/vtquery/branch/master/graph/badge.svg)](https://codecov.io/gh/mapbox/vtquery)
-[![node-cpp-skel](https://mapbox.s3.amazonaws.com/cpp-assets/node-cpp-skel-badge_blue.svg)](https://github.com/mapbox/node-cpp-skel)
+[![node-cpp-skel](https://raw.githubusercontent.com/mapbox/cpp/master/assets/node-cpp-skel-badge_blue.svg)](https://github.com/mapbox/node-cpp-skel)
 
     npm install @mapbox/vtquery
 
