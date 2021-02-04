@@ -513,64 +513,53 @@ struct Worker : Napi::AsyncWorker {
         }
     }
 
-    void OnOK() override {
-        Napi::HandleScope scope(Env());
-        try {
-            Napi::Object results_object = Napi::Object::New(Env());
-            Napi::Array features_array = Napi::Array::New(Env());
-            results_object.Set("type", "FeatureCollection");
+    std::vector<napi_value> GetResult(Napi::Env env) override {
+        Napi::Object results_object = Napi::Object::New(Env());
+        Napi::Array features_array = Napi::Array::New(Env());
+        results_object.Set("type", "FeatureCollection");
+        // for each result object
+        while (!results_queue_.empty()) {
+            auto const& feature = results_queue_.back(); // get reference to top item in results queue
+            if (feature.distance < std::numeric_limits<double>::max()) {
+                // if this is a default value, don't use it
+                Napi::Object feature_obj = Napi::Object::New(Env());
+                feature_obj.Set("type", "Feature");
+                feature_obj.Set("id", feature.id);
 
-            // for each result object
-            while (!results_queue_.empty()) {
-                auto const& feature = results_queue_.back(); // get reference to top item in results queue
-                if (feature.distance < std::numeric_limits<double>::max()) {
-                    // if this is a default value, don't use it
-                    Napi::Object feature_obj = Napi::Object::New(Env());
-                    feature_obj.Set("type", "Feature");
-                    feature_obj.Set("id", feature.id);
+                // create geometry object
+                Napi::Object geometry_obj = Napi::Object::New(Env());
+                geometry_obj.Set("type", "Point");
+                Napi::Array coordinates_array = Napi::Array::New(Env(), 2);
+                coordinates_array.Set(0u, feature.coordinates.x); // latitude
+                coordinates_array.Set(1u, feature.coordinates.y); // longitude
+                geometry_obj.Set("coordinates", coordinates_array);
+                feature_obj.Set("geometry", geometry_obj);
 
-                    // create geometry object
-                    Napi::Object geometry_obj = Napi::Object::New(Env());
-                    geometry_obj.Set("type", "Point");
-                    Napi::Array coordinates_array = Napi::Array::New(Env(), 2);
-                    coordinates_array.Set(0u, feature.coordinates.x); // latitude
-                    coordinates_array.Set(1u, feature.coordinates.y); // longitude
-                    geometry_obj.Set("coordinates", coordinates_array);
-                    feature_obj.Set("geometry", geometry_obj);
-
-                    // create properties object
-                    Napi::Object properties_obj = Napi::Object::New(Env());
-                    for (auto const& prop : feature.properties_vector_materialized) {
-                        set_property(prop, properties_obj, Env());
-                    }
-
-                    // set properties.tilquery
-                    Napi::Object tilequery_properties_obj = Napi::Object::New(Env());
-                    tilequery_properties_obj.Set("distance", feature.distance);
-                    std::string og_geom = getGeomTypeString(feature.original_geometry_type);
-                    tilequery_properties_obj.Set("geometry", og_geom);
-                    tilequery_properties_obj.Set("layer", feature.layer_name);
-                    properties_obj.Set("tilequery", tilequery_properties_obj);
-
-                    // add properties to feature
-                    feature_obj.Set("properties", properties_obj);
-
-                    // add feature to features array
-                    features_array.Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
+                // create properties object
+                Napi::Object properties_obj = Napi::Object::New(Env());
+                for (auto const& prop : feature.properties_vector_materialized) {
+                    set_property(prop, properties_obj, Env());
                 }
 
-                results_queue_.pop_back();
-            }
-            results_object.Set("features", features_array);
-            Callback().Call({Env().Null(), results_object});
+                // set properties.tilquery
+                Napi::Object tilequery_properties_obj = Napi::Object::New(Env());
+                tilequery_properties_obj.Set("distance", feature.distance);
+                std::string og_geom = getGeomTypeString(feature.original_geometry_type);
+                tilequery_properties_obj.Set("geometry", og_geom);
+                tilequery_properties_obj.Set("layer", feature.layer_name);
+                properties_obj.Set("tilequery", tilequery_properties_obj);
 
-        } catch (const std::exception& e) {
-            // unable to create test to throw exception here, the try/catch is simply
-            // for unexpected cases https://github.com/mapbox/vtquery/issues/69
-            // LCOV_EXCL_START
-            Callback().Call({Napi::String::New(Env(), e.what()), Env().Null()});
-            // LCOV_EXCL_STOP
+                // add properties to feature
+                feature_obj.Set("properties", properties_obj);
+
+                // add feature to features array
+                features_array.Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
+            }
+
+            results_queue_.pop_back();
         }
+        results_object.Set("features", features_array);
+        return {env.Undefined(), napi_value(results_object)};
     }
 };
 
