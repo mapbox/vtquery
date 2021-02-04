@@ -65,7 +65,7 @@ matrix:
       osx_image: xcode11
       env: BUILDTYPE=release
       node_js: 12
-    # linux sanitizer build node v6/debug
+    # linux sanitizer build node v10/debug
     - os: linux
       env: BUILDTYPE=debug TOOLSET=asan
       node_js: 10
@@ -75,18 +75,7 @@ matrix:
         - make sanitize
       # Overrides `before_script` (tests are already run in `make sanitize`)
       before_script:
-    # osx sanitizer build node v6/debug
-    - os: osx
-      env: BUILDTYPE=debug TOOLSET=asan
-      node_js: 10
-      sudo: required
-      # Overrides `install` to set up custom asan flags
-      install:
-        - make sanitize
-      # Overrides `before_script` (tests are already run in `make sanitize`)
-      before_script:
         - true
-
     ## ** Builds that do not get published **
 
     # g++ build (default builds all use clang++)
