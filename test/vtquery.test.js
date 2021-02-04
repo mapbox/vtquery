@@ -101,7 +101,7 @@ test('failure: buffer value is not a buffer', assert => {
 test('failure: buffer object missing z value', assert => {
   const buffs = [
     {
-      buffer: new Buffer('hey'),
+      buffer: Buffer.from('hey'),
       // z: 0,
       x: 0,
       y: 0
@@ -117,7 +117,7 @@ test('failure: buffer object missing z value', assert => {
 test('failure: buffer object missing x value', assert => {
   const buffs = [
     {
-      buffer: new Buffer('hey'),
+      buffer: Buffer.from('hey'),
       z: 0,
       // x: 0,
       y: 0
@@ -133,7 +133,7 @@ test('failure: buffer object missing x value', assert => {
 test('failure: buffer object missing y value', assert => {
   const buffs = [
     {
-      buffer: new Buffer('hey'),
+      buffer: Buffer.from('hey'),
       z: 0,
       x: 0,
       // y: 0
@@ -149,7 +149,7 @@ test('failure: buffer object missing y value', assert => {
 test('failure: buffer object z value is not a number', assert => {
   const buffs = [
     {
-      buffer: new Buffer('hey'),
+      buffer: Buffer.from('hey'),
       z: 'zero',
       x: 0,
       y: 0
@@ -165,7 +165,7 @@ test('failure: buffer object z value is not a number', assert => {
 test('failure: buffer object x value is not a number', assert => {
   const buffs = [
     {
-      buffer: new Buffer('hey'),
+      buffer: Buffer.from('hey'),
       z: 0,
       x: 'zero',
       y: 0
@@ -181,7 +181,7 @@ test('failure: buffer object x value is not a number', assert => {
 test('failure: buffer object y value is not a number', assert => {
   const buffs = [
     {
-      buffer: new Buffer('hey'),
+      buffer: Buffer.from('hey'),
       z: 0,
       x: 0,
       y: 'zero'
@@ -197,7 +197,7 @@ test('failure: buffer object y value is not a number', assert => {
 test('failure: buffer object z value is negative', assert => {
   const buffs = [
     {
-      buffer: new Buffer('hey'),
+      buffer: Buffer.from('hey'),
       z: -10,
       x: 0,
       y: 0
@@ -213,7 +213,7 @@ test('failure: buffer object z value is negative', assert => {
 test('failure: buffer object x value is negative', assert => {
   const buffs = [
     {
-      buffer: new Buffer('hey'),
+      buffer: Buffer.from('hey'),
       z: 0,
       x: -5,
       y: 0
@@ -229,7 +229,7 @@ test('failure: buffer object x value is negative', assert => {
 test('failure: buffer object y value is negative', assert => {
   const buffs = [
     {
-      buffer: new Buffer('hey'),
+      buffer: Buffer.from('hey'),
       z: 0,
       x: 0,
       y: -4
@@ -243,7 +243,7 @@ test('failure: buffer object y value is negative', assert => {
 });
 
 test('failure: lnglat is not an array', assert => {
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], '[47.6117, -122.3444]', {}, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], '[47.6117, -122.3444]', {}, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, 'second arg \'lnglat\' must be an array with [longitude, latitude] values');
     assert.end();
@@ -251,7 +251,7 @@ test('failure: lnglat is not an array', assert => {
 });
 
 test('failure: lnglat array is of length != 2', assert => {
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3, 'hi'], {}, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3, 'hi'], {}, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'lnglat\' must be an array of [longitude, latitude]');
     assert.end();
@@ -259,7 +259,7 @@ test('failure: lnglat array is of length != 2', assert => {
 });
 
 test('failure: longitude is not a number', assert => {
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], ['47.6', -122.3], {}, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], ['47.6', -122.3], {}, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, 'lnglat values must be numbers');
     assert.end();
@@ -267,7 +267,7 @@ test('failure: longitude is not a number', assert => {
 });
 
 test('failure: latitude is not a number', assert => {
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, '-122.3'], {}, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, '-122.3'], {}, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, 'lnglat values must be numbers');
     assert.end();
@@ -275,7 +275,7 @@ test('failure: latitude is not a number', assert => {
 });
 
 test('failure: options is not an object', assert => {
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], 'hi i am options', function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], 'hi i am options', function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'options\' arg must be an object');
     assert.end();
@@ -286,7 +286,7 @@ test('failure: options.dedupe is not a boolean', assert => {
   const opts = {
     dedupe: 'yes please'
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'dedupe\' must be a boolean');
     assert.end();
@@ -297,7 +297,7 @@ test('failure: options.radius is not a number', assert => {
   const opts = {
     radius: '4'
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'radius\' must be a number');
     assert.end();
@@ -308,7 +308,7 @@ test('failure: options.radius is negative', assert => {
   const opts = {
     radius: -3
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'radius\' must be a positive number');
     assert.end();
@@ -319,7 +319,7 @@ test('failure: options.results is not a number', assert => {
   const opts = {
     limit: 'hi'
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'limit\' must be a number');
     assert.end();
@@ -330,7 +330,7 @@ test('failure: options.limit is negative', assert => {
   const opts = {
     limit: -10
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'limit\' must be 1 or greater');
     assert.end();
@@ -341,7 +341,7 @@ test('failure: options.limit is 0', assert => {
   const opts = {
     limit: 0
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'limit\' must be 1 or greater');
     assert.end();
@@ -352,7 +352,7 @@ test('failure: options.limit is greater than 1000', assert => {
   const opts = {
     limit: 2000
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'limit\' must be less than 1000');
     assert.end();
@@ -363,7 +363,7 @@ test('failure: options.layers is not an array', assert => {
   const opts = {
     layers: 'not array'
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'layers\' must be an array of strings');
     assert.end();
@@ -374,7 +374,7 @@ test('failure: options.layers includes non string values', assert => {
   const opts = {
     layers: [8, 4]
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'layers\' values must be strings');
     assert.end();
@@ -385,7 +385,7 @@ test('failure: options.layers includes empty strings', assert => {
   const opts = {
     layers: ['hello', '']
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'layers\' values must be non-empty strings');
     assert.end();
@@ -396,7 +396,7 @@ test('failure: options.geometry is not a string', assert => {
   const opts = {
     geometry: 1234
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'geometry\' option must be a string');
     assert.end();
@@ -407,7 +407,7 @@ test('failure: options.geometry does not equal an accepted value', assert => {
   const opts = {
     geometry: 'hexagon'
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'geometry\' must be \'point\', \'linestring\', or \'polygon\'');
     assert.end();
@@ -418,7 +418,7 @@ test('failure: options.geometry must not be empty', assert => {
   const opts = {
     geometry: ''
   };
-  vtquery([{buffer: new Buffer('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
+  vtquery([{buffer: Buffer.from('hey'), z: 0, x: 0, y: 0}], [47.6, -122.3], opts, function(err, result) {
     assert.ok(err);
     assert.equal(err.message, '\'geometry\' value must be a non-empty string');
     assert.end();
