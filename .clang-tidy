@@ -1,7 +1,7 @@
 ---
-Checks:          '*,-cert-err58-cpp,-fuchsia*,-google-runtime-references'
-WarningsAsErrors: '*'
-HeaderFilterRegex: '\/include\/'
+Checks:          '*,-fuchsia*,-misc-non-private-member-variables-in-classes,-google-runtime-references,-llvm-header-guard,-google-readability-todo,-cppcoreguidelines-pro-type-reinterpret-cast,-cppcoreguidelines-owning-memory,-modernize-use-trailing-return-type,-readability-magic-numbers,-cppcoreguidelines-avoid-magic-numbers'
+WarningsAsErrors: '*,-modernize-avoid-c-arrays,-hicpp-avoid-c-arrays,-cppcoreguidelines-avoid-c-arrays'
+HeaderFilterRegex: '\/src\/'
 AnalyzeTemporaryDtors: false
 CheckOptions:    
   - key:             google-readability-braces-around-statements.ShortStatementLines
