@@ -2,6 +2,7 @@
 #include "util.hpp"
 
 #include <algorithm>
+#include <array>
 #include <exception>
 #include <gzip/decompress.hpp>
 #include <gzip/utils.hpp>
@@ -24,9 +25,9 @@ enum GeomType { point,
                 polygon,
                 all,
                 unknown };
-static const char* GeomTypeStrings[] = {"point", "linestring", "polygon", "unknown"};
-const char* getGeomTypeString(int enumVal) {
-    return GeomTypeStrings[enumVal]; // NOLINT to temporarily disable cppcoreguidelines-pro-bounds-constant-array-index, but this really should be fixed
+static std::array<std::string, 4> const  GeomTypeStrings = {"point", "linestring", "polygon", "unknown"};
+char const* getGeomTypeString(std::size_t index) {
+    return GeomTypeStrings[index].c_str();
 }
 
 using materialized_prop_type = std::pair<std::string, mapbox::feature::value>;
