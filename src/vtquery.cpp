@@ -1,22 +1,17 @@
 #include "vtquery.hpp"
 #include "util.hpp"
-
+#include "vector_tile_util.hpp"
 #include <algorithm>
 #include <array>
 #include <exception>
 #include <gzip/decompress.hpp>
 #include <gzip/utils.hpp>
-#include <map>
 #include <mapbox/geometry/algorithms/closest_point.hpp>
 #include <mapbox/geometry/algorithms/closest_point_impl.hpp>
-#include <mapbox/geometry/geometry.hpp>
-#include <mapbox/vector_tile.hpp>
 #include <memory>
 #include <queue>
 #include <stdexcept>
 #include <utility>
-#include <vtzero/types.hpp>
-#include <vtzero/vector_tile.hpp>
 
 namespace VectorTileQuery {
 
@@ -25,7 +20,7 @@ enum GeomType { point,
                 polygon,
                 all,
                 unknown };
-static std::array<std::string, 4> const  GeomTypeStrings = {"point", "linestring", "polygon", "unknown"};
+static std::array<std::string, 4> const GeomTypeStrings = {"point", "linestring", "polygon", "unknown"};
 char const* getGeomTypeString(std::size_t index) {
     return GeomTypeStrings[index].c_str();
 }
