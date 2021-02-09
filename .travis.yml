@@ -35,7 +35,7 @@ matrix:
 
     ## ** Builds that are published **
 
-    # linux cfi build node v6/release
+    # linux cfi build node v10/release
     - os: linux
       env: BUILDTYPE=release TOOLSET=cfi CXXFLAGS="-fsanitize=cfi -fvisibility=hidden" LDFLAGS="-fsanitize=cfi"
       node_js: 10
