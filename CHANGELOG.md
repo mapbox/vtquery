@@ -4,6 +4,7 @@
 - Binaries are now compiled with clang 10.x
 - Updated mason and node_modules
 - Remove 'vector-tile' dependency
+- Upgrade to `mapbox/node-pre-gyp@1.x`
 
 ## 0.5.0
 
