@@ -1,22 +1,17 @@
 #include "vtquery.hpp"
 #include "util.hpp"
-
+#include "vector_tile_util.hpp"
 #include <algorithm>
+#include <array>
 #include <exception>
 #include <gzip/decompress.hpp>
 #include <gzip/utils.hpp>
-#include <iostream>
-#include <map>
 #include <mapbox/geometry/algorithms/closest_point.hpp>
 #include <mapbox/geometry/algorithms/closest_point_impl.hpp>
-#include <mapbox/geometry/geometry.hpp>
-#include <mapbox/vector_tile.hpp>
 #include <memory>
 #include <queue>
 #include <stdexcept>
 #include <utility>
-#include <vtzero/types.hpp>
-#include <vtzero/vector_tile.hpp>
 
 namespace VectorTileQuery {
 
@@ -25,9 +20,9 @@ enum GeomType { point,
                 polygon,
                 all,
                 unknown };
-static const char* GeomTypeStrings[] = {"point", "linestring", "polygon", "unknown"};
-const char* getGeomTypeString(int enumVal) {
-    return GeomTypeStrings[enumVal]; // NOLINT to temporarily disable cppcoreguidelines-pro-bounds-constant-array-index, but this really should be fixed
+static std::array<std::string, 4> const GeomTypeStrings = {"point", "linestring", "polygon", "unknown"};
+char const* getGeomTypeString(std::size_t index) {
+    return GeomTypeStrings[index].c_str();
 }
 
 using materialized_prop_type = std::pair<std::string, mapbox::feature::value>;
@@ -58,22 +53,18 @@ struct TileObject {
     TileObject(std::int32_t z0,
                std::int32_t x0,
                std::int32_t y0,
-               v8::Local<v8::Object> buffer)
-        : z(z0),
-          x(x0),
-          y(y0),
-          data(node::Buffer::Data(buffer), node::Buffer::Length(buffer)) {
-        buffer_ref.Reset(buffer.As<v8::Object>());
+               Napi::Buffer<char> const& buffer)
+        : z{z0},
+          x{x0},
+          y{y0},
+          data{buffer.Data(), buffer.Length()},
+          buffer_ref{Napi::Persistent(buffer)} {
     }
 
-    // explicitly use the destructor to clean up
-    // the persistent buffer ref by Reset()-ing
-    ~TileObject() {
-        buffer_ref.Reset();
-    }
+    ~TileObject() = default;
 
-    // guarantee that objects are not being copied by deleting the
-    // copy and move definitions
+    // guarantee that objects are not being copied or moved
+    // by deleting the copy and move definitions
 
     // non-copyable
     TileObject(TileObject const&) = delete;
@@ -87,7 +78,7 @@ struct TileObject {
     std::int32_t x;
     std::int32_t y;
     vtzero::data_view data;
-    Nan::Persistent<v8::Object> buffer_ref;
+    Napi::Reference<Napi::Buffer<char>> buffer_ref;
 };
 
 using value_type = boost::variant<float, double, int64_t, uint64_t, bool, std::string>;
@@ -162,33 +153,33 @@ struct QueryData {
 
 /// convert properties to v8 types
 struct property_value_visitor {
-    v8::Local<v8::Object>& properties_obj;
+    Napi::Object& properties_obj;
     std::string const& key;
-
+    Napi::Env& env;
     template <typename T>
     void operator()(T /*unused*/) {}
 
     void operator()(bool v) {
-        Nan::Set(properties_obj, Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Boolean>(v));
+        properties_obj.Set(key, Napi::Boolean::New(env, v));
     }
     void operator()(uint64_t v) {
-        Nan::Set(properties_obj, Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
+        properties_obj.Set(key, Napi::Number::New(env, static_cast<double>(v)));
     }
     void operator()(int64_t v) {
-        Nan::Set(properties_obj, Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
+        properties_obj.Set(key, Napi::Number::New(env, static_cast<double>(v)));
     }
     void operator()(double v) {
-        Nan::Set(properties_obj, Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::Number>(v));
+        properties_obj.Set(key, Napi::Number::New(env, v));
     }
     void operator()(std::string const& v) {
-        Nan::Set(properties_obj, Nan::New<v8::String>(key).ToLocalChecked(), Nan::New<v8::String>(v).ToLocalChecked());
+        properties_obj.Set(key, Napi::String::New(env, v));
     }
 };
 
 /// used to create the final v8 (JSON) object to return to the user
 void set_property(materialized_prop_type const& property,
-                  v8::Local<v8::Object>& properties_obj) {
-    mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first}, property.second);
+                  Napi::Object& properties_obj, Napi::Env env) {
+    mapbox::util::apply_visitor(property_value_visitor{properties_obj, property.first, env}, property.second);
 }
 
 GeomType get_geometry_type(vtzero::feature const& f) {
@@ -370,18 +361,20 @@ bool value_is_duplicate(ResultObject const& r,
     return r.properties_vector == candidate_props_vec;
 }
 
-/// main worker used by NAN
-struct Worker : Nan::AsyncWorker {
-    using Base = Nan::AsyncWorker;
+/// main worker used by N-API
+struct Worker : Napi::AsyncWorker {
+    using Base = Napi::AsyncWorker;
 
     /// set up major containers
     std::unique_ptr<QueryData> query_data_;
     std::vector<ResultObject> results_queue_;
 
     Worker(std::unique_ptr<QueryData> query_data,
-           Nan::Callback* cb)
-        : Base(cb, "vtquery:worker"),
-          query_data_(std::move(query_data)) {}
+           Napi::Function& cb)
+        : Base(cb),
+          query_data_(std::move(query_data)),
+          // reserve the query results and fill with empty objects
+          results_queue_{query_data_->num_results} {}
 
     void Execute() override {
         try {
@@ -389,13 +382,6 @@ struct Worker : Nan::AsyncWorker {
 
             std::vector<basic_filter_struct> filters = data.basic_filter.filters;
             bool filter_enabled = !filters.empty();
-
-            // reserve the query results and fill with empty objects
-            results_queue_.reserve(data.num_results);
-            for (std::size_t i = 0; i < data.num_results; ++i) {
-                results_queue_.emplace_back();
-            }
-
             // query point lng/lat geometry.hpp point (used for distance calculation later on)
             mapbox::geometry::point<double> query_lnglat{data.longitude, data.latitude};
 
@@ -519,287 +505,271 @@ struct Worker : Nan::AsyncWorker {
                 }
             }
         } catch (std::exception const& e) {
-            SetErrorMessage(e.what());
+            SetError(e.what());
         }
     }
 
-    void HandleOKCallback() override {
-        Nan::HandleScope scope;
-        try {
-            v8::Local<v8::Object> results_object = Nan::New<v8::Object>();
-            v8::Local<v8::Array> features_array = Nan::New<v8::Array>();
-            Nan::Set(results_object, Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("FeatureCollection").ToLocalChecked());
+    std::vector<napi_value> GetResult(Napi::Env env) override {
+        Napi::Object results_object = Napi::Object::New(Env());
+        Napi::Array features_array = Napi::Array::New(Env());
+        results_object.Set("type", "FeatureCollection");
+        // for each result object
+        while (!results_queue_.empty()) {
+            auto const& feature = results_queue_.back(); // get reference to top item in results queue
+            if (feature.distance < std::numeric_limits<double>::max()) {
+                // if this is a default value, don't use it
+                Napi::Object feature_obj = Napi::Object::New(Env());
+                feature_obj.Set("type", "Feature");
+                feature_obj.Set("id", feature.id);
 
-            // for each result object
-            while (!results_queue_.empty()) {
-                auto const& feature = results_queue_.back(); // get reference to top item in results queue
-                if (feature.distance < std::numeric_limits<double>::max()) {
-                    // if this is a default value, don't use it
-                    v8::Local<v8::Object> feature_obj = Nan::New<v8::Object>();
-                    Nan::Set(feature_obj, Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Feature").ToLocalChecked());
-                    Nan::Set(feature_obj, Nan::New("id").ToLocalChecked(), Nan::New<v8::Number>(feature.id));
+                // create geometry object
+                Napi::Object geometry_obj = Napi::Object::New(Env());
+                geometry_obj.Set("type", "Point");
+                Napi::Array coordinates_array = Napi::Array::New(Env(), 2);
+                coordinates_array.Set(0u, feature.coordinates.x); // latitude
+                coordinates_array.Set(1u, feature.coordinates.y); // longitude
+                geometry_obj.Set("coordinates", coordinates_array);
+                feature_obj.Set("geometry", geometry_obj);
 
-                    // create geometry object
-                    v8::Local<v8::Object> geometry_obj = Nan::New<v8::Object>();
-                    Nan::Set(geometry_obj, Nan::New("type").ToLocalChecked(), Nan::New<v8::String>("Point").ToLocalChecked());
-                    v8::Local<v8::Array> coordinates_array = Nan::New<v8::Array>(2);
-                    Nan::Set(coordinates_array, 0, Nan::New<v8::Number>(feature.coordinates.x)); // latitude
-                    Nan::Set(coordinates_array, 1, Nan::New<v8::Number>(feature.coordinates.y)); // longitude
-                    Nan::Set(geometry_obj, Nan::New("coordinates").ToLocalChecked(), coordinates_array);
-                    Nan::Set(feature_obj, Nan::New("geometry").ToLocalChecked(), geometry_obj);
-
-                    // create properties object
-                    v8::Local<v8::Object> properties_obj = Nan::New<v8::Object>();
-                    for (auto const& prop : feature.properties_vector_materialized) {
-                        set_property(prop, properties_obj);
-                    }
-
-                    // set properties.tilquery
-                    v8::Local<v8::Object> tilequery_properties_obj = Nan::New<v8::Object>();
-                    Nan::Set(tilequery_properties_obj, Nan::New("distance").ToLocalChecked(), Nan::New<v8::Number>(feature.distance));
-                    std::string og_geom = getGeomTypeString(feature.original_geometry_type);
-                    Nan::Set(tilequery_properties_obj, Nan::New("geometry").ToLocalChecked(), Nan::New<v8::String>(og_geom).ToLocalChecked());
-                    Nan::Set(tilequery_properties_obj, Nan::New("layer").ToLocalChecked(), Nan::New<v8::String>(feature.layer_name).ToLocalChecked());
-                    Nan::Set(properties_obj, Nan::New("tilequery").ToLocalChecked(), tilequery_properties_obj);
-
-                    // add properties to feature
-                    Nan::Set(feature_obj, Nan::New("properties").ToLocalChecked(), properties_obj);
-
-                    // add feature to features array
-                    Nan::Set(features_array, static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
+                // create properties object
+                Napi::Object properties_obj = Napi::Object::New(Env());
+                for (auto const& prop : feature.properties_vector_materialized) {
+                    set_property(prop, properties_obj, Env());
                 }
 
-                results_queue_.pop_back();
+                // set properties.tilquery
+                Napi::Object tilequery_properties_obj = Napi::Object::New(Env());
+                tilequery_properties_obj.Set("distance", feature.distance);
+                std::string og_geom = getGeomTypeString(feature.original_geometry_type);
+                tilequery_properties_obj.Set("geometry", og_geom);
+                tilequery_properties_obj.Set("layer", feature.layer_name);
+                properties_obj.Set("tilequery", tilequery_properties_obj);
+
+                // add properties to feature
+                feature_obj.Set("properties", properties_obj);
+
+                // add feature to features array
+                features_array.Set(static_cast<uint32_t>(results_queue_.size() - 1), feature_obj);
             }
 
-            Nan::Set(results_object, Nan::New("features").ToLocalChecked(), features_array);
-
-            auto const argc = 2u;
-            v8::Local<v8::Value> argv[argc] = {
-                Nan::Null(), results_object};
-
-            callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv), async_resource);
-
-        } catch (const std::exception& e) {
-            // unable to create test to throw exception here, the try/catch is simply
-            // for unexpected cases https://github.com/mapbox/vtquery/issues/69
-            // LCOV_EXCL_START
-            auto const argc = 1u;
-            v8::Local<v8::Value> argv[argc] = {Nan::Error(e.what())};
-            callback->Call(argc, static_cast<v8::Local<v8::Value>*>(argv), async_resource);
-            // LCOV_EXCL_STOP
+            results_queue_.pop_back();
         }
+        results_object.Set("features", features_array);
+        return {env.Undefined(), napi_value(results_object)};
     }
 };
 
-NAN_METHOD(vtquery) {
+Napi::Value vtquery(Napi::CallbackInfo const& info) {
     // validate callback function
-    v8::Local<v8::Value> callback_val = info[info.Length() - 1];
-    if (!callback_val->IsFunction()) {
-        Nan::ThrowError("last argument must be a callback function");
-        return;
+    // validate callback function
+    std::size_t length = info.Length();
+    if (length == 0) {
+        Napi::Error::New(info.Env(), "last argument must be a callback function").ThrowAsJavaScriptException();
+        return info.Env().Null();
     }
-    v8::Local<v8::Function> callback = callback_val.As<v8::Function>();
+    Napi::Value callback_val = info[info.Length() - 1];
+    if (!callback_val.IsFunction()) {
+        Napi::Error::New(info.Env(), "last argument must be a callback function").ThrowAsJavaScriptException();
+        return info.Env().Null();
+    }
+    Napi::Function callback = callback_val.As<Napi::Function>();
 
     // validate tiles
-    if (!info[0]->IsArray()) {
-        return utils::CallbackError("first arg 'tiles' must be an array of tile objects", callback);
+    if (!info[0].IsArray()) {
+        return utils::CallbackError("first arg 'tiles' must be an array of tile objects", info);
     }
 
-    v8::Local<v8::Array> tiles_arr_val = info[0].As<v8::Array>();
-    unsigned num_tiles = tiles_arr_val->Length();
+    Napi::Array tiles_arr_val = info[0].As<Napi::Array>();
+    unsigned num_tiles = tiles_arr_val.Length();
 
     if (num_tiles <= 0) {
-        return utils::CallbackError("'tiles' array must be of length greater than 0", callback);
+        return utils::CallbackError("'tiles' array must be of length greater than 0", info);
     }
 
     std::unique_ptr<QueryData> query_data = std::make_unique<QueryData>(num_tiles);
 
     for (unsigned t = 0; t < num_tiles; ++t) {
-        v8::Local<v8::Value> tile_val = Nan::Get(tiles_arr_val, t).ToLocalChecked();
-        if (!tile_val->IsObject()) {
-            return utils::CallbackError("items in 'tiles' array must be objects", callback);
+        Napi::Value tile_val = (tiles_arr_val).Get(t);
+        if (!tile_val.IsObject()) {
+            return utils::CallbackError("items in 'tiles' array must be objects", info);
         }
-        v8::Local<v8::Object> tile_obj = tile_val->ToObject(Nan::GetCurrentContext()).ToLocalChecked();
 
+        Napi::Object tile_obj = tile_val.As<Napi::Object>();
         // check buffer value
-        if (!Nan::Has(tile_obj, Nan::New("buffer").ToLocalChecked()).FromMaybe(false)) {
-            return utils::CallbackError("item in 'tiles' array does not include a buffer value", callback);
+        if (!tile_obj.Has("buffer")) {
+            return utils::CallbackError("item in 'tiles' array does not include a buffer value", info);
         }
-        v8::Local<v8::Value> buf_val = Nan::Get(tile_obj, Nan::New("buffer").ToLocalChecked()).ToLocalChecked();
-        if (buf_val->IsNull() || buf_val->IsUndefined()) {
-            return utils::CallbackError("buffer value in 'tiles' array item is null or undefined", callback);
+        Napi::Value buf_val = tile_obj.Get("buffer");
+        if (buf_val.IsNull() || buf_val.IsUndefined()) {
+            return utils::CallbackError("buffer value in 'tiles' array item is null or undefined", info);
         }
-        v8::Local<v8::Object> buffer = buf_val->ToObject(Nan::GetCurrentContext()).ToLocalChecked();
-        if (!node::Buffer::HasInstance(buffer)) {
-            return utils::CallbackError("buffer value in 'tiles' array item is not a true buffer", callback);
+
+        Napi::Object buffer_obj = buf_val.As<Napi::Object>();
+        if (!buffer_obj.IsBuffer()) {
+            return utils::CallbackError("buffer value in 'tiles' array item is not a true buffer", info);
         }
+        Napi::Buffer<char> buffer = buffer_obj.As<Napi::Buffer<char>>();
 
         // z value
-        if (!Nan::Has(tile_obj, Nan::New("z").ToLocalChecked()).FromMaybe(false)) {
-            return utils::CallbackError("item in 'tiles' array does not include a 'z' value", callback);
+        if (!tile_obj.Has("z")) {
+            return utils::CallbackError("item in 'tiles' array does not include a 'z' value", info);
         }
-        v8::Local<v8::Value> z_val = Nan::Get(tile_obj, Nan::New("z").ToLocalChecked()).ToLocalChecked();
-        if (!z_val->IsInt32()) {
-            return utils::CallbackError("'z' value in 'tiles' array item is not an int32", callback);
+        Napi::Value z_val = tile_obj.Get("z");
+        if (!z_val.IsNumber()) {
+            return utils::CallbackError("'z' value in 'tiles' array item is not an int32", info);
         }
-        std::int32_t z = Nan::To<std::int32_t>(z_val).FromJust();
+
+        std::int32_t z = z_val.As<Napi::Number>().Int32Value();
         if (z < 0) {
-            return utils::CallbackError("'z' value must not be less than zero", callback);
+            return utils::CallbackError("'z' value must not be less than zero", info);
         }
 
         // x value
-        if (!Nan::Has(tile_obj, Nan::New("x").ToLocalChecked()).FromMaybe(false)) {
-            return utils::CallbackError("item in 'tiles' array does not include a 'x' value", callback);
+        if (!tile_obj.Has("x")) {
+            return utils::CallbackError("item in 'tiles' array does not include a 'x' value", info);
         }
-        v8::Local<v8::Value> x_val = Nan::Get(tile_obj, Nan::New("x").ToLocalChecked()).ToLocalChecked();
-        if (!x_val->IsInt32()) {
-            return utils::CallbackError("'x' value in 'tiles' array item is not an int32", callback);
+        Napi::Value x_val = tile_obj.Get("x");
+        if (!x_val.IsNumber()) {
+            return utils::CallbackError("'x' value in 'tiles' array item is not an int32", info);
         }
-        std::int32_t x = Nan::To<std::int32_t>(x_val).FromJust();
+
+        std::int32_t x = x_val.As<Napi::Number>().Int32Value();
         if (x < 0) {
-            return utils::CallbackError("'x' value must not be less than zero", callback);
+            return utils::CallbackError("'x' value must not be less than zero", info);
         }
 
         // y value
-        if (!Nan::Has(tile_obj, Nan::New("y").ToLocalChecked()).FromMaybe(false)) {
-            return utils::CallbackError("item in 'tiles' array does not include a 'y' value", callback);
+        if (!(tile_obj).Has("y")) {
+            return utils::CallbackError("item in 'tiles' array does not include a 'y' value", info);
         }
-        v8::Local<v8::Value> y_val = Nan::Get(tile_obj, Nan::New("y").ToLocalChecked()).ToLocalChecked();
-        if (!y_val->IsInt32()) {
-            return utils::CallbackError("'y' value in 'tiles' array item is not an int32", callback);
-        }
-        std::int32_t y = Nan::To<std::int32_t>(y_val).FromJust();
-        if (y < 0) {
-            return utils::CallbackError("'y' value must not be less than zero", callback);
+        Napi::Value y_val = tile_obj.Get("y");
+        if (!y_val.IsNumber()) {
+            return utils::CallbackError("'y' value in 'tiles' array item is not an int32", info);
         }
 
+        std::int32_t y = y_val.As<Napi::Number>().Int32Value();
+        if (y < 0) {
+            return utils::CallbackError("'y' value must not be less than zero", info);
+        }
         // in-place construction
-        std::unique_ptr<TileObject> tile{new TileObject{z, x, y, buffer}};
-        query_data->tiles.push_back(std::move(tile));
+        query_data->tiles.push_back(std::make_unique<TileObject>(z, x, y, buffer));
     }
 
     // validate lng/lat array
-    if (!info[1]->IsArray()) {
-        return utils::CallbackError("second arg 'lnglat' must be an array with [longitude, latitude] values", callback);
+    if (!info[1].IsArray()) {
+        return utils::CallbackError("second arg 'lnglat' must be an array with [longitude, latitude] values", info);
     }
 
-    // v8::Local<v8::Array> lnglat_val(info[1]);
-    v8::Local<v8::Array> lnglat_val = info[1].As<v8::Array>();
-    if (lnglat_val->Length() != 2) {
-        return utils::CallbackError("'lnglat' must be an array of [longitude, latitude]", callback);
+    // Napi::Array lnglat_val(info[1]);
+    Napi::Array lnglat_val = info[1].As<Napi::Array>();
+    if (lnglat_val.Length() != 2) {
+        return utils::CallbackError("'lnglat' must be an array of [longitude, latitude]", info);
     }
 
-    v8::Local<v8::Value> lng_val = Nan::Get(lnglat_val, 0).ToLocalChecked();
-    v8::Local<v8::Value> lat_val = Nan::Get(lnglat_val, 1).ToLocalChecked();
-    if (!lng_val->IsNumber() || !lat_val->IsNumber()) {
-        return utils::CallbackError("lnglat values must be numbers", callback);
+    Napi::Value lng_val = lnglat_val.Get(0u);
+    Napi::Value lat_val = lnglat_val.Get(1u);
+    if (!lng_val.IsNumber() || !lat_val.IsNumber()) {
+        return utils::CallbackError("lnglat values must be numbers", info);
     }
-    query_data->longitude = Nan::To<double>(lng_val).FromJust();
-    query_data->latitude = Nan::To<double>(lat_val).FromJust();
+    query_data->longitude = lng_val.As<Napi::Number>().DoubleValue();
+    query_data->latitude = lat_val.As<Napi::Number>().DoubleValue();
 
     // validate options object if it exists
     // defaults are set in the QueryData struct.
     if (info.Length() > 3) {
 
-        if (!info[2]->IsObject()) {
-            return utils::CallbackError("'options' arg must be an object", callback);
+        if (!info[2].IsObject()) {
+            return utils::CallbackError("'options' arg must be an object", info);
         }
 
-        v8::Local<v8::Object> options = info[2]->ToObject(Nan::GetCurrentContext()).ToLocalChecked();
+        Napi::Object options = info[2].As<Napi::Object>();
 
-        if (Nan::Has(options, Nan::New("dedupe").ToLocalChecked()).FromMaybe(false)) {
-            v8::Local<v8::Value> dedupe_val = Nan::Get(options, Nan::New("dedupe").ToLocalChecked()).ToLocalChecked();
-            if (!dedupe_val->IsBoolean()) {
-                return utils::CallbackError("'dedupe' must be a boolean", callback);
+        if (options.Has("dedupe")) {
+            Napi::Value dedupe_val = options.Get("dedupe");
+            if (!dedupe_val.IsBoolean()) {
+                return utils::CallbackError("'dedupe' must be a boolean", info);
             }
 
-            bool dedupe = Nan::To<bool>(dedupe_val).FromJust();
+            bool dedupe = dedupe_val.As<Napi::Boolean>().Value();
             query_data->dedupe = dedupe;
         }
 
-        if (Nan::Has(options, Nan::New("direct_hit_polygon").ToLocalChecked()).FromMaybe(false)) {
-            v8::Local<v8::Value> direct_hit_polygon_val = Nan::Get(options, Nan::New("direct_hit_polygon").ToLocalChecked()).ToLocalChecked();
-            if (!direct_hit_polygon_val->IsBoolean()) {
-                return utils::CallbackError("'direct_hit_polygon' must be a boolean", callback);
+        if (options.Has("direct_hit_polygon")) {
+            Napi::Value direct_hit_polygon_val = options.Get("direct_hit_polygon");
+            if (!direct_hit_polygon_val.IsBoolean()) {
+                return utils::CallbackError("'direct_hit_polygon' must be a boolean", info);
             }
 
-            bool direct_hit_polygon = Nan::To<bool>(direct_hit_polygon_val).FromJust();
+            bool direct_hit_polygon = direct_hit_polygon_val.As<Napi::Boolean>().Value();
             query_data->direct_hit_polygon = direct_hit_polygon;
         }
 
-        if (Nan::Has(options, Nan::New("radius").ToLocalChecked()).FromMaybe(false)) {
-            v8::Local<v8::Value> radius_val = Nan::Get(options, Nan::New("radius").ToLocalChecked()).ToLocalChecked();
-            if (!radius_val->IsNumber()) {
-                return utils::CallbackError("'radius' must be a number", callback);
+        if (options.Has("radius")) {
+            Napi::Value radius_val = options.Get("radius");
+            if (!radius_val.IsNumber()) {
+                return utils::CallbackError("'radius' must be a number", info);
             }
 
-            double radius = Nan::To<double>(radius_val).FromJust();
+            double radius = radius_val.ToNumber();
             if (radius < 0.0) {
-                return utils::CallbackError("'radius' must be a positive number", callback);
+                return utils::CallbackError("'radius' must be a positive number", info);
             }
 
             query_data->radius = radius;
         }
 
-        if (Nan::Has(options, Nan::New("limit").ToLocalChecked()).FromMaybe(false)) {
-            v8::Local<v8::Value> num_results_val = Nan::Get(options, Nan::New("limit").ToLocalChecked()).ToLocalChecked();
-            if (!num_results_val->IsNumber()) {
-                return utils::CallbackError("'limit' must be a number", callback);
+        if (options.Has("limit")) {
+            Napi::Value num_results_val = options.Get("limit");
+            if (!num_results_val.IsNumber()) {
+                return utils::CallbackError("'limit' must be a number", info);
             }
 
-            std::int32_t num_results = Nan::To<std::int32_t>(num_results_val).FromJust();
+            std::int32_t num_results = num_results_val.As<Napi::Number>().Int32Value();
             if (num_results < 1) {
-                return utils::CallbackError("'limit' must be 1 or greater", callback);
+                return utils::CallbackError("'limit' must be 1 or greater", info);
             }
             if (num_results > 1000) {
-                return utils::CallbackError("'limit' must be less than 1000", callback);
+                return utils::CallbackError("'limit' must be less than 1000", info);
             }
 
             query_data->num_results = static_cast<std::uint32_t>(num_results);
         }
 
-        if (Nan::Has(options, Nan::New("layers").ToLocalChecked()).FromMaybe(false)) {
-            v8::Local<v8::Value> layers_val = Nan::Get(options, Nan::New("layers").ToLocalChecked()).ToLocalChecked();
-            if (!layers_val->IsArray()) {
-                return utils::CallbackError("'layers' must be an array of strings", callback);
+        if (options.Has("layers")) {
+            Napi::Value layers_val = options.Get("layers");
+            if (!layers_val.IsArray()) {
+                return utils::CallbackError("'layers' must be an array of strings", info);
             }
 
-            v8::Local<v8::Array> layers_arr = layers_val.As<v8::Array>();
-            unsigned num_layers = layers_arr->Length();
+            Napi::Array layers_arr = layers_val.As<Napi::Array>();
+            unsigned num_layers = layers_arr.Length();
 
             // only gather layers if there are some in the array
             if (num_layers > 0) {
                 for (unsigned j = 0; j < num_layers; ++j) {
-                    v8::Local<v8::Value> layer_val = Nan::Get(layers_arr, j).ToLocalChecked();
-                    if (!layer_val->IsString()) {
-                        return utils::CallbackError("'layers' values must be strings", callback);
+                    Napi::Value layer_val = layers_arr.Get(j);
+                    if (!layer_val.IsString()) {
+                        return utils::CallbackError("'layers' values must be strings", info);
                     }
-
-                    Nan::Utf8String layer_utf8_value(layer_val);
-                    int layer_str_len = layer_utf8_value.length();
-                    if (layer_str_len <= 0) {
-                        return utils::CallbackError("'layers' values must be non-empty strings", callback);
+                    std::string layer_name = layer_val.As<Napi::String>();
+                    if (layer_name.empty()) {
+                        return utils::CallbackError("'layers' values must be non-empty strings", info);
                     }
-
-                    query_data->layers.emplace_back(*layer_utf8_value, static_cast<std::size_t>(layer_str_len));
+                    query_data->layers.emplace_back(layer_name);
                 }
             }
         }
 
-        if (Nan::Has(options, Nan::New("geometry").ToLocalChecked()).FromMaybe(false)) {
-            v8::Local<v8::Value> geometry_val = Nan::Get(options, Nan::New("geometry").ToLocalChecked()).ToLocalChecked();
-            if (!geometry_val->IsString()) {
-                return utils::CallbackError("'geometry' option must be a string", callback);
+        if (options.Has("geometry")) {
+            Napi::Value geometry_val = options.Get("geometry");
+            if (!geometry_val.IsString()) {
+                return utils::CallbackError("'geometry' option must be a string", info);
             }
 
-            Nan::Utf8String geometry_utf8_value(geometry_val);
-            std::int32_t geometry_str_len = geometry_utf8_value.length();
-            if (geometry_str_len <= 0) {
-                return utils::CallbackError("'geometry' value must be a non-empty string", callback);
+            std::string geometry = geometry_val.As<Napi::String>();
+            if (geometry.empty()) {
+                return utils::CallbackError("'geometry' value must be a non-empty string", info);
             }
-
-            std::string geometry(*geometry_utf8_value, static_cast<std::size_t>(geometry_str_len));
             if (geometry == "point") {
                 query_data->geometry_filter_type = GeomType::point;
             } else if (geometry == "linestring") {
@@ -807,83 +777,74 @@ NAN_METHOD(vtquery) {
             } else if (geometry == "polygon") {
                 query_data->geometry_filter_type = GeomType::polygon;
             } else {
-                return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", callback);
+                return utils::CallbackError("'geometry' must be 'point', 'linestring', or 'polygon'", info);
             }
         }
 
-        if (Nan::Has(options, Nan::New("basic-filters").ToLocalChecked()).FromMaybe(false)) {
-            v8::Local<v8::Value> basic_filter_val = Nan::Get(options, Nan::New("basic-filters").ToLocalChecked()).ToLocalChecked();
-            if (!basic_filter_val->IsArray()) {
-                return utils::CallbackError("'basic-filters' must be of the form [type, [filters]]", callback);
+        if (options.Has("basic-filters")) {
+            Napi::Value basic_filter_val = options.Get("basic-filters");
+            if (basic_filter_val.IsArrayBuffer()) {
+                return utils::CallbackError("'basic-filters' must be of the form [type, [filters]]", info);
             }
 
-            v8::Local<v8::Array> basic_filter_array = basic_filter_val.As<v8::Array>();
-            unsigned basic_filter_length = basic_filter_array->Length();
+            Napi::Array basic_filter_array = basic_filter_val.As<Napi::Array>();
+            unsigned basic_filter_length = basic_filter_array.Length();
 
             // gather filters from an array
             if (basic_filter_length == 2) {
-                v8::Local<v8::Value> basic_filter_type = Nan::Get(basic_filter_array, 0).ToLocalChecked();
-                if (!basic_filter_type->IsString()) {
-                    return utils::CallbackError("'basic-filters' must be of the form [string, [filters]]", callback);
+                Napi::Value basic_filter_type = (basic_filter_array).Get(0u);
+                if (!basic_filter_type.IsString()) {
+                    return utils::CallbackError("'basic-filters' must be of the form [string, [filters]]", info);
                 }
-                Nan::Utf8String basic_filter_type_utf8_value(basic_filter_type);
-                std::int32_t basic_filter_type_str_len = basic_filter_type_utf8_value.length();
-                std::string basic_filter_type_str(*basic_filter_type_utf8_value, static_cast<std::size_t>(basic_filter_type_str_len));
+                std::string basic_filter_type_str = basic_filter_type.As<Napi::String>();
                 if (basic_filter_type_str == "all") {
                     query_data->basic_filter.type = filter_all;
                 } else if (basic_filter_type_str == "any") {
                     query_data->basic_filter.type = filter_any;
                 } else {
-                    return utils::CallbackError("'basic-filters[0] must be 'any' or 'all'", callback);
+                    return utils::CallbackError("'basic-filters[0] must be 'any' or 'all'", info);
                 }
 
-                v8::Local<v8::Value> filters_array_val = Nan::Get(basic_filter_array, 1).ToLocalChecked();
-                if (!filters_array_val->IsArray()) {
-                    return utils::CallbackError("'basic-filters' must be of the form [type, [filters]]", callback);
+                Napi::Value filters_array_val = basic_filter_array.Get(1u);
+                if (!filters_array_val.IsArray()) {
+                    return utils::CallbackError("'basic-filters' must be of the form [type, [filters]]", info);
                 }
 
-                v8::Local<v8::Array> filters_array = filters_array_val.As<v8::Array>();
-                unsigned num_filters = filters_array->Length();
+                Napi::Array filters_array = filters_array_val.As<Napi::Array>();
+                unsigned num_filters = filters_array.Length();
                 for (unsigned j = 0; j < num_filters; ++j) {
                     basic_filter_struct filter;
-                    v8::Local<v8::Value> filter_val = Nan::Get(filters_array, j).ToLocalChecked();
-                    if (!filter_val->IsArray()) {
-                        return utils::CallbackError("filters must be of the form [parameter, condition, value]", callback);
+                    Napi::Value filter_val = filters_array.Get(j);
+                    if (!filter_val.IsArray()) {
+                        return utils::CallbackError("filters must be of the form [parameter, condition, value]", info);
                     }
-                    v8::Local<v8::Array> filter_array = filter_val.As<v8::Array>();
-                    unsigned filter_length = filter_array->Length();
+                    Napi::Array filter_array = filter_val.As<Napi::Array>();
+                    unsigned filter_length = filter_array.Length();
 
                     if (filter_length != 3) {
-                        return utils::CallbackError("filters must be of the form [parameter, condition, value]", callback);
+                        return utils::CallbackError("filters must be of the form [parameter, condition, value]", info);
                     }
 
-                    v8::Local<v8::Value> filter_parameter_val = Nan::Get(filter_array, 0).ToLocalChecked();
-                    if (!filter_parameter_val->IsString()) {
-                        return utils::CallbackError("parameter filter option must be a string", callback);
+                    Napi::Value filter_parameter_val = filter_array.Get(0u);
+                    if (!filter_parameter_val.IsString()) {
+                        return utils::CallbackError("parameter filter option must be a string", info);
                     }
 
-                    Nan::Utf8String filter_parameter_utf8_value(filter_parameter_val);
-                    std::int32_t filter_parameter_len = filter_parameter_utf8_value.length();
-                    if (filter_parameter_len <= 0) {
-                        return utils::CallbackError("parameter filter value must be a non-empty string", callback);
+                    std::string filter_parameter = filter_parameter_val.As<Napi::String>();
+                    if (filter_parameter.empty()) {
+                        return utils::CallbackError("parameter filter value must be a non-empty string", info);
+                    }
+                    filter.key = filter_parameter;
+
+                    Napi::Value filter_condition_val = filter_array.Get(1u);
+                    if (!filter_condition_val.IsString()) {
+                        return utils::CallbackError("condition filter option must be a string", info);
                     }
 
-                    std::string filter_parameter(*filter_parameter_utf8_value, static_cast<std::size_t>(filter_parameter_len));
-                    filter.key.assign(filter_parameter);
-
-                    v8::Local<v8::Value> filter_condition_val = Nan::Get(filter_array, 1).ToLocalChecked();
-                    if (!filter_condition_val->IsString()) {
-                        return utils::CallbackError("condition filter option must be a string", callback);
+                    std::string filter_condition = filter_condition_val.As<Napi::String>();
+                    if (filter_condition.empty()) {
+                        return utils::CallbackError("condition filter value must be a non-empty string", info);
                     }
-
-                    Nan::Utf8String filter_condition_utf8_value(filter_condition_val);
-                    std::int32_t filter_condition_len = filter_condition_utf8_value.length();
-                    if (filter_condition_len <= 0) {
-                        return utils::CallbackError("condition filter value must be a non-empty string", callback);
-                    }
-
-                    std::string filter_condition(*filter_condition_utf8_value, static_cast<std::size_t>(filter_condition_len));
-
                     if (filter_condition == "=") {
                         filter.type = eq;
                     } else if (filter_condition == "!=") {
@@ -897,28 +858,29 @@ NAN_METHOD(vtquery) {
                     } else if (filter_condition == ">=") {
                         filter.type = gte;
                     } else {
-                        return utils::CallbackError("condition filter value must be =, !=, <, <=, >, or >=", callback);
+                        return utils::CallbackError("condition filter value must be =, !=, <, <=, >, or >=", info);
                     }
 
-                    v8::Local<v8::Value> filter_value_val = Nan::Get(filter_array, 2).ToLocalChecked();
-                    if (filter_value_val->IsNumber()) {
-                        double filter_value_double = Nan::To<double>(filter_value_val).FromJust();
+                    Napi::Value filter_value_val = filter_array.Get(2u);
+                    if (filter_value_val.IsNumber()) {
+                        double filter_value_double = filter_value_val.As<Napi::Number>().DoubleValue();
                         filter.value = filter_value_double;
-                    } else if (filter_value_val->IsBoolean()) {
-                        filter.value = Nan::To<bool>(filter_value_val).FromJust();
+                    } else if (filter_value_val.IsBoolean()) {
+                        filter.value = filter_value_val.As<Napi::Boolean>();
                     } else {
-                        return utils::CallbackError("value filter value must be a number or boolean", callback);
+                        return utils::CallbackError("value filter value must be a number or boolean", info);
                     }
                     query_data->basic_filter.filters.push_back(filter);
                 }
             } else {
-                return utils::CallbackError("'basic-filters' must be of the form [type, [filters]]", callback);
+                return utils::CallbackError("'basic-filters' must be of the form [type, [filters]]", info);
             }
         }
     }
 
-    auto* worker = new Worker{std::move(query_data), new Nan::Callback{callback}};
-    Nan::AsyncQueueWorker(worker);
+    auto* worker = new Worker{std::move(query_data), callback};
+    worker->Queue();
+    return info.Env().Undefined();
 }
 
 } // namespace VectorTileQuery

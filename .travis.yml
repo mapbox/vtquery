@@ -1,12 +1,10 @@
 language: node_js
 
-sudo: false
-
 # enable c++11/14 builds
 addons:
   apt:
     sources: [ 'ubuntu-toolchain-r-test' ]
-    packages: [ 'libstdc++-4.9-dev' ]
+    packages: [ 'libstdc++-5-dev' ]
 
 install:
   - node -v
@@ -14,6 +12,8 @@ install:
   - clang++ -v
   - which clang++
   - make ${BUILDTYPE}
+  # Build should be standalone now, so remove mason deps
+  - rm -rf mason_packages
 
 # *Here we run tests*
 # We prefer running tests in the 'before_script' section rather than 'script' to ensure fast failure.
@@ -35,44 +35,38 @@ matrix:
 
     ## ** Builds that are published **
 
-    # linux cfi build node v6/release
+    # linux cfi build node v10/release
     - os: linux
       env: BUILDTYPE=release TOOLSET=cfi CXXFLAGS="-fsanitize=cfi -fvisibility=hidden" LDFLAGS="-fsanitize=cfi"
+      node_js: 10
+    # linux publishable node v10/release
+    - os: linux
+      env: BUILDTYPE=release
       node_js: 10
     # linux publishable node v12/release
     - os: linux
       env: BUILDTYPE=release
       node_js: 12
-    # linux publishable node v10/release
+    # linux publishable node v13/release
     - os: linux
       env: BUILDTYPE=release
-      node_js: 10
+      node_js: 13
     # linux publishable node v10/debug
     - os: linux
       env: BUILDTYPE=debug
       node_js: 10
     # osx publishable node v10/release
     - os: osx
-      osx_image: xcode9.3
+      osx_image: xcode11
       env: BUILDTYPE=release
       node_js: 10
     # osx publishable node v12/release
     - os: osx
-      osx_image: xcode9.3
+      osx_image: xcode11
       env: BUILDTYPE=release
       node_js: 12
-    # linux sanitizer build node v6/debug
+    # linux sanitizer build node v10/debug
     - os: linux
-      env: BUILDTYPE=debug TOOLSET=asan
-      node_js: 10
-      sudo: required
-      # Overrides `install` to set up custom asan flags
-      install:
-        - make sanitize
-      # Overrides `before_script` (tests are already run in `make sanitize`)
-      before_script:
-    # osx sanitizer build node v6/debug
-    - os: osx
       env: BUILDTYPE=debug TOOLSET=asan
       node_js: 10
       sudo: required
@@ -82,7 +76,6 @@ matrix:
       # Overrides `before_script` (tests are already run in `make sanitize`)
       before_script:
         - true
-
     ## ** Builds that do not get published **
 
     # g++ build (default builds all use clang++)
