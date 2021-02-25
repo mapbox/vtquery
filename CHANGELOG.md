@@ -1,3 +1,7 @@
+## 0.5.1
+
+* Add support for Node 14
+
 ## 0.5.0
 
 * Add `direct_hit_polygon` option to allow queries only allow polygons that contain the query point but still allow points and line segments that are within `radius` distance.
