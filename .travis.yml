@@ -8,6 +8,10 @@ addons:
     sources: [ 'ubuntu-toolchain-r-test' ]
     packages: [ 'libstdc++-4.9-dev' ]
 
+before_install:
+  - if ! [ -x "$(command -v aws)" ]; then curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" ; unzip awscliv2.zip ; sudo ./aws/install ; fi
+  - aws sts get-caller-identity
+
 install:
   - node -v
   - which node
