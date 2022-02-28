@@ -1,8 +1,8 @@
 # vtquery
 
-[![Build Status](https://travis-ci.org/mapbox/vtquery.svg?branch=master)](https://travis-ci.org/mapbox/vtquery)
+[![Build Status](https://travis-ci.com/mapbox/vtquery.svg?branch=master)](https://travis-ci.com/mapbox/vtquery)
 [![codecov](https://codecov.io/gh/mapbox/vtquery/branch/master/graph/badge.svg)](https://codecov.io/gh/mapbox/vtquery)
-[![node-cpp-skel](https://mapbox.s3.amazonaws.com/cpp-assets/node-cpp-skel-badge_blue.svg)](https://github.com/mapbox/node-cpp-skel)
+[![node-cpp-skel](https://raw.githubusercontent.com/mapbox/cpp/master/assets/node-cpp-skel-badge_blue.svg)](https://github.com/mapbox/node-cpp-skel)
 
     npm install @mapbox/vtquery
 
@@ -121,7 +121,7 @@ GOTCHA 2: Any query point that exists _directly_ along an edge of a polygon will
 
 ## Deduplicating results
 
-When querying across multiple tiles (or even within a single tile) it's likely source geometries have been split by the tile boundaries into multiple, seemingly unique geometries. This can result in duplicate results in a response for edges of tile boundaries, rather than actual edges of source data. Vtquery assumes features are duplicates if the following all of the following are true:
+When querying across multiple tiles (or even within a single tile) it's likely source geometries have been split by the tile boundaries into multiple, seemingly unique geometries. This can result in duplicate results in a response for edges of tile boundaries, rather than actual edges of source data. Vtquery assumes features are duplicates if all of the following are true:
 
 -   The features are from the same layer
 -   The features are the same geometry type

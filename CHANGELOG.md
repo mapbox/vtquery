@@ -1,10 +1,15 @@
 ## 0.6.0
 
-- N-API (`node-addon-api`)
-- Binaries are now compiled with clang 10.x
-- Updated mason and node_modules
-- Remove 'vector-tile' dependency
-- Upgrade to `mapbox/node-pre-gyp@1.x`
+* N-API (`node-addon-api`)
+* Binaries are now compiled with clang 10.x
+* Updated mason and node_modules
+* Remove 'vector-tile' dependency
+* Upgrade to `mapbox/node-pre-gyp@1.x`
+* Build binaries with node v16 -> works at runtime with node v8 -> v16 (and likely others)
+* Remove `-D_GLIBCXX_USE_CXX11_ABI=0` build flag
+## 0.5.1
+
+* Add support for Node 14
 
 ## 0.5.0
 
