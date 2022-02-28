@@ -16,16 +16,16 @@
   "author": "Mapbox",
   "license": "ISC",
   "dependencies": {
-    "@mapbox/mason-js": "^0.1.5",
-    "@mapbox/node-pre-gyp": "^1.x",
-    "node-addon-api": "^3.1.0"
+    "node-addon-api": "^4.3.0"
   },
   "devDependencies": {
-    "@mapbox/mvt-fixtures": "3.6.0",
-    "aws-sdk": "^2.163.0",
+    "@mapbox/mason-js": "^0.1.5",
+    "@mapbox/node-pre-gyp": "^1.0.8",
+    "@mapbox/mvt-fixtures": "3.7.0",
+    "aws-sdk": "^2.1074.0",
     "d3-queue": "^3.0.7",
-    "minimist": ">=1.2.3",
-    "tape": "^4.5.1"
+    "minimist": ">=1.2.5",
+    "tape": "^4.5.2"
   },
   "binary": {
     "module_name": "vtquery",
