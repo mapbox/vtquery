@@ -39,20 +39,7 @@ matrix:
     # linux cfi build node release
     - os: linux
       env: BUILDTYPE=release TOOLSET=cfi CXXFLAGS="-fsanitize=cfi -fvisibility=hidden" LDFLAGS="-fsanitize=cfi"
-<<<<<<< HEAD
     # linux publishable node release
-=======
-      node_js: 10
-    # linux publishable node v14/release
-    - os: linux
-      env: BUILDTYPE=release
-      node_js: 14
-    # linux publishable node v12/release
-    - os: linux
-      env: BUILDTYPE=release
-      node_js: 12
-    # linux publishable node v10/release
->>>>>>> master
     - os: linux
       env: BUILDTYPE=release
     # linux publishable node release
@@ -64,21 +51,9 @@ matrix:
       env: BUILDTYPE=release
     # osx publishable node release
     - os: osx
-<<<<<<< HEAD
       osx_image: xcode11
       env: BUILDTYPE=debug
     # linux sanitizer build node debug
-=======
-      osx_image: xcode9.3
-      env: BUILDTYPE=release
-      node_js: 12
-    # osx publishable node v14/release
-    - os: osx
-      osx_image: xcode12.2
-      env: BUILDTYPE=release
-      node_js: 14
-    # linux sanitizer build node v6/debug
->>>>>>> master
     - os: linux
       env: BUILDTYPE=debug TOOLSET=asan
       sudo: required
