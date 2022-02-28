@@ -78,7 +78,7 @@ matrix:
       # Overrides `install` to avoid initializing clang toolchain
       install:
         - make ${BUILDTYPE}
-      before_install:
+      before_script:
         - npm test
       # Overrides `script` to disable publishing
       script: true
