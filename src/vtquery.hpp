@@ -1,6 +1,6 @@
 #pragma once
-#include <nan.h>
+#include <napi.h>
 
 namespace VectorTileQuery {
-NAN_METHOD(vtquery);
+Napi::Value vtquery(Napi::CallbackInfo const& info);
 }

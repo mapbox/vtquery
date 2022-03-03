@@ -1,3 +1,23 @@
+## 0.6.0
+
+* N-API (`node-addon-api`)
+* Binaries are now compiled with clang 10.x
+* libstdc++-6-dev
+* Build binaries with node v16 -> works at runtime with node v8 -> v16 (and likely others)
+* Remove `-D_GLIBCXX_USE_CXX11_ABI=0` build flag
+* Updated mason and node_modules
+* Remove 'vector-tile' dependency
+* Upgrade dependendcies to 
+    * `mapbox/node-pre-gyp@1.0.8`
+    * `node-addon-api@^4.3.0`
+    * `@mapbox/node-pre-gyp@^1.0.8`
+    * `@mapbox/mason-js@^0.1.5`
+* Uprade dev-dependencies to
+    * `@mapbox/mvt-fixtures@3.7.0`
+    * `aws-sdk@^2.1074.0`
+    * `minimist@>=1.2.5`
+    * `tape@^4.5.2`
+
 ## 0.5.1
 
 * Add support for Node 14
