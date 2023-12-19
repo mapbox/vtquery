@@ -1,13 +1,23 @@
+stages:
+  - test
+  - name: build-binaries
+    if: commit_message =~ /^.*\[publish binary\].*$/ OR commit_message =~ /^.*\[republish binary\].*$/
+
 language: node_js
-dist: bionic
+dist: focal
 
 # enable c++11/14 builds
 addons:
   apt:
-    sources: [ 'ubuntu-toolchain-r-test' ]
-    packages: [ 'libstdc++-6-dev' ]
+    sources:
+      - sourceline: 'ppa:ubuntu-toolchain-r/test'
+    packages:
+    - libstdc++-10-dev
+#    - libstdc++10-armhf-cross
+#    - libstdc++10-4.7-dev-armhf-cross
 
 install:
+  - arch
   - node -v
   - which node
   - clang++ -v
@@ -27,7 +37,7 @@ before_script:
 
 script:
   # after successful tests, publish binaries if specified in commit message
-  - ./scripts/publish.sh --toolset=${TOOLSET:-} --debug=$([ "${BUILDTYPE}" == 'debug' ] && echo "true" || echo "false")
+  - ./scripts/publish.sh --toolset=${TOOLSET:-} --target_arch=${TARGET_ARCH} --debug=$([ "${BUILDTYPE}" == 'debug' ] && echo "true" || echo "false")
 
 # the matrix allows you to specify different operating systems and environments to
 # run your tests and build binaries
@@ -36,87 +46,99 @@ matrix:
 
     ## ** Builds that are published **
 
-    # linux cfi build node release
+    # # linux cfi build node release
+    # - os: linux
+    #   env: BUILDTYPE=release TOOLSET=cfi CXXFLAGS="-fsanitize=cfi -fvisibility=hidden" LDFLAGS="-fsanitize=cfi"
+    #   stage: build-binaries
+    # # linux publishable node release
+    # - os: linux
+    #   env: BUILDTYPE=release
+    #   stage: build-binaries
+    # # linux publishable node release
+    # - os: linux
+    #   env: BUILDTYPE=debug
+    #   stage: build-binaries
+    # # osx publishable node release
+    # - os: osx
+    #   osx_image: xcode11
+    #   env: BUILDTYPE=release
+    #   stage: build-binaries
+    # # osx publishable node release
+    # - os: osx
+    #   osx_image: xcode11
+    #   env: BUILDTYPE=debug
+    #   stage: build-binaries
+    # # linux sanitizer build node debug
+    # - os: linux
+    #   env: BUILDTYPE=debug TOOLSET=asan
+    #   sudo: required
+    #   stage: build-binaries
+    #   # Overrides `install` to set up custom asan flags
+    #   install:
+    #     - make sanitize
+    #   # Overrides `before_script` (tests are already run in `make sanitize`)
+    #   before_script: true
+    # linux ARM64 cfi build node release 
     - os: linux
-      env: BUILDTYPE=release TOOLSET=cfi CXXFLAGS="-fsanitize=cfi -fvisibility=hidden" LDFLAGS="-fsanitize=cfi"
-    # linux publishable node release
-    - os: linux
-      env: BUILDTYPE=release
-    # linux publishable node release
-    - os: linux
-      env: BUILDTYPE=debug
-    # osx publishable node release
-    - os: osx
-      osx_image: xcode11
-      env: BUILDTYPE=release
-    # osx publishable node release
-    - os: osx
-      osx_image: xcode11
-      env: BUILDTYPE=debug
-    # linux sanitizer build node debug
-    - os: linux
-      env: BUILDTYPE=debug TOOLSET=asan
-      sudo: required
-      # Overrides `install` to set up custom asan flags
-      install:
-        - make sanitize
-      # Overrides `before_script` (tests are already run in `make sanitize`)
-      before_script: true
-
+      arch: arm64-graviton2
+      virt: vm
+      stage: build-binaries
+      env: BUILDTYPE=release TOOLSET=cfi CXXFLAGS="-fsanitize=cfi -fvisibility=hidden" LDFLAGS="-fsanitize=cfi" TARGET_ARCH=arm64
+    
     ## ** Builds that do not get published **
 
-    # g++ build (default builds all use clang++)
-    - os: linux
-      env: BUILDTYPE=debug CXX="g++-6" CC="gcc-6" LINK="g++-6" AR="ar" NM="nm" CXXFLAGS="-fext-numeric-literals"
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - libstdc++-6-dev
-            - g++-6
-      # Overrides `install` to avoid initializing clang toolchain
-      install:
-        - make ${BUILDTYPE}
-      before_script:
-        - npm test
-      # Overrides `script` to disable publishing
-      script: true
-    # Coverage build
-    - os: linux
-      env: BUILDTYPE=debug CXXFLAGS="--coverage" LDFLAGS="--coverage"
-      # Overrides `script` to publish coverage data to codecov
-      script:
-        - export PATH=$(pwd)/mason_packages/.link/bin/:${PATH}
-        - which llvm-cov
-        - pip install --user codecov
-        - codecov --gcov-exec "llvm-cov gcov -l"
-    # Clang format build
-    - os: linux
-      # can be generic since we don't need nodejs to run formatting
-      language: generic
-      env: CLANG_FORMAT
-      # Overrides `install` to avoid initializing clang toolchain
-      install:
-        # Run the clang-format script. Any code formatting changes
-        # will trigger the build to fail (idea here is to get us to pay attention
-        # and get in the habit of running these locally before committing)
-        - make format
-      # Overrides `before_script`, no need to run tests
-      before_script: true
-      # Overrides `script` to disable publishing
-      script: true
-    # Clang tidy build
-    - os: linux
-      env: CLANG_TIDY
-      # Overrides `install` to avoid initializing clang toolchain
-      install:
-        # First run the clang-tidy target
-        # Any code formatting fixes automatically applied by clang-tidy
-        # will trigger the build to fail (idea here is to get us to pay attention
-        # and get in the habit of running these locally before committing)
-        - make tidy
-      # Overrides `before_script`, no need to run tests
-      before_script: true
-      # Overrides `script` to disable publishing 
-      script: true
+    # # g++ build (default builds all use clang++)
+    # - os: linux
+    #   env: BUILDTYPE=debug CXX="g++-6" CC="gcc-6" LINK="g++-6" AR="ar" NM="nm" CXXFLAGS="-fext-numeric-literals"
+    #   addons:
+    #     apt:
+    #       sources:
+    #         - ubuntu-toolchain-r-test
+    #       packages:
+    #         - libstdc++-6-dev
+    #         - g++-6
+    #   # Overrides `install` to avoid initializing clang toolchain
+    #   install:
+    #     - make ${BUILDTYPE}
+    #   before_script:
+    #     - npm test
+    #   # Overrides `script` to disable publishing
+    #   script: true
+    # # Coverage build
+    # - os: linux
+    #   env: BUILDTYPE=debug CXXFLAGS="--coverage" LDFLAGS="--coverage"
+    #   # Overrides `script` to publish coverage data to codecov
+    #   script:
+    #     - export PATH=$(pwd)/mason_packages/.link/bin/:${PATH}
+    #     - which llvm-cov
+    #     - pip install --user codecov
+    #     - codecov --gcov-exec "llvm-cov gcov -l"
+    # # Clang format build
+    # - os: linux
+    #   # can be generic since we don't need nodejs to run formatting
+    #   language: generic
+    #   env: CLANG_FORMAT
+    #   # Overrides `install` to avoid initializing clang toolchain
+    #   install:
+    #     # Run the clang-format script. Any code formatting changes
+    #     # will trigger the build to fail (idea here is to get us to pay attention
+    #     # and get in the habit of running these locally before committing)
+    #     - make format
+    #   # Overrides `before_script`, no need to run tests
+    #   before_script: true
+    #   # Overrides `script` to disable publishing
+    #   script: true
+    # # Clang tidy build
+    # - os: linux
+    #   env: CLANG_TIDY
+    #   # Overrides `install` to avoid initializing clang toolchain
+    #   install:
+    #     # First run the clang-tidy target
+    #     # Any code formatting fixes automatically applied by clang-tidy
+    #     # will trigger the build to fail (idea here is to get us to pay attention
+    #     # and get in the habit of running these locally before committing)
+    #     - make tidy
+    #   # Overrides `before_script`, no need to run tests
+    #   before_script: true
+    #   # Overrides `script` to disable publishing 
+    #   script: true

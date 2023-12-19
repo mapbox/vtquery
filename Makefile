@@ -36,7 +36,7 @@ mason_packages/.link/include: mason_packages/headers
 build-deps: mason_packages/.link/include
 
 release: build-deps
-	V=1 ./node_modules/.bin/node-pre-gyp configure build --error_on_warnings=$(WERROR) --loglevel=error
+	V=1 ./node_modules/.bin/node-pre-gyp configure build --error_on_warnings=$(WERROR) --loglevel=error --target_arch=$(TARGET_ARCH)
 	@echo "run 'make clean' for full rebuild"
 
 debug: mason_packages/.link/include
