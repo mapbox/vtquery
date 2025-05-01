@@ -1,6 +1,6 @@
 # vtquery
 
-[![Build Status](https://travis-ci.com/mapbox/vtquery.svg?branch=master)](https://travis-ci.com/mapbox/vtquery)
+[![Build Status](https://github.com/mapbox/vtquery/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/mapbox/vtquery/actions/workflows/test.yml)
 [![node-cpp-skel](https://raw.githubusercontent.com/mapbox/cpp/master/assets/node-cpp-skel-badge_blue.svg)](https://github.com/mapbox/node-cpp-skel)
 
     npm install @mapbox/vtquery
