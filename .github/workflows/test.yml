@@ -3,7 +3,7 @@ name: tests
 on: [push]
 
 jobs:
-  test:
+  test-clang:
     runs-on: ubuntu-22.04
     permissions:
       id-token: write
@@ -35,6 +35,7 @@ jobs:
           clang++ -v
           which clang++
           make "${{ matrix.build-type }}"
+          rm -rf mason_packages
 
       # Run the clang-format and clang-tidy scripts. Any code formatting changes
       # will trigger the build to fail (idea here is to get us to pay attention
@@ -44,6 +45,59 @@ jobs:
           make format
           make tidy
 
-      - name: Run tests
+      - name: Run node tests
+        run: |
+          npm test
+
+  test-gcc:
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: ['debug']
+        # build-type: ['release', 'debug']
+        node-version: ['22']
+        # node-version: ['20', '22']
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install packages
+        run: |
+          sudo apt update
+          sudo apt-get install -y libstdc++-12-dev g++-12 gcc-12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install and setup
+        env:
+          CXX: g++-12
+          CC: gcc-12
+          LINK: g++-12
+          AR: ar
+          NM: nm
+          CXXFLAGS: -fext-numeric-literals
+        run: |
+          node -v
+          which node
+          g++ -v
+          which g++
+          make "${{ matrix.build-type }}"
+          rm -rf mason_packages
+
+      # Run the clang-format and clang-tidy scripts. Any code formatting changes
+      # will trigger the build to fail (idea here is to get us to pay attention
+      # and get in the habit of running these locally before committing)
+      - name: Run format and tidy
+        run: |
+          make format
+          make tidy
+
+      - name: Run node tests
         run: |
           npm test
