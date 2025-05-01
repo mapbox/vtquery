@@ -21,7 +21,9 @@ jobs:
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt update
-          sudo apt-get install -y libstdc++-6-dev
+          sudo apt-get install -y gcc-6 g++-6 libstdc++-6-dev
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 60
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 60
 
       - uses: actions/setup-node@v4
         with:
