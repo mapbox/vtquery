@@ -15,19 +15,12 @@ jobs:
         build-type: ['release', 'debug']
         node-version: ['16']
 
-    # Download and install gcc-6 and g++-6 from Ubuntu 18.04
     steps:
       - uses: actions/checkout@v4
       - name: Install packages
         run: |
           sudo apt update
-          sudo apt install -y wget
-          wget http://archive.ubuntu.com/ubuntu/pool/universe/g/gcc-6/gcc-6_6.5.0-2ubuntu1~18.04_amd64.deb
-          wget http://archive.ubuntu.com/ubuntu/pool/universe/g/gcc-6/g++-6_6.5.0-2ubuntu1~18.04_amd64.deb
-          wget http://archive.ubuntu.com/ubuntu/pool/universe/g/gcc-6/libstdc++-6-dev_6.5.0-2ubuntu1~18.04_amd64.deb
-          sudo dpkg -i gcc-6_6.5.0-2ubuntu1~18.04_amd64.deb g++-6_6.5.0-2ubuntu1~18.04_amd64.deb libstdc++-6-dev_6.5.0-2ubuntu1~18.04_amd64.deb
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 60
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 60
+          sudo apt-get install -y libstdc++-12-dev
 
       - uses: actions/setup-node@v4
         with:
