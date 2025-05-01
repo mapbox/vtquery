@@ -34,6 +34,14 @@ jobs:
           which clang++
           make "${{ matrix.build-type }}"
 
+      # Run the clang-format and clang-tidy scripts. Any code formatting changes
+      # will trigger the build to fail (idea here is to get us to pay attention
+      # and get in the habit of running these locally before committing)
+      - name: Run format and tidy
+        run: |
+          make format
+          make tidy
+
       - name: Run tests
         run: |
           npm test
