@@ -8,3 +8,4 @@ build
 local.env
 lib/binding
 viz/node_modules
+node_modules

@@ -1,0 +1,40 @@
+name: tests
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: ['release', 'debug']
+        node-version: ['16']
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install packages
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+          sudo apt update
+          sudo apt-get install -y libstdc++-6-dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install and setup
+        run: |
+          node -v
+          which node
+          clang++ -v
+          which clang++
+          make "${{ matrix.build-type }}"
+
+      - name: Run tests
+        run: |
+          npm test
