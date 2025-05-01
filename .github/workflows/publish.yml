@@ -21,6 +21,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Configure AWS Credentials
+        uses: mapbox/configure-aws-credentials-internal@v4
+        with:
+          target-account-id: "234858372212"
+
       - name: Install packages
         run: |
           sudo apt update
