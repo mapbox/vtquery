@@ -10,7 +10,6 @@ jobs:
       contents: read
 
     strategy:
-      fail-fast: false
       matrix:
         build-type: ['debug']
         # build-type: ['release', 'debug']
@@ -40,6 +39,7 @@ jobs:
       # Run the clang-format and clang-tidy scripts. Any code formatting changes
       # will trigger the build to fail (idea here is to get us to pay attention
       # and get in the habit of running these locally before committing)
+      # These are only run under the test-clang job because they're clang specific.
       - name: Run format and tidy
         run: |
           make format
@@ -56,7 +56,6 @@ jobs:
       contents: read
 
     strategy:
-      fail-fast: false
       matrix:
         build-type: ['debug']
         # build-type: ['release', 'debug']
@@ -74,6 +73,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      # Default builds use clang, but this job overrides the compiler to use g++.
       - name: Install and setup
         env:
           CXX: g++-12
@@ -89,14 +89,6 @@ jobs:
           which g++
           make "${{ matrix.build-type }}"
           rm -rf mason_packages
-
-      # Run the clang-format and clang-tidy scripts. Any code formatting changes
-      # will trigger the build to fail (idea here is to get us to pay attention
-      # and get in the habit of running these locally before committing)
-      - name: Run format and tidy
-        run: |
-          make format
-          make tidy
 
       - name: Run node tests
         run: |
