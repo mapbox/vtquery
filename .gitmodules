@@ -13,9 +13,6 @@
 [submodule "vendor/boost"]
 	path = vendor/boost
 	url = https://github.com/boostorg/boost
-[submodule "vendor/cheap-ruler"]
-	path = vendor/cheap-ruler
-	url = https://github.com/mapbox/cheap-ruler
 [submodule "vendor/gzip-hpp"]
 	path = vendor/gzip-hpp
 	url = https://github.com/mapbox/gzip-hpp

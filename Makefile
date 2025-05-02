@@ -24,35 +24,27 @@ export WERROR ?= true
 # just typing `make` will call `make release`
 default: release
 
-node_modules/nan:
+node_modules:
 	npm install --ignore-scripts
 
-mason_packages/headers: node_modules/nan
-	node_modules/.bin/mason-js install
-
-mason_packages/.link/include: mason_packages/headers
-	node_modules/.bin/mason-js link
-
-build-deps: mason_packages/.link/include
-
-release: build-deps
+release:
 	V=1 ./node_modules/.bin/node-pre-gyp configure build --error_on_warnings=$(WERROR) --loglevel=error
 	@echo "run 'make clean' for full rebuild"
 
-debug: mason_packages/.link/include
+debug:
 	V=1 ./node_modules/.bin/node-pre-gyp configure build --error_on_warnings=$(WERROR) --loglevel=error --debug
 	@echo "run 'make clean' for full rebuild"
 
-coverage: build-deps
+coverage:
 	./scripts/coverage.sh
 
-tidy: build-deps
+tidy:
 	./scripts/clang-tidy.sh
 
-format: build-deps
+format:
 	./scripts/clang-format.sh
 
-sanitize: build-deps
+sanitize:
 	./scripts/sanitize.sh
 
 clean:
@@ -61,11 +53,10 @@ clean:
 	# remove remains from running 'make coverage'
 	rm -f *.profraw
 	rm -f *.profdata
-	@echo "run 'make distclean' to also clear node_modules, mason_packages, and .mason directories"
+	@echo "run 'make distclean' to also clear node_modules"
 
 distclean: clean
 	rm -rf node_modules
-	rm -rf mason_packages
 
 # variable used in the `xcode` target below
 MODULE_NAME := $(shell node -e "console.log(require('./package.json').binary.module_name)")
