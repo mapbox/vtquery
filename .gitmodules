@@ -19,3 +19,6 @@
 [submodule "vendor/protozero"]
 	path = vendor/protozero
 	url = https://github.com/mapbox/protozero
+[submodule "vendor/cheap-ruler"]
+	path = vendor/cheap-ruler
+	url = https://github.com/mapbox/cheap-ruler-cpp
