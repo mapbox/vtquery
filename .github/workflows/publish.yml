@@ -1,0 +1,50 @@
+name: publish
+
+on: [push]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: read
+
+    strategy:
+      matrix:
+        build-type: ['debug']
+        # build-type: ['release', 'debug']
+        node-version: ['22']
+        os:
+          - name: "linux"
+            arhcs: ["x86_64"]
+        # node-version: ['20', '22']
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS Credentials
+        uses: mapbox/configure-aws-credentials-internal@v4
+        with:
+          target-account-id: "234858372212"
+
+      - name: Install packages
+        run: |
+          sudo apt update
+          sudo apt-get install -y libstdc++-12-dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install and setup
+        run: |
+          node -v
+          which node
+          clang++ -v
+          which clang++
+          make "${{ matrix.build-type }}"
+          rm -rf mason_packages
+
+      - name: Build and publish
+        run: |
+          ./scripts/publish.sh --toolset=${TOOLSET:-} --debug=$([ "${{ matrix.build-type }}" == 'debug' ] && echo "true" || echo "false")

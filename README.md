@@ -1,7 +1,6 @@
 # vtquery
 
-[![Build Status](https://travis-ci.com/mapbox/vtquery.svg?branch=master)](https://travis-ci.com/mapbox/vtquery)
-[![codecov](https://codecov.io/gh/mapbox/vtquery/branch/master/graph/badge.svg)](https://codecov.io/gh/mapbox/vtquery)
+[![Build Status](https://github.com/mapbox/vtquery/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/mapbox/vtquery/actions/workflows/test.yml)
 [![node-cpp-skel](https://raw.githubusercontent.com/mapbox/cpp/master/assets/node-cpp-skel-badge_blue.svg)](https://github.com/mapbox/node-cpp-skel)
 
     npm install @mapbox/vtquery
@@ -145,7 +144,7 @@ make clean
 
 # Cleans everything, including the things you download from the network in order to compile (ex: npm packages).
 # This is useful if you want to nuke everything and start from scratch.
-# For example, it's super useful for making sure everything works for Travis, production, someone else's machine, etc
+# For example, it's super useful for making sure everything works for github actions, production, someone else's machine, etc
 make distclean
 
 # Generate API docs from index.js
@@ -169,6 +168,23 @@ make test
 # edit files - helpful for debugging
 vim src/vtquery.cpp
 ```
+
+## Code Formatting
+
+We use [this script](/scripts/format.sh#L20) to install a consistent version of [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) to format the code base. The format is automatically checked via a GitHub Action job as well. Run the following script locally to ensure formatting is ready to merge:
+
+```
+make format
+```
+
+We also use [`clang-tidy`](https://clang.llvm.org/extra/clang-tidy/) as a C++ linter. Run the following command to lint and ensure your code is ready to merge:
+
+```
+make tidy
+```
+
+These commands are set from within [the Makefile](./Makefile).
+
 
 # Benchmarks
 
