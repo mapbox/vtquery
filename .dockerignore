@@ -1,8 +1,6 @@
-mason_packages
 node_modules
 build
 .toolchain
-.mason
 .git
 local.env
 lib/binding

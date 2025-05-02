@@ -15,7 +15,7 @@ rm -f *gcov
 rm -f *profdata
 LLVM_PROFILE_FILE="code-%p.profraw" npm test
 CXX_MODULE=$(./node_modules/.bin/node-pre-gyp reveal module --silent)
-export PATH=$(pwd)/mason_packages/.link/bin/:${PATH}
+# TODO: how do we install llvm-profdata and llvm-cov? 
 llvm-profdata merge -output=code.profdata code-*.profraw
 llvm-cov report ${CXX_MODULE} -instr-profile=code.profdata -use-color
 llvm-cov show ${CXX_MODULE} -instr-profile=code.profdata src/*.cpp -filename-equivalence -use-color
