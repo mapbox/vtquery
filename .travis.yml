@@ -13,8 +13,6 @@ install:
   - clang++ -v
   - which clang++
   - make ${BUILDTYPE}
-  # Build should be standalone now, so remove mason deps
-  - rm -rf mason_packages
 
 # *Here we run tests*
 # We prefer running tests in the 'before_script' section rather than 'script' to ensure fast failure.
@@ -87,7 +85,6 @@ matrix:
       env: BUILDTYPE=debug CXXFLAGS="--coverage" LDFLAGS="--coverage"
       # Overrides `script` to publish coverage data to codecov
       script:
-        - export PATH=$(pwd)/mason_packages/.link/bin/:${PATH}
         - which llvm-cov
         - pip install --user codecov
         - codecov --gcov-exec "llvm-cov gcov -l"

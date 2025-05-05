@@ -1,0 +1,24 @@
+[submodule "vendor/geometry"]
+	path = vendor/geometry
+	url = https://github.com/mapbox/geometry.hpp
+[submodule "vendor/variant"]
+	path = vendor/variant
+	url = https://github.com/mapbox/variant
+[submodule "vendor/vtzero"]
+	path = vendor/vtzero
+	url = https://github.com/mapbox/vtzero
+[submodule "vendor/spatial-algorithms"]
+	path = vendor/spatial-algorithms
+	url = https://github.com/mapbox/spatial-algorithms
+[submodule "vendor/boost"]
+	path = vendor/boost
+	url = https://github.com/boostorg/boost
+[submodule "vendor/gzip-hpp"]
+	path = vendor/gzip-hpp
+	url = https://github.com/mapbox/gzip-hpp
+[submodule "vendor/protozero"]
+	path = vendor/protozero
+	url = https://github.com/mapbox/protozero
+[submodule "vendor/cheap-ruler"]
+	path = vendor/cheap-ruler
+	url = https://github.com/mapbox/cheap-ruler-cpp
