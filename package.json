@@ -1,6 +1,6 @@
 {
   "name": "@mapbox/vtquery",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Get features from Mapbox Vector Tiles from a lng/lat query point",
   "url": "http://github.com/mapbox/vtquery",
   "main": "./lib/index.js",
@@ -33,5 +33,8 @@
     "host": "https://mapbox-node-binary.s3.amazonaws.com",
     "remote_path": "./{name}/v{version}/{configuration}/{toolset}/",
     "package_name": "{platform}-{arch}.tar.gz"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
